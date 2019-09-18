@@ -1,4 +1,5 @@
 import feat 
+import numpy as np
 def start(st,text):
     return st[:len(text)]==text
 
@@ -19,7 +20,7 @@ def readfile(fname="asd.sto"):
             continue
         else:
             alignment.append(line.split()[-1])
-
+    alignment = np.array([list(a) for a in alignment])
     return fname, alignment, stru, cov 
 
 class bidir:
@@ -29,6 +30,9 @@ class bidir:
     def lol(self,a,b):
         self.f[a]=b
         self.b[b]=a
+    def fin(self):
+        self.both = dict(self.f)
+        self.both.update(self.b)
 
 def getblocks(stru):
     # shoud return a list of (start,stop)
@@ -41,7 +45,7 @@ def getblocks(stru):
             stack.append(i)
         if l == '>':
             bdir.lol(stack.pop(),i)
-
+    bdir.fin()
     unpaired= '._:-'
     mode = 'def'
     blocks = []
@@ -70,16 +74,17 @@ def getblocks(stru):
                     mode  = l
     
     realblocks = [(a-5,bdir.f[e]+5) if stru[a]=='<' else (bdir.b[a]-5,e+5)  for a,e in blocks]
-    return realblocks, blocks
+    return realblocks, blocks, bdir
         
 
 def makevec(ali, stru, cov):
-    _, blocks = getblocks(stru)
-
-    return [a for a in b for b in [feat.conservation(cov,ali)] ]
+    _, blocks,con = getblocks(stru)
+    return [a  for b in [feat.conservation(cov,ali),
+                        feat.cov_sloppycov_disturbance_instem(stru,cov,ali,blocks, con),
+                        feat.stemconservation(blocks, ali), 
+                        feat.stemlength(blocks)] for a in b  ]
     
 
 
 name, ali, stru, cov = readfile()
-blocks = getblocks(stru)
-print(getblocks(stru))
+print(makevec(ali, stru, cov))
