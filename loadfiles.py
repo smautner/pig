@@ -1,4 +1,4 @@
-
+import random
 import os 
 import feat 
 import numpy as np
@@ -144,7 +144,7 @@ def fnames_to_vec(fnames, getall=False):
         if a.shape[0]>2 or getall:
             yield  makevec(_,a,b,c)
 
-def loaddata(path, numneg = 10000, pos='both',getall=False):
+def loaddata(path, numneg = 10000, pos='both',getall=False, seed=None):
     pos1 = [ "%s/pos/%s" %(path,f) for f in  os.listdir("%s/pos" % path )]  
     pos2 = [ "%s/pos2/%s" %(path,f) for f in  os.listdir("%s/pos2" % path )] 
     if pos == 'both':
@@ -154,7 +154,13 @@ def loaddata(path, numneg = 10000, pos='both',getall=False):
     else:
         pos= pos2
         
-    neg = [ "%s/neg/%s" %(path,f) for f in  os.listdir("%s/neg" % path )[:numneg]] 
+    # NEGATIVES:
+    if seed:
+        random.seed()
+    negfnames =   list(os.listdir("%s/neg" % path ))
+    random.shuffle(negfnames)
+    print(negfnames[:5])
+    neg = [ "%s/neg/%s" %(path,f) for f in  negfnames[:numneg]] 
 
     pos = list(fnames_to_vec(pos,getall))
     neg = list(fnames_to_vec(neg,getall))

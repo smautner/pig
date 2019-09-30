@@ -26,21 +26,48 @@ def cons_targets(pos,ali):
         tb.print_stack()
     return r 
 
+
+def cons_targets_nuc(pos, ali):
+    r=[]
+    nu,le = ali.shape
+    for i in pos: 
+        a = ali[:,i]
+        nucmax = max ( (a=='G').sum(), (a=='A').sum() ,(a=='C').sum(),(a=='U').sum() )
+        delnum = (a=='.').sum()
+
+        if delnum>nucmax:
+            r.append(0)
+        else:
+            r.append(nucmax/nu)
+            
+    if np.isnan(np.mean(r)):
+        print ('cons_targets nuc has a problem')
+        print (ali)
+        print (pos)
+        tb.print_stack()
+    return r 
+
 def conservation(ali):
     # account for cov or not
     covcnt =  ali.cov.count("2")
     nu,le = ali.ali.shape
     r = cons_targets(range(le),ali.ali)
+    r2 = cons_targets_nuc(range(le),ali.ali)
     #print (ali.cov)
     #print([ 1 if b == '2' else a  for a,b in zip(r,ali.cov) ])
-    return  {"total conservation":np.mean(r), "total conservation +cov":np.mean([ 1 if b == '2' else a  for a,b in zip(r,ali.cov)  ]) }
+    return  {
+            "total conservation":np.mean(r), 
+             "total conservation +cov":np.mean([ 1 if b == '2' else a  for a,b in zip(r,ali.cov)  ]),
+            "total conservation_nuc":np.mean(r2), 
+             "total conservation_nuc +cov":np.mean([ 1 if b == '2' else a  for a,b in zip(r2,ali.cov)  ]) 
+    }
 
 def cons_targets_rmgaps(pos,ali):
     allgaps = lambda x, ali: all(ali[:,x]=='-')
     pos = [x for x in pos if not allgaps(x,ali)]
     if len(pos)<5:
         return [0]
-    return cons_targets(pos,ali)
+    return cons_targets(pos,ali), cons_targets_nuc(pos,ali)
 
 def percstem(ali):
     a = len(ali.stru)
@@ -50,20 +77,26 @@ def percstem(ali):
 
 def get_sloppy(pos, ali):
     sloppy=0
+    sloppy_all = 0
     ok = 0
     try:
         for p in pos: 
             for a,b in zip( ali.ali[:,p], ali.ali[:,ali.con.both[p]] ):
                 z = [a,b] if b > a else [b,a]
-                #if z != ["C","G"] and z != ["A",'U']: interestingly this performs worse  
                 if z == ["G","U"]:
                     sloppy+=1
+                elif z != ["C","G"] and z != ["A",'U']: # interestingly this performs worse  
+                    sloppy_all +=1
                 else:
                     ok +=1
-        return  sloppy/(sloppy+ok) 
+        return  sloppy/(sloppy+ok+sloppy_all), (sloppy_all+sloppy)/(sloppy+ok+sloppy_all)  
     except: 
         print ("getsloppy: p con.both ali.name, ali.blocks", p, ali.con.both, ali.name,ali.blocks )
 
+
+        
+        
+        
 def weirdo_detection(ali):
     height, length = ali.shape
     points = [0]*height
@@ -108,7 +141,25 @@ def checov(ali, pos, con, cov):
                 
     return loss/covn
 
-        
+def consblub(hbonds2,aliX,ali1,ali2,stems):
+    xcons , xconsnuc = cons_targets_rmgaps(hbonds2,aliX)
+    x1cons , x1consnuc = cons_targets_rmgaps(hbonds2,ali1)
+    x2cons , x2consnuc = cons_targets_rmgaps(hbonds2,ali2)
+    stemXcons, stemXconsnuc = cons_targets_rmgaps(stems, aliX)
+    stem1cons, stem1consnuc = cons_targets_rmgaps(stems, ali1)
+    stem2cons, stem2consnuc = cons_targets_rmgaps(stems, ali2)
+    return { 'aliX cons': np.mean(xcons),
+            'aliX cons nuc': np.mean(xconsnuc),
+            'ali1 cons': np.mean(x1cons),
+            'ali1 cons nuc': np.mean(x1consnuc),
+            'ali2 cons': np.mean(x2cons),
+            'ali2 cons nuc': np.mean(x2consnuc),
+            'aliX cons flank': np.mean(stemXcons)  ,
+            'aliX cons flank nuc': np.mean(stemXconsnuc)  ,
+            'ali1 cons flank': np.mean(stem1cons),
+            'ali1 cons flank nuc': np.mean(stem1consnuc),
+            'ali2 cons flank': np.mean(stem2cons),
+            'ali2 cons flank nuc': np.mean(stem2consnuc)}       
 
 def get_lennogap(ali):
     allgaps = lambda x, ali: all(ali[:,x]=='-')
@@ -131,14 +182,16 @@ def cov_sloppycov_disturbance_instem(ali):
     pvoc_all   = sum([1 for a in hbonds2 if ali.cov[a]=='2'])/len(hbonds2)
     
     # now we get the sloppy covariance 
-    sl_large = get_sloppy(hbonds, ali) if hbonds else 0  # TODO 
-    sl_all = get_sloppy(hbonds2, ali)
-
+    sl_large, sll_large= get_sloppy(hbonds, ali) if hbonds else 0,0  # TODO 
+    sl_all, sll_all = get_sloppy(hbonds2, ali)
+    #sloppydict = {b:a for a,b in zip([sl_large, sll_large, sl_all, sll_all],
+    #                                 ['filtered: gcsloppy','filtered: all sloppy','gcsloppy','all sloppy'])}
+    sloppydict={}
     # now we filter the most horrible line and do the stuff up there again. 
     weird = weirdo_detection(ali.ali)
     
     
-    aliX = ali.ali[[ a for a  in range(ali.ali.shape[0]) if a not in weird[-max(1,int(ali.ali.shape[0]/5)):]]] # hack off 20% 
+    aliX = ali.ali[[ a for a  in range(ali.ali.shape[0]) if a not in weird[-max(1,int(ali.ali.shape[0]/4)):]]] # hack off 20% 
     #print ("shapecheck:", ali.ali.shape, aliX.shape, -max(1,int(ali.ali.shape[0]/5)) )
     ali1 = ali.ali[[ a for a  in range(ali.ali.shape[0]) if a not in weird[-1:]]]
     ali2 = ali.ali[[ a for a  in range(ali.ali.shape[0]) if a not in weird[-2:]]]
@@ -147,8 +200,6 @@ def cov_sloppycov_disturbance_instem(ali):
     # 1. cons after cleaning(aliX+ignore all gaps)
     # 2. cons in the flanks (in aliX and normal)
     
-    
-    
     stems = set()
     for _,surset in ali.stems:
         stems = stems.union(surset)
@@ -156,13 +207,10 @@ def cov_sloppycov_disturbance_instem(ali):
     lennogap = get_lennogap(aliX)  
     lennogap1 = get_lennogap(ali1)  
     lennogap2 = get_lennogap(ali2)  
-    return {'ali len': ali.ali.shape[1],
+    lena=  ali.ali.shape[1]
+    d= {    
+            'ali len':lena,
             'ali count':ali.ali.shape[0],
-            #'ali lennogap':lennogap if aliX.shape[0]>1 else 0 ,
-            #'perc stem rmx': lennogap/sum([ b-a+1 for a,b in ali.blocks ]) if ali.ali.shape[0]>1 else 0, # TODO
-            #'rm bad X cons': np.mean(cons_targets_rmgaps(hbonds2,aliX)) if ali.ali.shape[0]>1 else 0, #TODO
-            #'cons flank': np.mean(cons_targets(stems, ali.ali)) if ali.ali.shape[0]>1 else 0 , #TODO 
-            #'rm bad X cons flank': np.mean(cons_targets_rmgaps(stems, aliX))  if ali.ali.shape[0]>1 else 0, #TODO
             'aliX lennogap':lennogap ,
             'ali1 lennogap':lennogap1 ,
             'ali2 lennogap':lennogap2 ,
@@ -170,19 +218,7 @@ def cov_sloppycov_disturbance_instem(ali):
             'perc stem aliX': sum([ b-a+1 for a,b in ali.blocks ])/lennogap,
             'perc stem ali1': sum([ b-a+1 for a,b in ali.blocks ])/lennogap1,
             'perc stem ali2': sum([ b-a+1 for a,b in ali.blocks ])/lennogap2,
-            # SLOPPY
-            "sloppy pair filtered":sl_large, 
-            "sloppy pair":sl_all,
-            # cons 
-            'aliX cons': np.mean(cons_targets_rmgaps(hbonds2,aliX)),
-            'ali1 cons': np.mean(cons_targets_rmgaps(hbonds2,ali1)),
-            'ali2 cons': np.mean(cons_targets_rmgaps(hbonds2,ali2)),
-            # FLANKS
             'cons flank': np.mean(cons_targets(stems, ali.ali)),
-            'aliX cons flank': np.mean(cons_targets_rmgaps(stems, aliX))  ,
-            'ali1 cons flank': np.mean(cons_targets_rmgaps(stems, ali1))  ,
-            'ali2 cons flank': np.mean(cons_targets_rmgaps(stems, ali2))  ,
-            
             # COVARIANCE
             'stem cov filtered':pcov_large,
             'stem cov':pvoc_all, 
@@ -192,6 +228,14 @@ def cov_sloppycov_disturbance_instem(ali):
             "ali2 cov filtered":checov(ali2,hbonds,ali.con,ali.cov),
             "ali2 cov":checov(ali2,hbonds2,ali.con,ali.cov)}
 
+    d2 = consblub(hbonds2,aliX,ali1,ali2,stems)
+    d.update(d2)
+    d.update({ "percentage loss vs ali: %s" % name : (lena-nog)/lena  for nog,name in zip([lennogap,lennogap1,lennogap2],'X,1,2')})
+    d.update(sloppydict)
+    return d
+
+
+                
 def stemlength(ali):
     s = [ b-a+1 for a,b in ali.blocks  ]
     s.sort()
@@ -206,7 +250,14 @@ def stemlength(ali):
 
 def stemconservation(ali):
     stacks2 = [ (a,b) for a,b in ali.blocks if b-a+1 > 2  ]
-    return {"stem cons":cons_stem(ali.blocks,ali.ali), 'stem cons filtered':cons_stem(stacks2,ali.ali)}
+    scons, sconsn = cons_stem(ali.blocks,ali.ali)
+    sconsf, sconsfn = cons_stem(stacks2,ali.ali)
+    return {
+            "stem cons": scons,
+            "stem cons nuc": sconsn,
+            'stem cons filtered': sconsf,
+            'stem cons filtered nuc':sconsfn
+           }
 
 def cons_stem(stacks,ali):
 
@@ -220,9 +271,9 @@ def cons_stem(stacks,ali):
                 targets.add(z)
     
     if len(targets)==0:
-        r= 0
+        r= 0,0
     else:
-        r= np.mean(cons_targets(targets,ali)) 
+        r= np.mean(cons_targets(targets,ali)), np.mean(cons_targets_nuc(targets,ali))
     #if np.isnan(r):  TODO
     #    return 0
     #else:
