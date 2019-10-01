@@ -141,13 +141,13 @@ def checov(ali, pos, con, cov):
                 
     return loss/covn
 
-def consblub(hbonds2,aliX,ali1,ali2,stems):
+def consblub(hbonds2,aliX,ali1,ali2,stemupdown):
     xcons , xconsnuc = cons_targets_rmgaps(hbonds2,aliX)
     x1cons , x1consnuc = cons_targets_rmgaps(hbonds2,ali1)
     x2cons , x2consnuc = cons_targets_rmgaps(hbonds2,ali2)
-    stemXcons, stemXconsnuc = cons_targets_rmgaps(stems, aliX)
-    stem1cons, stem1consnuc = cons_targets_rmgaps(stems, ali1)
-    stem2cons, stem2consnuc = cons_targets_rmgaps(stems, ali2)
+    stemXcons, stemXconsnuc = cons_targets_rmgaps(stemupdown, aliX)
+    stem1cons, stem1consnuc = cons_targets_rmgaps(stemupdown, ali1)
+    stem2cons, stem2consnuc = cons_targets_rmgaps(stemupdown, ali2)
     return { 'aliX cons': np.mean(xcons),
             'aliX cons nuc': np.mean(xconsnuc),
             'ali1 cons': np.mean(x1cons),
@@ -182,11 +182,11 @@ def cov_sloppycov_disturbance_instem(ali):
     pvoc_all   = sum([1 for a in hbonds2 if ali.cov[a]=='2'])/len(hbonds2)
     
     # now we get the sloppy covariance 
-    sl_large, sll_large= get_sloppy(hbonds, ali) if hbonds else 0,0  # TODO 
+    sl_large, sll_large= get_sloppy(hbonds, ali) if hbonds else (0,0)  # TODO 
     sl_all, sll_all = get_sloppy(hbonds2, ali)
-    #sloppydict = {b:a for a,b in zip([sl_large, sll_large, sl_all, sll_all],
-    #                                 ['filtered: gcsloppy','filtered: all sloppy','gcsloppy','all sloppy'])}
-    sloppydict={}
+    sloppydict = {b:a for a,b in zip([sl_large, sll_large, sl_all, sll_all],
+                                     ['filtered: gcsloppy','filtered: all sloppy','gcsloppy','all sloppy'])}
+    #sloppydict={}
     # now we filter the most horrible line and do the stuff up there again. 
     weird = weirdo_detection(ali.ali)
     
@@ -200,9 +200,9 @@ def cov_sloppycov_disturbance_instem(ali):
     # 1. cons after cleaning(aliX+ignore all gaps)
     # 2. cons in the flanks (in aliX and normal)
     
-    stems = set()
+    stemupdown = set()
     for _,surset in ali.stems:
-        stems = stems.union(surset)
+        stemupdown = stemupdown.union(surset)
         
     lennogap = get_lennogap(aliX)  
     lennogap1 = get_lennogap(ali1)  
@@ -218,7 +218,8 @@ def cov_sloppycov_disturbance_instem(ali):
             'perc stem aliX': sum([ b-a+1 for a,b in ali.blocks ])/lennogap,
             'perc stem ali1': sum([ b-a+1 for a,b in ali.blocks ])/lennogap1,
             'perc stem ali2': sum([ b-a+1 for a,b in ali.blocks ])/lennogap2,
-            'cons flank': np.mean(cons_targets(stems, ali.ali)),
+            'cons flank': np.mean(cons_targets(stemupdown, ali.ali)),
+            'cons flank nuc': np.mean(cons_targets_nuc(stemupdown, ali.ali)),
             # COVARIANCE
             'stem cov filtered':pcov_large,
             'stem cov':pvoc_all, 
@@ -228,9 +229,9 @@ def cov_sloppycov_disturbance_instem(ali):
             "ali2 cov filtered":checov(ali2,hbonds,ali.con,ali.cov),
             "ali2 cov":checov(ali2,hbonds2,ali.con,ali.cov)}
 
-    d2 = consblub(hbonds2,aliX,ali1,ali2,stems)
+    d2 = consblub(hbonds2,aliX,ali1,ali2,stemupdown)
     d.update(d2)
-    d.update({ "percentage loss vs ali: %s" % name : (lena-nog)/lena  for nog,name in zip([lennogap,lennogap1,lennogap2],'X,1,2')})
+    d.update({ "percentage loss vs ali: %s" % name : (lena-nog)/lena  for nog,name in zip([lennogap,lennogap1,lennogap2],['X','1','2'])})
     d.update(sloppydict)
     return d
 
