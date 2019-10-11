@@ -1,4 +1,5 @@
 import random
+from collections import defaultdict
 import os 
 import feat 
 import numpy as np
@@ -39,39 +40,44 @@ def getblocks(stru):
     # shoud return a list of (start,stop)
     
     # get start/end 
-    stack=[]
+    stack=defaultdict(list)
     bdir = bidir()
+    op='<([{'
+    cl='>)]}'
+    d={z:i for i,z in enumerate(op)} 
+    d.update({z:i for i,z in enumerate(cl)})
     for i,l in enumerate(stru):
-        if l == '<':
-            stack.append(i)
-        if l == '>':
-            bdir.lol(stack.pop(),i)
+        if l in op:
+            stack[d[l]].append(i)
+        if l in cl:
+            bdir.lol(stack[d[l]].pop(),i)
+            
     bdir.fin()
-    unpaired= '._:-,()[]{}'
+    unpaired= '._:-,'
     #allowed = '._:-,()<>'
     mode = 'def'
+    blocktypes="()<>{}[]"
     blocks = []
+    
+    
     for i,l in enumerate(stru):
+        
+        # i am in default mode, 
+        # i encounter a bracket, mode=current  symbol
+        # else continue
         if mode == 'def':
-            if l == '<' or l == '>':
+            if l in blocktypes:
                 start = i 
                 mode = l
 
-        elif mode == '<':
-            if l != '<':
-                blocks.append((start,i-1))
-                if l in unpaired:
+        # i am in reading block mode, 
+        # the new element is not the block i was reading so far...
+        elif mode in blocktypes:
+            if l != mode: 
+                blocks.append((start,i-1)) # end block  and decide if a new block starts or we are in unpaired territory
+                if l in unpaired: 
                     mode = 'def'
-                if l == '>':
-                    start = i 
-                    mode  = l
-
-        elif mode == '>':
-            if l != '>':
-                blocks.append((start,i-1))
-                if l in unpaired:
-                    mode = 'def'
-                if l == '<':
+                if l in blocktypes:
                     start = i 
                     mode  = l
     
@@ -81,20 +87,23 @@ def getblocks(stru):
 
 def makerealblock(stru,blocks,bdir):
     lstru = len(stru)
+    op='<([{'
+    cl= '>)]}'
     for a,e in blocks: 
         blockset = set()
         surroundset = set()
         for x in range(a,e+1):
             blockset.add(x)
-        if stru[a] == "<":
+            
+        if stru[a] in op:
             other_a = bdir.f[a]
             other_e = bdir.f[e]
             
-        elif stru[a] == ">":
+        elif stru[a] in cl:
             other_a = bdir.b[a]
             other_e = bdir.b[e]
         else:
-            print ("make real block failed horribly")
+            print ("make real block failed horribly:",stru,blocks,bdir,a,e)
 
         for x in range(a-5,a):
             if x >= 0:
@@ -121,7 +130,7 @@ class alignment:
         self.stems=stems
     
 def makevec(name, ali, stru, cov):
-    stems, blocks,con = getblocks(stru)
+    stems, blocks,con = getblocks(stru) # stems are all the indices, and blocks are start-end tupples
     if len(blocks) == 0:
         print ("no blocks:", name)
     ali = alignment(ali,stru,cov,con,blocks,name,stems)
@@ -131,7 +140,7 @@ def makevec(name, ali, stru, cov):
                         feat.cov_sloppycov_disturbance_instem(ali),
                         feat.stemconservation(ali), 
                         feat.percstem(ali), 
-                        feat.stemlength(ali)]
+                        feat.stemlength(ali), feat.blocktype(ali)]
    
     #print (block)
     r = {a:b for c in block for a,b in c.items()}

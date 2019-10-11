@@ -1,4 +1,5 @@
 import numpy as np
+from collections import defaultdict
 import traceback as tb 
 
 def cons_targets(pos,ali):
@@ -141,6 +142,21 @@ def checov(ali, pos, con, cov):
                 
     return loss/covn
 
+def blocktype(ali):
+    '''we want features like: num of <-blocks: 10'''
+    op='<([{'
+    cl='>)]}'
+    d={z:i for i,z in enumerate(op)} 
+    d.update({z:i for i,z in enumerate(cl)})
+    
+    res = defaultdict(int)
+    for a,e in ali.blocks: 
+        n = ali.stru[a]
+        res[d[n]]+=1
+        
+    return { "number of %s blocks" % op[n]:res.get(d[op[n]],0) for n in range(len(op)) }
+        
+    
 def consblub(hbonds2,aliX,ali1,ali2,stemupdown):
     xcons , xconsnuc = cons_targets_rmgaps(hbonds2,aliX)
     x1cons , x1consnuc = cons_targets_rmgaps(hbonds2,ali1)
