@@ -4,10 +4,45 @@ import os
 import feat 
 import numpy as np
 
-def start(st,text):
-    return st[:len(text)]==text
 
+
+
+
+
+class bidir:
+    def __init__(self, stru):
+        self.f ={}
+        self.b ={}
+        stack=defaultdict(list)
+        op='<([{'
+        cl='>)]}'
+        d={z:i for i,z in enumerate(op)} 
+        d.update({z:i for i,z in enumerate(cl)})
+        for i,l in enumerate(stru):
+            if l in op:
+                stack[d[l]].append(i)
+            if l in cl:
+                self.lol(stack[d[l]].pop(),i)
+        self.fin()   
+        
+    def lol(self,a,b):
+        self.f[a]=b
+        self.b[b]=a
+        
+    def fin(self):
+        self.both = dict(self.f)
+        self.both.update(self.b)
+
+    
+
+############
+# parse a file
+#############
+        
 def readfile(fname="asd.sto"):
+    def start(st,text):
+        return st[:len(text)]==text
+
     alignment=[]
     for line in open(fname,'r').readlines():
         if start(line,"#=GC SS_cons"):
@@ -25,43 +60,141 @@ def readfile(fname="asd.sto"):
     alignment = np.array([list(a) for a in alignment])
     return fname, alignment, stru, cov 
 
-class bidir:
-    def __init__(self):
-        self.f ={}
-        self.b ={}
-    def lol(self,a,b):
-        self.f[a]=b
-        self.b[b]=a
-    def fin(self):
-        self.both = dict(self.f)
-        self.both.update(self.b)
+
+################
+# vary the parsed alignment files
+################
+
+def weirdo_detection(ali):
+    height, length = ali.shape
+    points = [0]*height
+    for a in range(length): # for every possition 
+        items = ali[:,a]
+        dots = (items == '.').sum()
+        notdot = height - dots
+        if dots > notdot: # dots are the norm 
+            for i,e in enumerate(items):
+                if e != '.':
+                    points[i]+=1
+        if notdot > dots: # not dots are the norm 
+            for i,e in enumerate(items):
+                if e == '.':  # if you have a dot you get a minus point
+                    points[i]+=1
+        else: # same number
+            pass
+    return np.argsort(points)
+
+
+def structurecheck(ali,stru,basepairs):
+    '''return 
+        1. astructure that is possible when considering the altered aligment
+        2. alignments
+    '''
+    stru2=[]
+    stru = list(stru)
+    z= list(range(len(stru)))
+    z.reverse()
+    aliindices=[]
+    for i in z:
+        a = ali[:,i]
+        s= stru[i]
+        if all(a=='.'): # no nucleotides 
+            aliindices=append(False) # mark column for deletion 
+            if i in basepairs.b: stru[basepairs.b[i]] = '.' # if there is a corresponding bracket, delete that also
+            continue
+        aliindices.append(True)
+        if s not in  ")>]}": #  no h-bonds,  keep letter
+            stru2.append(s)
+        else:  # ok so there is a closing bracket, so we need to decide what to do 
+            other = basepairs.b[i]
+            b = ali[:,other]
+            for x,z in zip(a,b):
+                x,z  = x,z if x<z else z,x
+                if (x=='A' and z =='U') or (x=="C" and z =='G'):
+                    # all is good
+                    stru2.append(s)
+                    break
+            else: # structure broken
+                stru2.append('.')
+                stru[basepairs.b[i]] = '.'
+    aliindices.reverse()
+    stru2.reverse()        
+    return ali[:,aliindices], ''.join(stru2)
+            
+def rm_small_stems(stru):
+    stru = list(stru)
+    basepairs = bidir(stru)
+    last_char = 0
+    state = 0 
+    bracket = "{([<>])}"
+    for i in range(len(stru)): 
+        e = stru[i]
+        if e == last_char:
+            state += 1
+        else:
+            if last_char in bracket and state < 3: 
+                if stru[i-1]==last_char:
+                    stru[i-1]='.'
+                    stru[basepairs.both[i-1]]='.'
+                if stru[i-2]==last_char:
+                    stru[i-2]='.'
+                    stru[basepairs.both[i-2]]='.'
+            state = 0
+        last_char = e 
+    return ''.join(stru) 
+    
+def vary_alignments(fname,ali,stru,cov):
+    w = weirdo_detection(ali)
+    
+    alignments = []
+    ali.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-max(1,int(ali.shape[0]/3)):]]] )
+    ali.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-1:]]])
+    ali.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-2:]]])
+
+    # for each make a new stru-line 
+    structures = [stru]
+    alis = [ali]
+    basepairs = bidir(stru)
+    
+    for ali in alignments:
+        nuali,nustru = structurecheck(ali,stru,basepairs)
+        alis.append(nuali)
+        structures.append(nustru)
+        
+    # then make variations where i am ignoring small stacks
+    PASLKDJALKSJDLKAJSDL
+    
+
+    
+    
+    
+#############################
+#
+#############################
+
+class alignment:
+    def __init__(self,ali,stru,cov,con,blocks,name, stems):
+        self.ali=ali
+        self.structure = stru
+        self.covariance=cov
+        self.basepairs = con 
+        self.blockstartend =blocks
+        self.name = name
+        self.blockmask = stems[0]
+        self.flankmask = stems[1]
+
+
 
 def getblocks(stru):
     # shoud return a list of (start,stop)
-    
     # get start/end 
-    stack=defaultdict(list)
-    bdir = bidir()
-    op='<([{'
-    cl='>)]}'
-    d={z:i for i,z in enumerate(op)} 
-    d.update({z:i for i,z in enumerate(cl)})
-    for i,l in enumerate(stru):
-        if l in op:
-            stack[d[l]].append(i)
-        if l in cl:
-            bdir.lol(stack[d[l]].pop(),i)
-            
-    bdir.fin()
+    bdir=bidir(stru)
     unpaired= '._:-,'
     #allowed = '._:-,()<>'
     mode = 'def'
     blocktypes="()<>{}[]"
     blocks = []
-    
-    
     for i,l in enumerate(stru):
-        
         # i am in default mode, 
         # i encounter a bracket, mode=current  symbol
         # else continue
@@ -69,7 +202,6 @@ def getblocks(stru):
             if l in blocktypes:
                 start = i 
                 mode = l
-
         # i am in reading block mode, 
         # the new element is not the block i was reading so far...
         elif mode in blocktypes:
@@ -80,10 +212,15 @@ def getblocks(stru):
                 if l in blocktypes:
                     start = i 
                     mode  = l
+    block,stem = list(zip(*[x for x in makerealblock(stru, blocks,bdir)]))
+    def setify(x):
+        s = set()
+        for li in x:
+            for e in li:
+                s.add(e)
+        return s
     
-    realblocks = [x for x in makerealblock(stru, blocks,bdir)]
-    
-    return realblocks, blocks, bdir
+    return (setify(block),setify(stem)), blocks, bdir
 
 def makerealblock(stru,blocks,bdir):
     lstru = len(stru)
@@ -119,17 +256,10 @@ def makerealblock(stru,blocks,bdir):
                 surroundset.add(x)
         yield  blockset,surroundset
 
-class alignment:
-    def __init__(self,ali,stru,cov,con,blocks,name, stems):
-        self.ali=ali
-        self.stru = stru
-        self.cov=cov
-        self.con = con 
-        self.blocks=blocks
-        self.name= name
-        self.stems=stems
+
     
-def makevec(name, ali, stru, cov):
+    
+def ali_to_dict(name, ali, stru, cov):
     stems, blocks,con = getblocks(stru) # stems are all the indices, and blocks are start-end tupples
     if len(blocks) == 0:
         print ("no blocks:", name)
@@ -147,13 +277,23 @@ def makevec(name, ali, stru, cov):
     r['name'] = name
     return r 
 
+
+
 def fnames_to_vec(fnames, getall=False):
     for f in fnames:
         _,a,b,c = readfile(f)
         if a.shape[0]>2 or getall:
-            yield  makevec(_,a,b,c)
+            yield  ali_to_dict(_,a,b,c)
 
+            
+            
+            
+        
 def loaddata(path, numneg = 10000, pos='both',getall=False, seed=None):
+    
+    ##############
+    # get relevant file names
+    ##############
     pos1 = [ "%s/pos/%s" %(path,f) for f in  os.listdir("%s/pos" % path )]  
     pos2 = [ "%s/pos2/%s" %(path,f) for f in  os.listdir("%s/pos2" % path )] 
     if pos == 'both':
@@ -163,7 +303,6 @@ def loaddata(path, numneg = 10000, pos='both',getall=False, seed=None):
     else:
         pos= pos2
         
-    # NEGATIVES:
     if seed:
         random.seed()
     negfnames =   list(os.listdir("%s/neg" % path ))
@@ -171,11 +310,24 @@ def loaddata(path, numneg = 10000, pos='both',getall=False, seed=None):
     print(negfnames[:5])
     neg = [ "%s/neg/%s" %(path,f) for f in  negfnames[:numneg]] 
 
+    
+    ####################
+    # make ali objects 
+    ####################
+    
+    
+    ###################
+    # vary the ali objects 
+    ###################
+    
+    
+    ###################
+    # extract the features and turn into dictionary 
+    ###################
+    
     pos = list(fnames_to_vec(pos,getall))
     neg = list(fnames_to_vec(neg,getall))
     
     return pos, neg
-    #data = np.array(pos+neg)
-    #return data ,[1]*len(pos)+[0]*len(neg)
 
    
