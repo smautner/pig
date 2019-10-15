@@ -10,7 +10,6 @@ def cons_targets(pos,ali):
         R = (a=='G').sum()+(a=='A').sum()
         Y = (a=='C').sum()+(a=='U').sum()
         d = (a=='.').sum()
-
         if R < Y:
             R = Y
         if d > R:
@@ -47,6 +46,8 @@ def cons_targets_nuc(pos, ali):
         print (pos)
         tb.print_stack()
     return r 
+
+
 
 def conservation(ali):
     # account for cov or not
@@ -99,8 +100,6 @@ def get_sloppy(pos, ali):
         
         
 
-            
-
 def checov(ali, pos, con, cov):
     # chhecking covariance manually, this is necessary after we remove the worst hit line 
     covn = cov.count("2")*2
@@ -124,6 +123,8 @@ def checov(ali, pos, con, cov):
                 print ("cov check: ali p basepairs.both", ali, p, con.both )
                 
     return loss/covn
+            
+
 
 def blocktype(ali):
     '''we want features like: num of <-blocks: 10'''
@@ -287,3 +288,18 @@ def cons_stem(stacks,ali):
 
 def beststem(ali):
     pass
+
+
+
+
+
+def getfeatures(ali):
+    d={}
+    
+    d.update()
+    #block =  [feat.conservation(ali),
+    #                    feat.cov_sloppycov_disturbance_instem(ali),
+    #                    feat.stemconservation(ali), 
+    #                    feat.percstem(ali), 
+    #                    feat.stemlength(ali), feat.blocktype(ali)]
+   
