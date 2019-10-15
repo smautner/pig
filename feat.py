@@ -131,13 +131,13 @@ def lencount(ali):
     }
 
 def stemcov(ali):
-    return {f"{ali.name} stem covariance": sum(ali.blockmask)/sum([a=='2' for a in ali.covariance]) }
+    return {f"{ali.name} stem covariance": sum([a=='2' for a in ali.covariance])/len(ali.blockmask)  }
  
 ########
 # sloppy
 ###########
 
-def get_sloppy(pos, ali):
+def get_sloppy( ali):
     sloppy=0
     sloppy_all = 0
     ok = 0
@@ -153,7 +153,8 @@ def get_sloppy(pos, ali):
                     ok +=1
         return  {
             f"{ali.name} sloppy gu":sloppy/(sloppy+ok+sloppy_all), 
-            f"{ali.name} sloppy all ":(sloppy_all+sloppy)/(sloppy+ok+sloppy_all)  
+            f"{ali.name} sloppy all ":(sloppy_all+sloppy)/(sloppy+ok+sloppy_all)
+        }
     except: 
         print ("getsloppy: p con.both ali.name, ali.blocks", p, ali.basepairs.both, ali.name,ali.blockstartend )
 

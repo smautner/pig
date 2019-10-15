@@ -41,6 +41,7 @@ class Alignment:
         self.ali=ali
         self.structure = stru
         self.name = name
+        self.getblocks(stru)
         self.covariance=self.covariance()
 
     def getblocks(self,stru):
@@ -78,8 +79,8 @@ class Alignment:
                     s.add(e)
             return s
 
-        self.blockmask=setify(block)
-        self.flankmask = setify(stem)
+        self.blockmask=list(setify(block))
+        self.flankmask = list(setify(stem))
         self.blockstartend=blocks
 
     def makerealblock( self, stru,blocks,bdir):
@@ -120,27 +121,27 @@ class Alignment:
     def covariance(self):
         # return covariance string 
         
-        cov = "0"*len(self.structure)
+        cov = ["0"]*len(self.structure)
         
         for Open,Close in self.basepairs.f.items():
                 A=-1
                 B=-1 
                 try:
-                    for a,b in zip(ali[:,Open], ali[:,Close]):
+                    for a,b in zip(self.ali[:,Open], self.ali[:,Close]):
                         if a != '.' and b!='.':
                             if A==-1:
                                 A=a
                                 B=b
-                            if a!=A and b!=B: # when we find a single alternative, all is good
+                            elif a!=A and b!=B: # when we find a single alternative, all is good
                                 cov[Open]='2'
                                 cov[Close]='2'
                                 break
                     else:
                         pass  # all are the sam
-                except: 
-                    print ("cov check: ali p basepairs.both", ali, p, con.both )
+                except Exception as ex: 
+                    print ("covcheckproblem:", self.ali[:,Open],self.ali[:,Close],ex)
 
-        return cov
+        return ''.join(cov)
     
 
 ############
@@ -207,7 +208,7 @@ def structurecheck(ali,stru,basepairs):
         a = ali[:,i]
         s= stru[i]
         if all(a=='.'): # no nucleotides 
-            aliindices=append(False) # mark column for deletion 
+            aliindices.append(False) # mark column for deletion 
             if i in basepairs.b: stru[basepairs.b[i]] = '.' # if there is a corresponding bracket, delete that also
             continue
         aliindices.append(True)
@@ -217,7 +218,7 @@ def structurecheck(ali,stru,basepairs):
             other = basepairs.b[i]
             b = ali[:,other]
             for x,z in zip(a,b):
-                x,z  = x,z if x<z else z,x
+                x,z  = (x,z) if x<z else (z,x)
                 if (x=='A' and z =='U') or (x=="C" and z =='G'):
                     # all is good
                     stru2.append(s)
@@ -232,7 +233,7 @@ def structurecheck(ali,stru,basepairs):
 def rm_small_stems(stru):
     stru = list(stru)
     basepairs = bidir(stru)
-    last_char = 0
+    last_char = ''
     state = 0 
     bracket = "{([<>])}"
     for i in range(len(stru)): 
@@ -252,12 +253,12 @@ def rm_small_stems(stru):
     return ''.join(stru) 
     
 def vary_alignment(fname,ali,stru,cov):
-    w = weirdo_detection(ali)
+    weird = weirdo_detection(ali)
     
     alignments = []
-    ali.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-max(1,int(ali.shape[0]/3)):]]] )
-    ali.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-1:]]])
-    ali.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-2:]]])
+    alignments.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-max(1,int(ali.shape[0]/3)):]]] )
+    alignments.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-1:]]])
+    alignments.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-2:]]])
 
     # for each make a new stru-line 
     structures = [stru]
@@ -310,7 +311,7 @@ def fnames_to_dict(fnames, getall=False):
         yield ali_to_dict(f,alignments)
 
         
-def loaddata(path, numneg = 10000, pos='both',getall=False, seed=None):
+def loaddata(path, numneg = 10000, pos='both',getall="not implemented", seed=None):
     
     ##############
     # get relevant file names
@@ -332,23 +333,12 @@ def loaddata(path, numneg = 10000, pos='both',getall=False, seed=None):
     neg = [ "%s/neg/%s" %(path,f) for f in  negfnames[:numneg]] 
 
     
-    ####################
-    # make ali objects 
-    ####################
-    
-    
-    ###################
-    # vary the ali objects 
-    ###################
-    
-    
-    ###################
-    # extract the features and turn into dictionary 
-    ###################
-    
+
     pos = list(fnames_to_dict(pos,getall))
     neg = list(fnames_to_dict(neg,getall))
     
     return pos, neg
 
    
+
+    
