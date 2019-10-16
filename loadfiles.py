@@ -37,10 +37,11 @@ class bidir:
         
 
 class Alignment:
-    def __init__(self,ali,stru,name):
+    def __init__(self,fname, ali,stru,name):
         self.ali=ali
         self.structure = stru
         self.name = name
+        self.fname = fname
         self.getblocks(stru)
         self.covariance=self.covariance()
 
@@ -71,7 +72,10 @@ class Alignment:
                     if l in blocktypes:
                         start = i 
                         mode  = l
-        block,stem = list(zip(*[x for x in self.makerealblock(stru, blocks,self.basepairs)]))
+        
+        
+        sets = self.makerealblock(stru, blocks,self.basepairs)
+        block,stem = list(zip(*sets))
         def setify(x):
             s = set()
             for li in x:
@@ -116,6 +120,9 @@ class Alignment:
                 if x <lstru:
                     surroundset.add(x)
             yield  blockset,surroundset
+        if not blocks:
+            yield set(),set()
+            
 
 
     def covariance(self):
@@ -307,7 +314,7 @@ def fnames_to_dict(fnames, getall=False):
     for f in fnames:
         parsed = readfile(f)
         alignments = vary_alignment(*parsed)
-        alignments = [Alignment(*a) for a in alignments]
+        alignments = [Alignment(f, *a) for a in alignments]
         yield ali_to_dict(f,alignments)
 
         
