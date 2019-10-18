@@ -44,6 +44,9 @@ class Alignment:
         self.fname = fname
         self.getblocks(stru)
         self.covariance=self.covariance()
+        
+        def __str__(self):
+            return f"Alignment: {ali.name} {ali.fname}"
 
     def getblocks(self,stru):
         # shoud return a list of (start,stop)
@@ -283,26 +286,31 @@ def vary_alignment(fname,ali,stru,cov):
     
     return [ (ali,st,text) for ali,st,text in zip(alis+alis,
                                                   structures+alternative_str,
-                                                  [a+b for a in ['','noSmallBlocks'] for b in ['ali','Xali','1ali','2ali']])]
+                                                  [a+b for a in ['allblock','delblock'] for b in ['ali','Xali','1ali','2ali']])]
 
     
     
 def ali_to_dict(name, alignments):
-    
-    
     #block =  [feat.conservation(ali),
     #                    feat.cov_sloppycov_disturbance_instem(ali),
     #                    feat.stemconservation(ali), 
     #                    feat.percstem(ali), 
     #                    feat.stemlength(ali), feat.blocktype(ali)]
-   
 
     #print (block)
-    r = {a:b for c in [feat.getfeatures(A) for A in alignments] for a,b in c.items()}
+    list_of_dict = [feat.getfeatures(A) for A in alignments]
+    master = list_of_dict[0]
+    ld2= [master]
+    for d,ali in zip(list_of_dict[1:],alignments[1:]):
+        #print (ali.name)
+        ld2.append({  ali.name+k:v  for k,v in d.items()}) 
+        #ld2.append({  "diff %s %s" % (ali.name, k): v-d[k]   for k,v in master.items()}) 
+    
     
     ######
     # add the differences to the original for every variation 
     ######
+    r = {a:b for c in ld2 for a,b in c.items()}
     
     ####
     # add a file name
@@ -313,15 +321,23 @@ def ali_to_dict(name, alignments):
 def fnames_to_dict(fnames, getall=False):
     for f in fnames:
         parsed = readfile(f)
+        if parsed[1].shape[0] < 3:
+            continue
         alignments = vary_alignment(*parsed)
-        alignments = [Alignment(f, *a) for a in alignments]
-        yield ali_to_dict(f,alignments)
+        #print ('lena',len(alignments)) # 8
+        alignments2 = [Alignment(f, *a) for a in alignments]
+        #print ('lenb',len(alignments2)) # 8 ok
+        z=  ali_to_dict(f,alignments2)
+        #print ('lenc',len(z)) # 64 to few
+        yield z
 
         
 def loaddata(path, numneg = 10000, pos='both',getall="not implemented", seed=None):
     
+    if seed:
+        random.seed()
     ##############
-    # get relevant file names
+    # positives
     ##############
     pos1 = [ "%s/pos/%s" %(path,f) for f in  os.listdir("%s/pos" % path )]  
     pos2 = [ "%s/pos2/%s" %(path,f) for f in  os.listdir("%s/pos2" % path )] 
@@ -332,13 +348,21 @@ def loaddata(path, numneg = 10000, pos='both',getall="not implemented", seed=Non
     else:
         pos= pos2
         
-    if seed:
-        random.seed()
+        
+    ###########
+    # negatives
+    ##############
     negfnames =   list(os.listdir("%s/neg" % path ))
     random.shuffle(negfnames)
     print(negfnames[:5])
     neg = [ "%s/neg/%s" %(path,f) for f in  negfnames[:numneg]] 
 
+    
+    if len(pos) > numneg:
+        random.shuffle(pos)
+        pos=pos[:numneg]
+        print ("loadfile.py: removing some positives")
+    
     
 
     pos = list(fnames_to_dict(pos,getall))
