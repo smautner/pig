@@ -1,4 +1,6 @@
+import sys
 from loadfiles import loaddata
+import dill
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,6 +27,7 @@ from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier
 from sklearn.model_selection import RandomizedSearchCV as RSCV
 import randomsearch as  rs
 
+import basics as b
 
 
 
@@ -42,7 +45,7 @@ def makeXY(featurelist):
     return X,y,df
 
 
-debug=True
+debug=False
 p,n = loaddata("/home/pig/data",numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed = 9)
 allfeatures = list(p[1].keys()) # the filenames are the last one and we dont need that (for now)
 allfeatures.remove("name")
@@ -73,44 +76,49 @@ def lasso(X,y,alpha=.06):
     mod.fit(X_train,y_train)
     return [b for a,b in zip(mod.coef_, df.columns) if a!=0]
 
-
+def runner(stuff):
+    X,y,s = stuff
+    f= dill.loads(s)
+    return f(X,y)
 
 def getfeaturelist(): 
-    reli=relief()
-    reli.fit(X,y)
 
-    def relief(X,y,param):
+    def myrelief(X,y,param):
         #https://github.com/EpistasisLab/scikit-rebate
         return [ df.columns[top] for top in reli.top_features_[:param]]
 
+    reli=relief()
+    reli.fit(X,y)
 
 
     selectors = [lambda x,y: lasso(X,y,alpha=.05),  
                  lambda x,y: lasso(X,y,alpha=.01),
-                 lambda x,y: relief(X,y,40),
-                 lambda x,y: relief(X,y,60),
-                 lambda x,y: relief(X,y,80)
+                 lambda x,y: myrelief(X,y,40),
+                 lambda x,y: myrelief(X,y,60),
+                 lambda x,y: myrelief(X,y,80)
                                                    ]
     #featurelists =  [ selector(X,y) for selector in selectors]
 
-    featurelist = b.mpmap_prog( lambda x: x(X,y), selectors,chunksize=1,poolsize=5)  
+    featurelists = b.mpmap_prog( runner,  [( X,y,dill.dumps(s) )for s in selectors],chunksize=1,poolsize=5)  
     featurelists.append(df.columns)
 
-    ba.dumpfile(featurelist, "ftlist")
+    b.dumpfile(featurelists, "ftlist")
     
 
-getfeaturelist()
 
 
 
 
 
 
-'''
 
-for FEATURELIST in featurelists:  # loop over all the selectors 
-    
-    # make some data 
+def doajob(idd):
+    ftlist  = b.loadfile("ftlist")
+    tasks = [(clf,param,ftli)for clf,param in zip(rs.classifiers,rs.param_lists) for ftli in ftlist]
+
+    clf, param,FEATURELIST= tasks[idd]
+
+
     X,y,df = makeXY(FEATURELIST)
     X = StandardScaler().fit_transform(X)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=testsize, random_state=randseed) # USE THE SAME SEED AS BELOW! 
@@ -130,9 +138,21 @@ for FEATURELIST in featurelists:  # loop over all the selectors
                     error_score=np.nan,
                     return_train_score=False)
         searcher.fit(X_train, y_train)
+        return searcher 
+    
+    searcher = score(clf,param)
         
-        print(searcher.best_params_)
-        return scorer(searcher.best_estimator_,X_test,np.array(y_test))
+    b.dumpfile( (searcher.best_params_, scorer(searcher.best_estimator_,X_test,np.array(y_test))) , "res%d" % idd)
         
-    res.append( [score(clf,param) for clf,param in zip(rs.classifiers,rs.param_lists)] )
-'''
+
+if __name__ == "__main__":
+    if sys.argv[1] == 'report':
+        pass
+    if sys.argv[1] == 'makeftlist':
+        getfeaturelist()
+
+    else:
+        idd = int(sys.argv[1])
+        doajob(idd)
+
+
