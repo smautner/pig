@@ -26,10 +26,8 @@ from skrebate import ReliefF as relief
 from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier
 from sklearn.model_selection import RandomizedSearchCV as RSCV
 import randomsearch as  rs
-
 import basics as b
-
-
+import time 
 
 def clean(di,oklist):
     for k in list(di.keys()):
@@ -46,7 +44,14 @@ def makeXY(featurelist):
 
 
 debug=False
-p,n = loaddata("/home/pig/data",numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed = 9)
+
+try:
+    p,n = b.loadfile("pn")
+except: 
+    p,n = loaddata("/scratch/bi01/mautner/GRAPHLEARN/data",numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed = 9)
+    b.dumpfile((p,n), 'pn') 
+
+
 allfeatures = list(p[1].keys()) # the filenames are the last one and we dont need that (for now)
 allfeatures.remove("name")
 X,y,df = makeXY(allfeatures)
@@ -105,13 +110,6 @@ def getfeaturelist():
     b.dumpfile(featurelists, "ftlist")
     
 
-
-
-
-
-
-
-
 def doajob(idd):
     ftlist  = b.loadfile("ftlist")
     tasks = [(clf,param,ftli)for clf,param in zip(rs.classifiers,rs.param_lists) for ftli in ftlist]
@@ -128,10 +126,10 @@ def doajob(idd):
                     param, 
                     n_iter=50 if not debug else 5, 
                     scoring=None,
-                    n_jobs=4,
+                    n_jobs=10,
                     iid=False,
                     #fefit=True,
-                    cv=4,
+                    cv=5,
                     verbose=0,
                     pre_dispatch="2*n_jobs",
                     random_state=None,
@@ -139,10 +137,11 @@ def doajob(idd):
                     return_train_score=False)
         searcher.fit(X_train, y_train)
         return searcher 
-    
+    start=time.time()
     searcher = score(clf,param)
         
-    b.dumpfile( (searcher.best_params_, scorer(searcher.best_estimator_,X_test,np.array(y_test))) , "res%d" % idd)
+    #b.dumpfile( (searcher.best_params_, scorer(searcher.best_estimator_,X_test,np.array(y_test))) , "res%d" % idd)
+    print( searcher.best_params_, scorer(searcher.best_estimator_,X_test,np.array(y_test)) , idd, time.time()-start)
         
 
 if __name__ == "__main__":
@@ -150,9 +149,9 @@ if __name__ == "__main__":
         pass
     if sys.argv[1] == 'makeftlist':
         getfeaturelist()
-
     else:
-        idd = int(sys.argv[1])
+        idd = int(sys.argv[1])-1
         doajob(idd)
+
 
 
