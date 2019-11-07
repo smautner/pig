@@ -126,7 +126,7 @@ def doajob(idd):
                     param, 
                     n_iter=100 if not debug else 5, 
                     scoring=None,
-                    n_jobs=10,
+                    n_jobs=24,
                     iid=False,
                     #fefit=True,
                     cv=5,
