@@ -124,7 +124,7 @@ def doajob(idd):
     def score(clf,param):
         searcher = RSCV(clf, 
                     param, 
-                    n_iter=50 if not debug else 5, 
+                    n_iter=100 if not debug else 5, 
                     scoring=None,
                     n_jobs=10,
                     iid=False,
