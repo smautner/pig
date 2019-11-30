@@ -110,10 +110,13 @@ def getfeaturelist():
     b.dumpfile(featurelists, "ftlist")
     
 
-def doajob(idd):
+def gettasks():
     ftlist  = b.loadfile("ftlist")
     tasks = [(clf,param,ftli)for clf,param in zip(rs.classifiers,rs.param_lists) for ftli in ftlist]
+    return tasks
 
+def doajob(idd):
+    tasks = gettasks()
     clf, param,FEATURELIST= tasks[idd]
 
 
@@ -144,9 +147,27 @@ def doajob(idd):
     print( searcher.best_params_, scorer(searcher.best_estimator_,X_test,np.array(y_test)) , idd, time.time()-start)
         
 
+def readresult(fname):
+    a= open(fname,"r").read()
+    dic,numerics = a.split("}")
+    params = eval(dic+"}")
+    perf,jid,time = [float(a) for a in numerics.split()]
+    return perf, dic , jid , time
+    
+
+
 if __name__ == "__main__":
     if sys.argv[1] == 'report':
-        pass
+        print("reporting")
+        arrayjobid = sys.argv[2]
+        jobstr= f"/home/mautner/JOBZ/pig_o/{arrayjobid}.o_%d"
+        tasks = len(gettasks())
+        print(tasks)
+        files = [jobstr %i  for i in range(1,tasks)]
+        allresults = [readresult(f) for f in files]
+        # TODO: split results by feature set used.. make a table..
+        
+
     if sys.argv[1] == 'makeftlist':
         getfeaturelist()
     else:
