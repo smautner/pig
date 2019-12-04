@@ -17,6 +17,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+from collections import defaultdict
 import pandas as pd
 import copy
 from sklearn.feature_selection import RFECV as rec
@@ -115,6 +116,11 @@ def gettasks():
     tasks = [(clf,param,ftli)for clf,param in zip(rs.classifiers,rs.param_lists) for ftli in ftlist]
     return tasks
 
+def gettasks_annotated():
+    ftlist  = b.loadfile("ftlist")
+    tasks = [(clf,param,ftli, clfname,ftid)for clf,param,clfname in zip(rs.classifiers,rs.param_lists, rs.clfnames) for ftid,ftli in enumerate(ftlist)] 
+    return tasks
+
 def doajob(idd):
     tasks = gettasks()
     clf, param,FEATURELIST= tasks[idd]
@@ -161,14 +167,32 @@ if __name__ == "__main__":
         print("reporting")
         arrayjobid = sys.argv[2]
         jobstr= f"/home/mautner/JOBZ/pig_o/{arrayjobid}.o_%d"
-        tasks = len(gettasks())
-        print(tasks)
-        files = [jobstr %i  for i in range(1,tasks)]
+        tasks = gettasks_annotated()
+        tasksnum = len(tasks)
+        files = [jobstr %i  for i in range(1,tasksnum+1)]
         allresults = [readresult(f) for f in files]
+        
+        res = defaultdict(dict)
+        for task, result in zip(tasks,allresults):
+            res[task[-1]][task[-2]]= ("%.2f" % result[0], "%.1f"% result[-1])
+
+        print(pd.DataFrame(res))
+
+
+
+        res= [ (result[0],task[-2],result[1]) for task, result in zip(tasks,allresults)] 
+        res.sort(reverse=True)
+        for a,b,c in res[:3]:
+            print (a,b,c)
+
+
+
+        
+
         # TODO: split results by feature set used.. make a table..
         
 
-    if sys.argv[1] == 'makeftlist':
+    elif sys.argv[1] == 'makeftlist':
         getfeaturelist()
     else:
         idd = int(sys.argv[1])-1
