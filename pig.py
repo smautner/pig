@@ -133,8 +133,8 @@ def doajob(idd):
     def score(clf,param):
         searcher = RSCV(clf, 
                     param, 
-                    n_iter=100 if not debug else 5, 
-                    scoring=None,
+                    n_iter=200 if not debug else 5, 
+                    scoring='f1',
                     n_jobs=24,
                     iid=False,
                     #fefit=True,
@@ -150,15 +150,15 @@ def doajob(idd):
     searcher = score(clf,param)
         
     #b.dumpfile( (searcher.best_params_, scorer(searcher.best_estimator_,X_test,np.array(y_test))) , "res%d" % idd)
-    print( searcher.best_params_, scorer(searcher.best_estimator_,X_test,np.array(y_test)) , idd, time.time()-start)
+    print( searcher.best_params_,searcher.best_score_, scorer(searcher.best_estimator_,X_test,np.array(y_test)) , idd, time.time()-start)
         
 
 def readresult(fname):
     a= open(fname,"r").read()
     dic,numerics = a.split("}")
     params = eval(dic+"}")
-    perf,jid,time = [float(a) for a in numerics.split()]
-    return perf, dic , jid , time
+    f1,perf,jid,time = [float(a) for a in numerics.split()]
+    return f1,perf, dic , jid , time
     
 
 
@@ -174,24 +174,23 @@ if __name__ == "__main__":
         
         res = defaultdict(dict)
         for task, result in zip(tasks,allresults):
-            res[task[-1]][task[-2]]= ("%.2f" % result[0], "%.1f"% result[-1])
+            res[task[-1]][task[-2]]= ("%.2f" % result[0],"%.2f" % result[1], "%.1f"% result[-1])
 
         print(pd.DataFrame(res))
 
 
 
-        res= [ (result[0],task[-2],result[1]) for task, result in zip(tasks,allresults)] 
+        res= [ (result[1],task[-2],result[2]) for task, result in zip(tasks,allresults)] 
         res.sort(reverse=True)
         for a,b,c in res[:3]:
             print (a,b,c)
 
-
-
-        
-
-        # TODO: split results by feature set used.. make a table..
-        
-
+    
+    elif sys.argv[1] == 'showft':
+        features = b.loadfile("ftlist")
+        ft= list(features[int(sys.argv[2])])
+        print(ft)
+        print("numft:",len(ft))
     elif sys.argv[1] == 'makeftlist':
         getfeaturelist()
     else:

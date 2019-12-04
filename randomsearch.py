@@ -16,7 +16,7 @@ from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier
 
 clfnames = [
 'kneighbors',
-'SVC',
+#'SVC',
 'TREE',
 'neuralnet',
 'random forest',
@@ -25,7 +25,7 @@ clfnames = [
 ]
 classifiers = [
     KNeighborsClassifier(),
-    SVC(),
+    #SVC(), 2 slow 
     DecisionTreeClassifier(),
     MLPClassifier(),
     #AdaBoostClassifier(),
@@ -44,20 +44,20 @@ param_lists = [{'algorithm': ['auto'], # kneighs
   'n_jobs': [None],
   'n_neighbors': [1,2,3,4,5,6,7,8,9,10],
   'weights': ['uniform','distance']},
- {'C': [10**x for x in range(-2,6)], # svc 
-  'cache_size': [200],
-  'class_weight': ['balanced'],
-  'coef0': [0.0],
-  'decision_function_shape': ['ovr'],
-  'degree': [2,3,4,5],
-  'gamma': ['auto_deprecated' ],
-  'kernel': ["linear", "poly", "rbf", "sigmoid" ],
-  'max_iter': [-1],
-  'probability': [False],
-  'random_state': [None],
-  'shrinking': [True],
-  'tol': [0.001],
-  'verbose': [False]},
+# {'C': [10**x for x in range(-2,6)], # svc 
+#  'cache_size': [200],
+#  'class_weight': ['balanced'],
+#  'coef0': [0.0],
+#  'decision_function_shape': ['ovr'],
+#  'degree': [2,3,4,5],
+#  'gamma': ['auto_deprecated' ],
+#  'kernel': ["linear", "poly", "rbf", "sigmoid" ],
+#  'max_iter': [-1],
+#  'probability': [False],
+#  'random_state': [None],
+#  'shrinking': [True],
+#  'tol': [0.001],
+#  'verbose': [False]},
  {'class_weight': [None], # decision tree classifier 
   'criterion': ['gini','entropy'],
   'max_depth': [None],
