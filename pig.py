@@ -1,4 +1,7 @@
 import sys
+
+
+from sklearn.metrics import  make_scorer
 from loadfiles import loaddata
 import dill
 import matplotlib.pyplot as plt
@@ -64,13 +67,16 @@ X,y,df = makeXY(allfeatures)
 #############
 
 X = StandardScaler().fit_transform(X)
-randseed = 42
+randseed = 41
 testsize=.3
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=testsize, random_state=randseed) # USE THE SAME SEED AS BELOW! 
 
 def myscore(y,yh):
-    tpr = sum([ i==j for i,j in zip(y,yh) if i==1  ])/np.count_nonzero(y==1)
-    tnr = sum([ i==j for i,j in zip(y,yh) if i==0  ])/np.count_nonzero(y==0)
+    
+    y1 = np.count_nonzero(y==1)
+    y0 = np.count_nonzero(y==0)
+    tpr = sum([ i==j for i,j in zip(y,yh) if i==1  ])/np.count_nonzero(y==1) if y1 else 0
+    tnr = sum([ i==j for i,j in zip(y,yh) if i==0  ])/np.count_nonzero(y==0) if y0 else 0
     return ((2*tnr)+tpr)/3
     
 def scorer(esti,X,y):
@@ -89,20 +95,33 @@ def runner(stuff):
 
 def getfeaturelist(): 
 
-    def myrelief(X,y,param):
+    def myrelief(X,y,param,reli):
         #https://github.com/EpistasisLab/scikit-rebate
         return [ df.columns[top] for top in reli.top_features_[:param]]
 
-    reli=relief()
+    reli=relief(n_jobs=-1, n_neighbors =50) # 10 is clearly worse than 100
+    reli2=relief(n_jobs=-1, n_neighbors =100)
     reli.fit(X,y)
+    reli2.fit(X,y)
 
 
-    selectors = [lambda x,y: lasso(X,y,alpha=.05),  
-                 lambda x,y: lasso(X,y,alpha=.01),
-                 lambda x,y: myrelief(X,y,40),
-                 lambda x,y: myrelief(X,y,60),
-                 lambda x,y: myrelief(X,y,80)
-                                                   ]
+    selectors = [lambda x,y: lasso(X,y,alpha=.004),  
+                 lambda x,y: lasso(X,y,alpha=.003),
+                 lambda x,y: lasso(X,y,alpha=.005),
+                 lambda x,y: lasso(X,y,alpha=.006),
+                 lambda x,y: lasso(X,y,alpha=.007),
+                 lambda x,y: lasso(X,y,alpha=.008),
+                 lambda x,y: lasso(X,y,alpha=.009),
+                 lambda x,y: myrelief(X,y,40,reli),
+                 lambda x,y: myrelief(X,y,50,reli),
+                 lambda x,y: myrelief(X,y,60,reli),
+                 lambda x,y: myrelief(X,y,70,reli),
+                 lambda x,y: myrelief(X,y,80,reli),
+                 lambda x,y: myrelief(X,y,40,reli2),
+                 lambda x,y: myrelief(X,y,50,reli2),
+                 lambda x,y: myrelief(X,y,60,reli2),
+                 lambda x,y: myrelief(X,y,70,reli2),
+                 lambda x,y: myrelief(X,y,80,reli2)]
     #featurelists =  [ selector(X,y) for selector in selectors]
 
     featurelists = b.mpmap_prog( runner,  [( X,y,dill.dumps(s) )for s in selectors],chunksize=1,poolsize=5)  
@@ -134,7 +153,7 @@ def doajob(idd):
         searcher = RSCV(clf, 
                     param, 
                     n_iter=200 if not debug else 5, 
-                    scoring='f1',
+                    scoring='f1', # using my own doesnt work.. why?
                     n_jobs=24,
                     iid=False,
                     #fefit=True,
@@ -142,6 +161,7 @@ def doajob(idd):
                     verbose=0,
                     pre_dispatch="2*n_jobs",
                     random_state=None,
+                    refit=True, # enables best_score_
                     error_score=np.nan,
                     return_train_score=False)
         searcher.fit(X_train, y_train)
@@ -169,12 +189,13 @@ if __name__ == "__main__":
         jobstr= f"/home/mautner/JOBZ/pig_o/{arrayjobid}.o_%d"
         tasks = gettasks_annotated()
         tasksnum = len(tasks)
+        print("number of tasks:", tasksnum)
         files = [jobstr %i  for i in range(1,tasksnum+1)]
         allresults = [readresult(f) for f in files]
         
         res = defaultdict(dict)
         for task, result in zip(tasks,allresults):
-            res[task[-1]][task[-2]]= ("%.2f" % result[0],"%.2f" % result[1], "%.1f"% result[-1])
+            res[task[-2]][task[-1]]= ("%.2f" % result[0],"%.2f" % result[1], "%.1f"% result[-1])
 
         print(pd.DataFrame(res))
 
@@ -186,6 +207,9 @@ if __name__ == "__main__":
             print (a,b,c)
 
     
+    elif sys.argv[1] == 'maxtask':
+        print(len( gettasks_annotated() )) # for use in qsub.. 
+
     elif sys.argv[1] == 'showft':
         features = b.loadfile("ftlist")
         ft= list(features[int(sys.argv[2])])

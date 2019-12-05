@@ -15,35 +15,36 @@ from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier
 
 
 clfnames = [
-'kneighbors',
+#'kneighbors',
 #'SVC',
-'TREE',
+#'TREE',
 'neuralnet',
-'random forest',
+#'random forest',
 'xtratrees',
 'gradientboosting'
 ]
 classifiers = [
-    KNeighborsClassifier(),
+    #KNeighborsClassifier(),
     #SVC(), 2 slow 
-    DecisionTreeClassifier(),
+    #DecisionTreeClassifier(),
     MLPClassifier(),
     #AdaBoostClassifier(),
     #GaussianNB(),
     #QuadraticDiscriminantAnalysis(),
-    RandomForestClassifier(),
+    #RandomForestClassifier(),
     ExtraTreesClassifier(),
     GradientBoostingClassifier()
     ]
 
 from scipy.stats import randint as rint
-param_lists = [{'algorithm': ['auto'], # kneighs
-  'leaf_size': [30], 
-  'metric': ['minkowski'],
-  'p': [.5,1,1.5,2,2.5,3],
-  'n_jobs': [None],
-  'n_neighbors': [1,2,3,4,5,6,7,8,9,10],
-  'weights': ['uniform','distance']},
+param_lists = [
+#  {'algorithm': ['auto'], # kneighs
+#  'leaf_size': [30], 
+#  'metric': ['minkowski'],
+#  'p': [.5,1,1.5,2,2.5,3],
+#  'n_jobs': [None],
+#  'n_neighbors': [1,2,3,4,5,6,7,8,9,10],
+#  'weights': ['uniform','distance']},
 # {'C': [10**x for x in range(-2,6)], # svc 
 #  'cache_size': [200],
 #  'class_weight': ['balanced'],
@@ -58,19 +59,19 @@ param_lists = [{'algorithm': ['auto'], # kneighs
 #  'shrinking': [True],
 #  'tol': [0.001],
 #  'verbose': [False]},
- {'class_weight': [None], # decision tree classifier 
-  'criterion': ['gini','entropy'],
-  'max_depth': [None],
-  'max_features': [None,'sqrt','log2'],
-  'max_leaf_nodes': [None],
-  'min_impurity_decrease': [0.0],
-  'min_impurity_split': [None],
-  'min_samples_leaf': [1],
-  'min_samples_split': [2],
-  'min_weight_fraction_leaf': [0.0],
-  'presort': [False],
-  'random_state': [None],
-  'splitter': ['best']},
+# {'class_weight': [None], # decision tree classifier 
+#  'criterion': ['gini','entropy'],
+#  'max_depth': [None],
+#  'max_features': [None,'sqrt','log2'],
+#  'max_leaf_nodes': [None],
+#  'min_impurity_decrease': [0.0],
+#  'min_impurity_split': [None],
+#  'min_samples_leaf': [1],
+#  'min_samples_split': [2],
+#  'min_weight_fraction_leaf': [0.0],
+#  'presort': [False],
+#  'random_state': [None],
+#  'splitter': ['best']},
  {'activation': ['relu','tanh','logistic','identity'], # MLP 
   'alpha': [0.0001,0.001,0.01,0.00001],
   'batch_size': ['auto'],
@@ -93,33 +94,33 @@ param_lists = [{'algorithm': ['auto'], # kneighs
   'validation_fraction': [0.1],
   'verbose': [False],
   'warm_start': [False]},
- #{'algorithm': ['SAMME.R'],# adaboost 
- # 'base_estimator': [None],
- # 'learning_rate': [1.0],
- # 'n_estimators': [50],
- # 'random_state': [None]},
- #{'priors': [None], 'var_smoothing': [1e-09]}, # bla
- #{'priors': [None], # bla
- # 'reg_param': [0.0],
- # 'store_covariance': [False],
- # 'tol': [0.0001]},
- {'bootstrap': [True,False],
-  'class_weight': ['balanced'],
-  'criterion': ['gini','entropy'],
-  'max_depth': [None],
-  'max_features': [None,'sqrt','log2'],
-  'max_leaf_nodes': [None],
-  'min_impurity_decrease': [0.0],
-  'min_impurity_split': [None],
-  'min_samples_leaf': [1],
-  'min_samples_split': [2],
-  'min_weight_fraction_leaf': [0.0],
-  'n_estimators': [20,50,100,150],
-  'n_jobs': [None],
-  'oob_score': [False,True],
-  'random_state': [None],
-  'verbose': [0],
-  'warm_start': [False]},
+#{'algorithm': ['SAMME.R'],# adaboost 
+# 'base_estimator': [None],
+# 'learning_rate': [1.0],
+# 'n_estimators': [50],
+# 'random_state': [None]},
+#{'priors': [None], 'var_smoothing': [1e-09]}, # bla
+#{'priors': [None], # bla
+# 'reg_param': [0.0],
+# 'store_covariance': [False],
+# 'tol': [0.0001]},
+# {'bootstrap': [True,False],
+#  'class_weight': ['balanced'],
+#  'criterion': ['gini','entropy'],
+#  'max_depth': [None],
+#  'max_features': [None,'sqrt','log2'],
+#  'max_leaf_nodes': [None],
+#  'min_impurity_decrease': [0.0],
+#  'min_impurity_split': [None],
+#  'min_samples_leaf': [1],
+#  'min_samples_split': [2],
+#  'min_weight_fraction_leaf': [0.0],
+#  'n_estimators': [20,50,100,150],
+#  'n_jobs': [None],
+#  'oob_score': [False,True],
+#  'random_state': [None],
+#  'verbose': [0],
+#  'warm_start': [False]},
  {'bootstrap': [False,True], # xtra trees 
   'class_weight': ['balanced'],
   'criterion': ['gini','entropy'],
