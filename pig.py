@@ -45,7 +45,7 @@ def makeXY(featurelist):
     return X,y,df
 
 
-debug=False
+debug=True
 
 try:
     p,n = b.loadfile("pn")
