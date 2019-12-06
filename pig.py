@@ -1,6 +1,4 @@
 import sys
-
-
 from sklearn.metrics import  make_scorer
 from loadfiles import loaddata
 import dill
@@ -195,13 +193,13 @@ if __name__ == "__main__":
         
         res = defaultdict(dict)
         for task, result in zip(tasks,allresults):
-            res[task[-2]][task[-1]]= ("%.2f" % result[0],"%.2f" % result[1], "%.1f"% result[-1])
+            res[task[-2]][task[-1]]= ("%.4f" % result[0], "%.1f"% result[-1])
 
         print(pd.DataFrame(res))
 
 
 
-        res= [ (result[1],task[-2],result[2]) for task, result in zip(tasks,allresults)] 
+        res= [ (result[0],task[-2],result[2]) for task, result in zip(tasks,allresults)] 
         res.sort(reverse=True)
         for a,b,c in res[:3]:
             print (a,b,c)
@@ -213,7 +211,8 @@ if __name__ == "__main__":
     elif sys.argv[1] == 'showft':
         features = b.loadfile("ftlist")
         ft= list(features[int(sys.argv[2])])
-        print(ft)
+        import pprint
+        pprint.pprint(ft)
         print("numft:",len(ft))
     elif sys.argv[1] == 'makeftlist':
         getfeaturelist()
