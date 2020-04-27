@@ -3,6 +3,7 @@ from collections import defaultdict
 import os 
 import feat 
 import numpy as np
+import json
 
 
 
@@ -290,7 +291,7 @@ def vary_alignment(fname,ali,stru,cov):
 
     
     
-def ali_to_dict(name, alignments):
+def ali_to_dict(name, alignments, yao_scores):
     #block =  [feat.conservation(ali),
     #                    feat.cov_sloppycov_disturbance_instem(ali),
     #                    feat.stemconservation(ali), 
@@ -316,9 +317,10 @@ def ali_to_dict(name, alignments):
     # add a file name
     ####
     r['name'] = name
+    r['yao_score'] = yao_scores[name]
     return r 
 
-def fnames_to_dict(fnames, getall=False):
+def fnames_to_dict(fnames, yao_scores):
     for f in fnames:
         parsed = readfile(f)
         if parsed[1].shape[0] < 3:
@@ -327,15 +329,14 @@ def fnames_to_dict(fnames, getall=False):
         #print ('lena',len(alignments)) # 8
         alignments2 = [Alignment(f, *a) for a in alignments]
         #print ('lenb',len(alignments2)) # 8 ok
-        z=  ali_to_dict(f,alignments2)
+        z=  ali_to_dict(f,alignments2, yao_scores)
         #print ('lenc',len(z)) # 64 to few
         yield z
 
         
-def loaddata(path, numneg = 10000, pos='both',getall="not implemented", seed=None):
+def loaddata(path, numneg = 10000, pos='both', seed=None):
     
-    if seed:
-        random.seed()
+    random.seed(seed)
     ##############
     # positives
     ##############
@@ -361,12 +362,15 @@ def loaddata(path, numneg = 10000, pos='both',getall="not implemented", seed=Non
     if len(pos) > numneg:
         random.shuffle(pos)
         pos=pos[:numneg]
-        print ("loadfile.py: removing some positives")
-    
-    
+        print ("loadfiles.py: removing some positives")
 
-    pos = list(fnames_to_dict(pos,getall))
-    neg = list(fnames_to_dict(neg,getall))
+    yao = {}
+    for x in os.listdir("%s/yaoscores" % path):
+        with open("%s/yaoscores/%s" %(path, x)) as f:
+            yao.update(json.load(f))
+
+    pos = list(fnames_to_dict(pos, yao))
+    neg = list(fnames_to_dict(neg, yao))
     
     return pos, neg
 
