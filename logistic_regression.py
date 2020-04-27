@@ -4,6 +4,7 @@ from numpy import chararray
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import f1_score
+import json
 #from loadfiles import loaddata
 
 
@@ -39,18 +40,19 @@ def log_reg(pos, neg):
     X = []
     for i in neg:
         with open(i) as negfile:
-            X = reshape(negfile.read().split(), (-1, 1))
+            X += json.load(negfile).values()
     negf = len(X)
     for j in pos:
         with open(j) as posfile:
-            X = concatenate((X, reshape(posfile.read().split(), (-1, 1))))
+            X += json.load(posfile).values()
+    X = reshape(X, (-1, 1))
     posf = len(X) - negf
     y = [0]*negf + [1]*posf
     lr = LogisticRegression()
-    # X_scaled = StandardScaler().fit_transform(X)
     cv = cross_val_score(lr, chararray.astype(X, float), y, scoring="f1")
     return cv 
 
 
 if __name__ == "__main__":
-    cv = log_reg(["yaoscores/pos", "yaoscores/pos2"], ["yaoscores/neg"])
+    cv = log_reg(["data/yaoscores/pos.json", "data/yaoscores/pos2.json"],
+                 ["data/yaoscores/neg.json"])
