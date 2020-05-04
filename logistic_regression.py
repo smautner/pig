@@ -1,9 +1,10 @@
 from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
 from numpy import reshape, concatenate
-from numpy import chararray
+from numpy import chararray, unique
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import f1_score
+from draw import matrix
 import json
 #from loadfiles import loaddata
 
@@ -27,12 +28,13 @@ import json
 #         n = json.load(f)
 #     return p, n
 
-def log_reg(pos, neg):
+def log_reg(pos, neg, conf_matrix = True):
     """Builds a Logistic Regression model using the Yao-score
-       of the given sample data as the feature and returns it.
+       of the given sample data and returns the Cross validation score.
     Args:
       pos (Array[String]): An array of paths to proven positive yao-scores.
       neg (Array[String]): An array of paths to proven negative yao-scores.
+      conf_matrix (Bool): If True: Draw confusion matrix
 
     Returns:
       cv (ndarray[float64]): The Cross validation score
@@ -48,8 +50,12 @@ def log_reg(pos, neg):
     X = reshape(X, (-1, 1))
     posf = len(X) - negf
     y = [0]*negf + [1]*posf
-    lr = LogisticRegression()
-    cv = cross_val_score(lr, chararray.astype(X, float), y, scoring="f1")
+    lr = LogisticRegression(class_weight="balanced")
+    if conf_matrix:
+        lr.fit(X,y)
+        predictions = lr.predict(X)
+        matrix(y, predictions, reshape([0,1], (-1,1)))
+    cv = cross_val_score(lr, chararray.astype(X, float), y, cv=3, scoring="f1")
     return cv 
 
 
