@@ -3,78 +3,13 @@ from sklearn.feature_selection import (RFECV, VarianceThreshold,
 import pandas as pd
 from sklearn.linear_model import Lasso
 from skrebate import ReliefF
-from sklearn.metrics import f1_score
 from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold, train_test_split  # tmp
 from IPython.display import display, HTML
-import pandas as pd
-import copy
 from multiprocessing import Pool
 from functools import partial
+from help_functions import load_data, clean, makeXY, pd_dataframe, kfold
 import numpy as np
 
-#########################
-# Note: These functions are exactly the same as the ones in the Notebook.
-#########################
-
-
-def load_data():
-    debug = True
-
-    from sklearn.model_selection import train_test_split
-    import loadfiles
-    p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=9)
-    return p, n
-
-
-def clean(di, oklist):
-    for k in list(di.keys()):
-        if k not in oklist:
-            di.pop(k)
-    return di
-
-
-def makeXY(featurelist, p, n):
-    asd = [clean(e, featurelist) for e in copy.deepcopy(p+n)]
-    df = pd.DataFrame(asd)
-    X = df.to_numpy()
-    y = [1]*len(p)+[0]*len(n)
-    return X, y, df
-
-
-def pd_dataframe(p, n):
-    allfeatures = list(p[1].keys())  # the filenames are the last one and we dont need that (for now)
-    allfeatures.remove("name")
-    X, Y, df = makeXY(allfeatures, p, n)
-    return X, Y, df
-
-###################
-# Functions for train_test_split and KFold Cross Validation.
-###################
-
-
-def tts(X, y, test_size, randseed):
-    """Train_test_split with the given data.
-    Probably no longer neccessary but I didnt want to discard this yet."""
-    X = StandardScaler().fit_transform(X)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=testsize,
-                                                        random_state=randseed)  # USE THE SAME SEED AS BELOW!
-    return X_train, X_test, y_train, y_test
-
-
-def kfold(X, y, n_splits=2, randseed=None, shuffle=True):
-    """Applies KFold Cross Validation to the given data.
-    Returns:
-      folds (List): A list where each entry represents each fold with [X_train, X_test, y_train, y_test]
-    """
-    X = StandardScaler().fit_transform(X)
-    folds = []
-    kf = KFold(n_splits=n_splits, shuffle=shuffle, random_state=randseed)
-    for train, test in kf.split(X):
-        folds.append([X[train], X[test],
-                      [y[i] for i in train], [y[i] for i in test]])
-    return folds
 
 #####################
 # Feature selection methods.
@@ -158,8 +93,8 @@ def feature_selection(X_train, y_train, df, processes=4, debug=False):
             functions.append(partial(select_k_best, X_train, y_train, df, k=k))
         for stepsize in [1, 2, 3]:  # RFECV (Testing)
             functions.append(partial(rfecv, X_train, y_train, df, rfecv_estimator, step=stepsize))
-    with Pool(processes) as p:
-        featurelists = p.map(smap, functions)
+    with Pool(processes) as pool:
+        featurelists = pool.map(smap, functions)
     featurelists.append(df.columns)
     tmp = pd.DataFrame([[1 if f in featurelist else 0 for f in df.columns]
                         for featurelist in featurelists], columns=df.columns)
@@ -171,7 +106,7 @@ if __name__ == "__main__":
     testsize = .3
     randseed = 42
 
-    p, n = load_data()
+    p, n = load_data(True)
     X, Y, df = pd_dataframe(p, n)
     folds = kfold(X, Y, n_splits=2, randseed=randseed)
     for X_train, X_test, y_train, y_test in folds:
