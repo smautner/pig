@@ -13,8 +13,9 @@ from functools import partial
 from time import time
 
 
-def score(clf, param, Xy, debug):
-    X_train, X_test, y_train, y_test = Xy
+def score(xy, clf_param, debug):
+    X_train, X_test, y_train, y_test = xy
+    clf, param = clf_param
     searcher = RSCV(clf, 
                 param, 
                 n_iter=50 if not debug else 5, 
@@ -32,27 +33,25 @@ def score(clf, param, Xy, debug):
     #print(searcher.best_params_)
     return scorer(searcher.best_estimator_,X_test,np.array(y_test))
 
-
-def random_param_search(featurelists, p, n, randseed, n_splits=2, processes=4, debug=False):
-    t1 = time()
-    res = []
-    tasks = [(clf,param) for clf,param in zip(rs.classifiers,rs.param_lists)]
+def makesplits(featurelists, p, n, randseed, n_splits):
+    splits = []
     for FEATURELIST in featurelists:  # loop over all the selectors 
         # make some data 
         X,y,df = makeXY(FEATURELIST, p, n)
         X = StandardScaler().fit_transform(X)
-        splits = [kfold(X, y, n_splits, randseed, True)[0]]
+        splits += kfold(X, y, n_splits, randseed, True)
+    return splits
 
-        with Pool(processes) as pool:
-            for Xy in splits:
-                score2 = partial(score, Xy=Xy, debug=debug)
-                res.append(pool.starmap(score2, tasks))
-###### Demonstration #######
-##        with Pool(processes) as pool:
-##            score2 = partial(score, Xy=splits[0], debug=debug)
-##            res.append(pool.starmap(score2, tasks))
-##        score2 = partial(score, Xy=splits[0], debug=debug)
-##        res.append(score2(clf, param) for clf, param in tasks)####
+def random_param_search(featurelists, p, n, randseed, n_splits=2, processes=4, debug=False):
+    from numpy import reshape
+    res = []
+    splits = makesplits(featurelists, p, n, randseed, n_splits)
+
+    tasks = [(xy, cp) for xy in splits for cp in zip(rs.classifiers,rs.param_lists)]
+    with Pool(processes) as pool:
+        score2 = partial(score, debug=debug)
+        res = pool.starmap(score2, tasks)
+    res = reshape(res, (len(splits), -1))
     display(HTML(pd.DataFrame(res,columns=rs.clfnames).to_html()))
 
 
@@ -72,5 +71,5 @@ if __name__ == "__main__":
     for X_train, X_test, y_train, y_test in folds:
         featurelists.append(fs(X_train, y_train, df, debug=True))
     a = time()
-    random_param_search(featurelists[0], p, n, randseed, n_splits=2, debug=debug)
+    random_param_search(featurelists, p, n, randseed, n_splits=2, debug=debug)
     print(time()-a)
