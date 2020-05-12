@@ -31,4 +31,7 @@ def execute_cmfinder04(path="cmfinder-0.4.1.18/bin/cmfinder04",
 
 
 if __name__ == "__main__":
-    execute_cmfinder04()
+    parent = "../"
+    path = parent + "cmfinder-0.4.1.18/bin/cmfinder04"
+    data = parent + "data"
+    execute_cmfinder04(path, data)

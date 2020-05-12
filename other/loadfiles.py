@@ -1,7 +1,7 @@
 import random
 from collections import defaultdict
 import os 
-import feat 
+import other.feat as feat
 import numpy as np
 import json
 

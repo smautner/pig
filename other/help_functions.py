@@ -2,14 +2,13 @@ import pandas as pd
 import copy
 from sklearn.metrics import f1_score
 from sklearn.model_selection import StratifiedKFold, train_test_split  # tmp
-
+import other.loadfiles as loadfiles
 
 def scorer(esti,x,y):
     yh = esti.predict(x)
     return f1_score(y,yh)
 
 def load_data(debug=False):
-    import loadfiles
     p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=9)
     return p, n
 
