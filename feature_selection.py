@@ -7,8 +7,7 @@ from sklearn.svm import SVC
 from IPython.display import display, HTML
 from multiprocessing import Pool
 from functools import partial
-from help_functions import load_data, clean, makeXY, pd_dataframe, kfold
-import numpy as np
+from other.help_functions import load_data, pd_dataframe, kfold
 
 
 #####################
@@ -103,11 +102,11 @@ def feature_selection(X_train, y_train, df, processes=4, debug=False):
 
 
 if __name__ == "__main__":
-    testsize = .3
     randseed = 42
 
     p, n = load_data(True)
     X, Y, df = pd_dataframe(p, n)
     folds = kfold(X, Y, n_splits=2, randseed=randseed)
+    featurelists = []
     for X_train, X_test, y_train, y_test in folds:
-        fl = feature_selection(X_train, y_train, df)
+        featurelists += feature_selection(X_train, y_train, df, debug=True)
