@@ -76,8 +76,6 @@ if __name__ == "__main__":
     X, Y, df = pd_dataframe(p, n)
     folds = kfold(X, Y, n_splits=2, randseed=randseed)
     featurelists = []
-    print("A")
     for X_train, X_test, y_train, y_test in folds:
         featurelists += fs(X_train, y_train, df, debug=debug)
-    print("B")
     random_param_search(featurelists, p, n, randseed, n_splits=2, debug=debug)
