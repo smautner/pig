@@ -4,7 +4,7 @@ from numpy import chararray, unique
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import f1_score
-from draw import matrix
+from other.draw import matrix
 import json
 #from loadfiles import loaddata
 
