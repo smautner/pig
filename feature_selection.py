@@ -60,7 +60,7 @@ def smap(f):
     return f()
 
 
-def feature_selection(X_train, y_train, df, processes=4, debug=False):
+def feature_selection(X_train, y_train, df, processes=None, debug=False):
     """Executes the feature selection process with multiprocessing.
     Args:
       X_train (ndarray)
@@ -94,7 +94,7 @@ def feature_selection(X_train, y_train, df, processes=4, debug=False):
             functions.append(partial(rfecv, X_train, y_train, df, rfecv_estimator, step=stepsize))
     with Pool(processes) as pool:
         featurelists = pool.map(smap, functions)
-    featurelists.append(df.columns)
+    featurelists.append(list(df.columns)) # Maybe should be pulled out of the main function
     tmp = pd.DataFrame([[1 if f in featurelist else 0 for f in df.columns]
                         for featurelist in featurelists], columns=df.columns)
     display(HTML(tmp.loc[:, (tmp != 0).any(axis=0)].to_html()))
@@ -103,10 +103,11 @@ def feature_selection(X_train, y_train, df, processes=4, debug=False):
 
 if __name__ == "__main__":
     randseed = 42
+    debug = True
 
-    p, n = load_data(True)
+    p, n = load_data(debug)
     X, Y, df = pd_dataframe(p, n)
     folds = kfold(X, Y, n_splits=2, randseed=randseed)
     featurelists = []
     for X_train, X_test, y_train, y_test in folds:
-        featurelists += feature_selection(X_train, y_train, df, debug=True)
+        featurelists += feature_selection(X_train, y_train, df, debug=debug)
