@@ -9,7 +9,12 @@ def scorer(esti,x,y):
     return f1_score(y,yh)
 
 def load_data(debug=False):
-    p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=9)
+    fn = "pnd.json" if debug else "pn.json" # Different file for debug mode.
+    try:
+        p, n = loadfile(fn)
+    except:
+        p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=9)
+        dumpfile((p,n), fn)
     return p, n
 
 
@@ -42,7 +47,7 @@ def pd_dataframe(p, n):
 def kfold(X, y, n_splits=2, randseed=None, shuffle=True):
     """Applies KFold Cross Validation to the given data.
     Returns:
-      folds (List): A list where each entry represents each fold with [X_train, X_test, y_train, y_test]
+      splirs (List): A list where each entry represents each fold with [X_train, X_test, y_train, y_test]
     """
     #X = StandardScaler().fit_transform(X)
     splits = []
@@ -51,3 +56,21 @@ def kfold(X, y, n_splits=2, randseed=None, shuffle=True):
         splits.append([X[train], X[test],
                       [y[i] for i in train], [y[i] for i in test]])
     return splits
+
+
+##################
+# Loading and dumping p and n data files in JSON
+##################
+
+def dumpfile(data, fn):
+     """saves with loaddata() loaded data as a JSON file."""
+     import json
+     with open(fn, "w") as f:
+         json.dump(data, f)
+
+def loadfile(fn):
+    """loads with save_loadeddata() saved files
+    and returns its p and n again."""
+    import json
+    with open(fn, "r") as f:
+        return json.load(f)

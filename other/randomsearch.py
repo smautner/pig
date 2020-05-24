@@ -1,4 +1,3 @@
-
 # define parameters for the random search 
 
 import pprint
@@ -152,7 +151,7 @@ param_lists = [
   'min_weight_fraction_leaf': [0.0],
   'n_estimators':  list(range(20,300)),
   'n_iter_no_change': [None],
-  'presort': ['auto'],
+#  'presort': ['auto'],
   'random_state': [None],
   'subsample': [1.0],
   'tol': [0.0001],
