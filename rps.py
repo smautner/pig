@@ -50,7 +50,7 @@ def maketasks(featurelists, p, n, randseed, n_splits):
     tasks.dump("tasks")
     return tasks
 
-def random_param_search(tasks, n_jobs=4, processes=None, debug=False):
+def random_param_search(task, n_jobs=4, debug=False):
     """
     Args:
       tasks: A list with tasks made by maketasks().
@@ -59,17 +59,7 @@ def random_param_search(tasks, n_jobs=4, processes=None, debug=False):
     """
     res = []
     best_esti = []
-    with Pool(processes) as pool:
-        score2 = partial(score, n_jobs=n_jobs, debug=debug)
-        res_best_esti = pool.starmap(score2, tasks)
-    for x, y in res_best_esti:
-        res.append(x)
-        best_esti.append(y)
-    res_len = int(len(tasks) / len(list(zip(rs.classifiers,rs.param_lists)))) # Currently = 16
-    # res_len is required to reshape res properly. Can be removed if the len is set or
-    # if res is no longer required for visual.
-    res = reshape(res, (res_len, -1))
-    display(HTML(pd.DataFrame(res,columns=rs.clfnames).to_html()))
+    res, best_esti = score(task[0], task[1], n_jobs, debug)
     return best_esti
 
 
@@ -87,4 +77,5 @@ if __name__ == "__main__":
 
     tasks = maketasks(featurelists, p, n, randseed, n_splits=2)
     tasks = np.load("tasks", allow_pickle=True)
-    random_param_search(tasks, debug=debug)
+    for task in tasks:
+        random_param_search(task, debug=debug)

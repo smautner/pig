@@ -11,6 +11,8 @@ def execute_cmfinder04(path="cmfinder-0.4.1.18/bin/cmfinder04",
     output = data + "/yaoscores"
     os.system("mkdir -p " + output)
     for directory in os.listdir(data):
+        if not os.path.isdir(directory):
+            continue
         if directory == "yaoscores":
             continue
         if os.path.exists(output + "/" + directory + ".json"):
