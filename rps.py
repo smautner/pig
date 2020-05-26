@@ -60,7 +60,7 @@ def random_param_search(task, n_jobs=4, debug=False):
     res = []
     best_esti = []
     res, best_esti = score(task[0], task[1], n_jobs, debug)
-    return best_esti
+    return res, best_esti
 
 
 if __name__ == "__main__":

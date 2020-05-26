@@ -35,8 +35,8 @@ def gettasks_annotated():
 
 def doajob(idd, debug):
     tasks = np.load("tasks", allow_pickle=True)
-    best_esti = rps.random_param_search(tasks[idd], n_jobs=4, debug=debug)
-    print(best_esti)
+    res, best_esti = rps.random_param_search(tasks[idd], n_jobs=4, debug=debug)
+    print(res, best_esti)
         
 
 def readresult(fname):
