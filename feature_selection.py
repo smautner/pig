@@ -82,8 +82,10 @@ def feature_selection(X_train, y_train, df, processes=None, debug=False):
             partial(variance_threshold, X_train, y_train, df, threshold=1)]
     else:
         functions = []
+        func_names = []
         for alpha in [.05, 0.1]:  # Lasso
             functions.append(partial(lasso, X_train, y_train, df, alpha=alpha))
+            func_names.append(f"lasso:{alpha}" )
         for features in [40, 60, 80]:  # Relief
             functions.append(partial(relief, X_train, y_train, reli, df, features))
         for threshold in [1]:  # Variance Threshold
