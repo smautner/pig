@@ -72,6 +72,7 @@ if __name__ == "__main__":
     X, Y, df = h.pd_dataframe(p, n)
     folds = h.kfold(X, Y, n_splits=2, randseed=randseed)
     featurelists = []
+  
     for X_train, X_test, y_train, y_test in folds:
         featurelists += fs(X_train, y_train, df, debug=debug)
 
@@ -79,3 +80,9 @@ if __name__ == "__main__":
     tasks = np.load("tasks", allow_pickle=True)
     for task in tasks:
         random_param_search(task, debug=debug)
+        
+# vor every fold: 
+# use trainXY to get featurelists =>
+# dann alle featurelists x classifiers (x2000) ;; dump score, classifier+params, feature_list (und wie generiert); (1)
+# report (1) and score(best_esti, testXY) 
+
