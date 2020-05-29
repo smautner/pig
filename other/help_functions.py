@@ -3,16 +3,17 @@ import copy
 from sklearn.metrics import f1_score
 from sklearn.model_selection import StratifiedKFold, train_test_split  # tmp
 import other.loadfiles as loadfiles
+import os
 
 def scorer(esti,x,y):
     yh = esti.predict(x)
     return f1_score(y,yh)
 
 def load_data(debug=False):
-    fn = "pnd.json" if debug else "pn.json" # Different file for debug mode.
-    try:
+    fn = "tmp/pnd.json" if debug else "tmp/pn.json" # Different file for debug mode.
+    if os.path.isfile(fn):
         p, n = loadfile(fn)
-    except:
+    else:
         p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=9)
         dumpfile((p,n), fn)
     return p, n
