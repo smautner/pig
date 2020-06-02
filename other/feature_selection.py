@@ -7,8 +7,8 @@ from sklearn.svm import SVC
 from IPython.display import display, HTML
 from multiprocessing import Pool
 from functools import partial
-
-
+import other.help_functions as h
+import numpy as np
 #####################
 # Feature selection methods.
 #####################
@@ -20,7 +20,9 @@ def lasso(X_data, y_data, df, alpha=.06):
     return [b for a, b in zip(mod.coef_, df.columns) if a != 0]
 
 
-def relief(_, _2, reli, df, param):
+def relief(X_data, y_data, df, param):
+    reli = ReliefF()
+    reli.fit(X_data, y_data)
     # https://github.com/EpistasisLab/scikit-rebate
     return [df.columns[top] for top in reli.top_features_[:param]]
 
@@ -31,7 +33,9 @@ def variance_threshold(X_data, y_data, df, threshold=0.0):
     return [b for a, b in zip(clf.get_support(), df.columns) if a != False]
 
 
-def select_k_best(X_data, y_data, df, score_func=chi2, k=20):
+def select_k_best(X_data, y_data, df, k=20):
+    score_func=chi2
+
     clf = SelectKBest(score_func, k)
     mini = 0
     for x in range(0, len(X_data)):
@@ -45,7 +49,9 @@ def select_k_best(X_data, y_data, df, score_func=chi2, k=20):
 
 
 def rfecv(X_data, y_data, df, estimator, step=1, cv=3):
-    clf = RFECV(estimator, step=step, cv=cv)
+    rfecv_estimator = SVC(kernel="linear")
+
+    clf = RFECV(rfecv_estimator, step=step, cv=cv)
     clf.fit(X_data, y_data)
     return [b for a, b in zip(clf.get_support(), df.columns) if a != False]
 
@@ -54,61 +60,59 @@ def rfecv(X_data, y_data, df, estimator, step=1, cv=3):
 #######################
 
 
-def smap(f):
-    """Helping function for multiprocessing"""
-    return f()
-
-
-def feature_selection(X_train, y_train, df, processes=8, debug=False):
-    """Executes the feature selection process with multiprocessing.
-    Args:
-      X_train (ndarray)
-      y_train (ndarray)
-      df (DataFrame)
-      processes (Int): Number of processes used for multiprocessing
-      debug (Bool)
-
-    Returns:
-      featurelists(List)
-      """
-    func_names = []
-
-    reli = ReliefF()
-    reli.fit(X_train, y_train)
+def maketasks(folds, df, debug=False):
+    """Creates the feature selection tasks"""
     rfecv_estimator = SVC(kernel="linear")
 
-    functions = []
-    func_names = []
-    if debug:
-        functions = [
-            partial(lasso, X_train, y_train, df, alpha=.05),
-            partial(relief, X_train, y_train, reli, df, 40),
-            partial(variance_threshold, X_train, y_train, df, threshold=1)]
-        func_names.extend(["Lasso: 0.05", "Relief: 40", "VarThresh: 1"])
+    tasks = []
+    foldnr = 0
+    for X_train, X_test, y_train, y_test in folds:
+        # Each task: (i, type, X, y, df, (args)
+        if debug:
+            tasks.extend([(foldnr, "Lasso", X_train, y_train, df, .05),
+                          (foldnr, "Relief", X_train, y_train, df, 40),
+                          (foldnr, "VarThresh", X_train, y_train, df, 1)])
+
+        else:
+            for alpha in [.05, 0.1]:  # Lasso
+                tasks.append((foldnr, "Lasso", X_train, y_train, df, alpha))
+            for features in [40, 60, 80]:  # Relief
+                tasks.append((foldnr, "Relief", X_train, y_train, df, features))
+            for threshold in [1]:  # Variance Threshold
+                tasks.append((foldnr, "VarThresh", X_train, y_train, df, threshold))
+            for k in [20]:  # Select K Best
+                tasks.append((foldnr, "SelKBest", X_train, y_train, df, k))
+            for stepsize in [1, 2, 3]:  # RFECV (Testing)
+                tasks.append((foldnr, "RFECV", X_train, y_train, df, stepsize))
+        foldnr += 1
+
+    np.array(tasks).dump("tmp/fs_tasks")
+    return tasks
+
+
+def feature_selection(taskid):
+    """Executes the feature selection using the given task.
+    Args:
+      taskid: An ID for a made from maketasks()
+
+    Returns:
+      featurelist(List)
+      """
+    tasks = np.load("tmp/fs_tasks", allow_pickle=True)
+    foldnr, fstype, X_train, y_train, df, args = tasks[taskid]
+    if fstype == "Lasso":
+        fl = lasso(X_train, y_train, df, args)
+    elif fstype == "Relief":
+        fl = relief(X_train, y_train, df, args)
+    elif fstype == "VarThresh":
+        fl = variance_threshold(X_train, y_train, df, args)
+    elif fstype == "SelKBest":
+        fl = select_k_best(X_train, y_train, df, args)
+    elif fstype == "RFECV":
+        fl = rfecv(X_train, y_train, df, args)
     else:
-        for alpha in [.05, 0.1]:  # Lasso
-            functions.append(partial(lasso, X_train, y_train, df, alpha=alpha))
-            func_names.append(f"Lasso: {alpha}")
-        for features in [40, 60, 80]:  # Relief
-            functions.append(partial(relief, X_train, y_train, reli, df, features))
-            func_names.append(f"Relief: {features}")
-        for threshold in [1]:  # Variance Threshold
-            functions.append(partial(variance_threshold, X_train, y_train, df, threshold=1))
-            func_names.append(f"VarThresh: {alpha}")
-        for k in [20]:  # Select K Best
-            functions.append(partial(select_k_best, X_train, y_train, df, k=k))
-            func_names.append(f"SelectKBest: {k}")
-        for stepsize in [1, 2, 3]:  # RFECV (Testing)
-            functions.append(partial(rfecv, X_train, y_train, df, rfecv_estimator, step=stepsize))
-            func_names.append(f"RFECV: {stepsize}")
-    with Pool(processes) as pool:
-        featurelists = pool.map(smap, functions)
-    # featurelists.append(list(df.columns)) # Maybe should be pulled out of the main function
-    # I commented this one out for now since it seems like its not needed at all. Possible removal.
-    tmp = pd.DataFrame([[1 if f in featurelist else 0 for f in df.columns]
-                        for featurelist in featurelists], columns=df.columns)
-    display(HTML(tmp.loc[:, (tmp != 0).any(axis=0)].to_html()))
-    return featurelists, func_names
+        raise ValueError(f"'{fstype}' is not a valid Feature selection method.")
+    return foldnr, fl, f"{fstype}: {args}"
 
 
 if __name__ == "__main__":
@@ -121,7 +125,12 @@ if __name__ == "__main__":
     folds = h.kfold(X, Y, n_splits=2, randseed=randseed)
     featurelists = []
     func_names = []
-    for X_train, X_test, y_train, y_test in folds:
-        fs = feature_selection(X_train, y_train, df, debug=debug)
-        featurelists.append(fs[0])
-        func_names.append(fs[1])
+    maketasks(folds, df, debug)
+    tasks = np.load("tmp/fs_tasks", allow_pickle=True)
+    featurelists = {}
+    for taskid in range(0, len(tasks)):
+        foldnr, fl, fname = feature_selection(taskid) # This is what the Cluster would compute.
+        if foldnr in featurelists:
+            featurelists[foldnr].append((fl, fname))
+        else:
+            featurelists[foldnr] = [(fl, fname)]

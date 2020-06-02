@@ -4,6 +4,7 @@ from sklearn.metrics import f1_score
 from sklearn.model_selection import StratifiedKFold, train_test_split  # tmp
 import other.loadfiles as loadfiles
 import os
+import dill
 
 def scorer(esti,x,y):
     yh = esti.predict(x)
@@ -60,7 +61,7 @@ def kfold(X, y, n_splits=2, randseed=None, shuffle=True):
 
 
 ##################
-# Loading and dumping p and n data files in JSON
+# Loading and dumping data files in JSON
 ##################
 
 def dumpfile(data, fn):
@@ -75,3 +76,4 @@ def loadfile(fn):
     import json
     with open(fn, "r") as f:
         return json.load(f)
+

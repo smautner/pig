@@ -19,7 +19,7 @@ def score(X, y, clf_param, n_jobs, debug):
                 n_jobs=n_jobs,
                 iid=False,
                 #fefit=True,
-                cv=3,
+                cv=5,
                 verbose=0,
                 pre_dispatch="2*n_jobs",
                 random_state=None,
@@ -30,25 +30,24 @@ def score(X, y, clf_param, n_jobs, debug):
     best_score = searcher.best_score_
     return best_score, best_esti
 
-def maketasks(featurelists, func_names, p, n, randseed, n_splits):
+def maketasks(featurelists, p, n, randseed, n_splits):
     """Creates tasks that can be used for random_param_search.
     Args:
-      featurelists: A list of featurelists each list is a fold of featurelists.
-      func_names: A list of strings, describing how the featurelists were made.
+      featurelists: A dictionary of featurelists each entry is a fold of featurelists.
       p and n: The results from load_data().
       randseed: The seed used.
     """
     tasks = []
     for i in range(0, len(featurelists)): # Each list is a fold
-        for j in range(0, len(featurelists[i])): # Each fold contains featurelists.
-            FEATURELIST = featurelists[i][j]
-            FUNCNAME = func_names[i][j]
+        for flist in featurelists[i]: # Each fold contains featurelists.
+            FEATURELIST = flist[0]
+            FUNCNAME = flist[1]
             X,y,df = h.makeXY(FEATURELIST, p, n)
-            X = StandardScaler().fit_transform(X)  # < Do I need this?
+            X = StandardScaler().fit_transform(X)
             tasks.extend([(i, X, y, cp, FEATURELIST, FUNCNAME) for cp in zip(rs.classifiers,rs.param_lists)])
     tasks = np.array(tasks)
     print(len(tasks)) # = 18 !
-    tasks.dump("tmp/tasks")
+    tasks.dump("tmp/rps_tasks")
     return tasks
 
 def random_param_search(task, n_jobs=4, debug=False):
