@@ -4,7 +4,6 @@ from sklearn.metrics import f1_score
 from sklearn.model_selection import StratifiedKFold, train_test_split  # tmp
 import other.loadfiles as loadfiles
 import os
-import dill
 
 def scorer(esti,x,y):
     yh = esti.predict(x)
