@@ -76,3 +76,52 @@ def loadfile(fn):
     with open(fn, "r") as f:
         return json.load(f)
 
+###################
+# Printing out Results
+###################
+
+def showresults(args=""):
+    from collections import Counter
+    from pprint import pprint
+    results = loadfile("results.json")
+    scores = []
+    estimators = {}
+    ftlists = []
+    c = Counter()
+    for best_score, best_esti, ftlist, fname in results.values():
+        scores.append(best_score)
+        esti_name, params = best_esti
+        if esti_name not in estimators:
+            estimators[esti_name] = {}
+        for key, value in params.items():
+            if key in estimators[esti_name]:
+                estimators[esti_name][key].append(value)
+            else:
+                estimators[esti_name][key] = [value]
+        ftlists.append((fname, ftlist)) # ?
+        c.update(ftlist)
+    print_help = True
+    if "s" in args:
+        pprint(scores)
+        print("\n")
+        print_help = False
+    if "f" in args:
+        pprint(c.most_common())
+        print("\n")
+        print_help = False
+    if "e" in args:
+        for key in estimators.keys():
+            print(f"{key}:")
+            print("-" * (len(key)+1))
+            for param in estimators[key].items():
+                print(f"{param[0]}: {param[1]}")
+            print("\n")
+        print_help = False
+    if "n" in args:
+        for x in ftlists:
+            pprint(x)
+    if print_help:
+        print("Usage: pig.py showresults {sfen}\n s - scores\n", \
+              "f - featurelists with number of occurences\n e - estimators\n", \
+              "n - Shows ALL featurelists with the info used to create them")
+    return estimators, c.most_common()
