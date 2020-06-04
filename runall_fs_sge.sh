@@ -8,4 +8,3 @@
 #$ -e /home/guest10/BioProject/JOBZ/pig_e/$JOB_ID.e_$TASK_ID
 
 python pig.py calcfl $SGE_TASK_ID
-#qsub -V -t 1-35  runall_sge.sh

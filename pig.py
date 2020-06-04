@@ -1,10 +1,12 @@
 import sys
+import time
 import numpy as np
 import other.randomsearch as  rs
 import os
 import other.help_functions as h
-import other.feature_selection as fs
-import other.rps
+import other.basics as b
+import core.feature_selection as fs
+import core.rps as rps
 from sklearn.preprocessing import StandardScaler
 
 
@@ -36,11 +38,14 @@ def makefltasks(n_splits, randseed, debug):
     folds = h.kfold(X, Y, n_splits=n_splits, randseed=randseed)
     tasks = fs.maketasks(folds, df, debug)
     print(f"Created {len(tasks)} FS tasks.")
+    return len(tasks)
+
 
 def calculate_featurelists(idd):
     """Executed by Cluster"""
     foldnr, fl, fname = fs.feature_selection(idd)
     h.dumpfile([foldnr, fl, fname], f"tmp/fs_results/{idd}.json")
+
 
 def gather_featurelists(debug):
     """Collect results to create the proper featurelists.
@@ -57,9 +62,11 @@ def gather_featurelists(debug):
     p, n = h.load_data(debug)
     tasks = rps.maketasks(featurelists, p, n, randseed, n_splits) # Creates "tmp/rps_tasks" file
     print(f"Created {len(tasks)} RPS tasks.")
+    return len(tasks)
+
 
 def get_top_features(k=None):
-    """Optional function. Returns the k most used features.
+    """Optional function. Returns the k most used features by ALL featurelists.
     Not very efficient but probably does the job for now."""
     from collections import Counter
     featurelists = h.loadfile("tmp/ftlists.json")
@@ -69,7 +76,6 @@ def get_top_features(k=None):
         for ftlist in fold:
             c.update(ftlist[0])
     return c.most_common(k)
-        
 
 
 #############
@@ -96,10 +102,45 @@ def getresults():
     h.dumpfile(results, "results.json")
     return results
 
+#############
+# Additional Options
+#############
+
+def makeall(n_splits, randseed, debug):
+    # FL tasks
+    print("Making Featurelist tasks...")
+    fstasklen = makefltasks(n_splits, randseed, debug)
+    #Calc FL Part -> Cluster
+    print(f"Sending {fstasklen} FS tasks to cluster...")
+    ret,stderr,out = b.shexec(f"qsub -V -t 1-{fstasklen} runall_fs_sge.sh")
+    taskid = out.split()[2][:7]
+    print("taskid:", int(taskid))
+    while taskid in b.shexec("qstat")[2]: # "not ba.shexc("qstat"[2]" would be enough if user only runs 1 thing at a time
+        time.sleep(10)
+    print("...Cluster finished")
+    # RPS tasks
+    print("Assembling FS lists and RPS tasks...")
+    rpstasklen = gather_featurelists(debug)
+    print(f"Sending {rpstasklen} RPS tasks to cluster...")
+    #Calc RPS Part -> Cluster
+    ret,stderr,out = b.shexec(f"qsub -V -t 1-{rpstasklen} runall_rps_sge.sh")
+    taskid = out.split()[2][:7]
+    print("taskid:", int(taskid))
+    while taskid in b.shexec("qstat")[2]:
+        time.sleep(10)
+    # Results
+    print("Gathering results...")
+    getresults()
+    print("Done")
+
+
+#############
+# Main Function
+#############
 
 if __name__ == "__main__":
-    debug = False
-    n_splits = 10
+    debug = True
+    n_splits = 10 if not debug else 2
     randseed = 42
 
     if not os.path.exists("tmp"):
@@ -130,24 +171,29 @@ if __name__ == "__main__":
     elif sys.argv[1] == 'getresults':
         getresults()
 
-    elif sys.argv[1] == 'showresult':
-        if sys.argv[2] == 'all':
-            print(h.loadfile("results.json"))
+    elif sys.argv[1] == 'makeall':
+        makeall(n_splits, randseed, debug)
+
+    elif sys.argv[1] == 'showresults':
+        if len(sys.argv) == 3:
+            h.showresults(sys.argv[2])
         else:
-            print(h.loadfile("results.json")[sys.argv[2]])
+            h.showresults("")
 
     elif sys.argv[1] == 'topfeatures':
-        if len(sys.argv) == 1:
+        if len(sys.argv) == 2:
             get_top_features()
         else:
             get_top_features(sys.argv[2])
-    elif sys.argv[1] == cleanup:
-        if len(sys.argv) == 1:
-            get_top_features()
+
+    elif sys.argv[1] == 'cleanup':
+        if len(sys.argv) == 2:
+            cleanup()
         elif sys.argv[2] == 'True':
-            get_top_features(True)
+            cleanup(True)
         else:
             print("Usage: cleanup (True if pn and pnd should also be removed)")
+
     else:
         print("Usage: makefltasks -> calcfl(Cluster) -> gatherfl -> calcrps(Cluster) -> getresults -> showresults")
 
