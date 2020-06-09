@@ -1,7 +1,7 @@
 import pandas as pd
 import copy
 from sklearn.metrics import f1_score
-from sklearn.model_selection import StratifiedKFold, train_test_split  # tmp
+from sklearn.model_selection import StratifiedKFold
 import other.loadfiles as loadfiles
 import os
 
@@ -120,6 +120,7 @@ def showresults(args=""):
     if "n" in args:
         for x in ftlists:
             pprint(x)
+        print_help = False
     if print_help:
         print("Usage: pig.py showresults {sfen}\n s - scores\n", \
               "f - featurelists with number of occurences\n e - estimators\n", \
