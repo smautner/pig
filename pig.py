@@ -1,7 +1,6 @@
 import sys
 import time
 import numpy as np
-import other.randomsearch as  rs
 import os
 import other.help_functions as h
 import other.basics as b

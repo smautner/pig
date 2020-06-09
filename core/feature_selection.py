@@ -1,12 +1,8 @@
 from sklearn.feature_selection import (RFECV, VarianceThreshold,
                                        chi2, SelectKBest)
-import pandas as pd
 from sklearn.linear_model import Lasso
 from skrebate import ReliefF
 from sklearn.svm import SVC
-from IPython.display import display, HTML
-from multiprocessing import Pool
-from functools import partial
 import other.help_functions as h
 import numpy as np
 #####################
@@ -48,7 +44,7 @@ def select_k_best(X_data, y_data, df, k=20):
     return [b for a, b in zip(clf.get_support(), df.columns) if a != False]
 
 
-def rfecv(X_data, y_data, df, estimator, step=1, cv=3):
+def rfecv(X_data, y_data, df, step=1, cv=3):
     rfecv_estimator = SVC(kernel="linear")
 
     clf = RFECV(rfecv_estimator, step=step, cv=cv)
@@ -62,7 +58,6 @@ def rfecv(X_data, y_data, df, estimator, step=1, cv=3):
 
 def maketasks(folds, df, debug=False):
     """Creates the feature selection tasks"""
-    rfecv_estimator = SVC(kernel="linear")
 
     tasks = []
     foldnr = 0
@@ -116,7 +111,6 @@ def feature_selection(taskid):
 
 
 if __name__ == "__main__":
-    import other.help_functions as h
     randseed = 42
     debug = True
 

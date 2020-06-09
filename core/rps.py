@@ -1,11 +1,6 @@
 import numpy as np
-from numpy import reshape
-import pandas as pd
 from sklearn.model_selection import RandomizedSearchCV as RSCV
-from multiprocessing import Pool
-from IPython.display import display, HTML
 from sklearn.preprocessing import StandardScaler
-from functools import partial
 import other.randomsearch as  rs
 import other.help_functions as h
 
@@ -57,8 +52,6 @@ def random_param_search(task, n_jobs=4, debug=False):
       n_jobs: Number of parallel jobs used by score().
       debug: True if debug mode.
     """
-    res = []
-    best_esti = []
     best_score, best_esti = score(task[1], task[2], task[3], n_jobs, debug)
     return task[0], best_score, best_esti, task[4], task[5]
 
