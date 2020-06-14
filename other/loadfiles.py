@@ -4,7 +4,7 @@ import os
 import other.feat as feat
 import numpy as np
 import json
-
+import other.help_functions as h
 
 
   
@@ -335,13 +335,16 @@ def fnames_to_dict(fnames, yao_scores):
 
         
 def loaddata(path, numneg = 10000, pos='both', seed=None):
-    
     random.seed(seed)
+    if os.path.isfile("tmp/blacklist.json"):
+        blacklist = set(h.loadfile("tmp/blacklist.json"))
+    else:
+        blacklist = set()
     ##############
     # positives
     ##############
-    pos1 = [ "%s/pos/%s" %(path,f) for f in  os.listdir("%s/pos" % path )]  
-    pos2 = [ "%s/pos2/%s" %(path,f) for f in  os.listdir("%s/pos2" % path )] 
+    pos1 = [ "%s/pos/%s" %(path,f) for f in  os.listdir("%s/pos" % path) if f"{path}/pos/{f}" not in blacklist]  
+    pos2 = [ "%s/pos2/%s" %(path,f) for f in  os.listdir("%s/pos2" % path) if f"{path}/pos2/{f}" not in blacklist] 
     if pos == 'both':
         pos = pos1+pos2
     elif pos == '1':
@@ -356,7 +359,7 @@ def loaddata(path, numneg = 10000, pos='both', seed=None):
     negfnames =   list(os.listdir("%s/neg" % path ))
     random.shuffle(negfnames)
     print(negfnames[:5])
-    neg = [ "%s/neg/%s" %(path,f) for f in  negfnames[:numneg]] 
+    neg = [ "%s/neg/%s" %(path,f) for f in  negfnames[:numneg] if f"{path}/neg/{f}" not in blacklist] 
 
     
     if len(pos) > numneg:

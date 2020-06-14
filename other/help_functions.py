@@ -119,7 +119,7 @@ def showresults(args=""):
         print_help = False
     if "n" in args:
         for x in ftlists:
-            pprint(x)
+            pprint((x[0], len(x[1]), x[1]))
         print_help = False
     if print_help:
         print("Usage: pig.py showresults {sfen}\n s - scores\n", \

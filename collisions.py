@@ -2,6 +2,21 @@ import os
 import other.help_functions as h
 from collections import Counter, defaultdict
 from itertools import combinations
+from pprint import pprint
+
+
+def compare(a, b):
+    a_1, a_2 = a[0].split("-")
+    b_1, b_2 = b[0].split("-")
+    if a_1 > a_2:
+        a_1, a_2 = a_2, a_1
+    if b_1 > b_2:
+        b_2, b_1 = b_1, b_2
+    if ((a_1 <= b_1 <= a_2) or
+        (a_1 <= b_2 <= a_2) or
+        (b_1 <= a_1 <= b_2) or
+        (b_1 <= a_2 <= b_2)):
+        return True
 
 
 def load(path):
@@ -28,6 +43,7 @@ def load(path):
                 
     return seqdict, filedict
 
+
 def find_collisions(seqdict, filedict):
     cou = 0
     col = 0
@@ -36,48 +52,43 @@ def find_collisions(seqdict, filedict):
         for a, b in combinations(seqdict[key], 2):
             cou += 1
             if compare(a, b):
-                if a[0] == b[0]:
-                    if a[1] < b[1]:
-                        l.append((a[1], b[1]))
-                    else:
-                        l.append((b[1], a[1]))
-                    col += 1
+                ###if a[0] == b[0]:### Wtf why..........
+                    
+                if a[1] <= b[1]:
+                    l.append((a[1], b[1]))
+                else:
+                    l.append((b[1], a[1]))
+                col += 1
     print (f"Total comparisons: {cou}, Collisions: {col}")
     allcol = Counter(l).most_common()
     print(f"Different file collisions: {len(allcol)}")
-    subsetcount = 0
+    not_subset = []
     for x in allcol:
         a = x[0][0]
         b = x[0][1]
         subset_a = a.split(sep="-")
         subset_b = b.split(sep="-")
-        if subset_a[:2] == subset_b[:2]:
-            subsetcount += 1
-            #print(((a, filedict[a]), (b, filedict[b]), x[1]))
-            #return
-    print(f"Subsets: {subsetcount}")
-    #print(Counter(l).most_common(5))
-    return l
+        if not subset_a[:2] == subset_b[:2]:
+            not_subset.append(((a, filedict[a]), (b, filedict[b]), x[1]))
+    
+    print(f"Subsets: {len(allcol)-len(not_subset)}")
+    print(Counter(l).most_common(5))
+    return not_subset # Instead of return add to "tmp/blacklist.json"
 
-def compare(a, b):
-    a_1, a_2 = a[0].split("-")
-    b_1, b_2 = b[0].split("-")
-    if a_1 < a_2:
-        a_start, a_end = a_1, a_2
-    else:
-        a_start, a_end = a_2, a_1
-    if b_1 < b_2:
-        b_start, b_end = b_1, b_2
-    else:
-        b_start, b_end = b_2, b_1
-    if ((a_start <= b_start <= a_end) or
-        (a_start <= b_end <= a_end) or
-        (b_start <= a_start <= b_end) or
-        (b_start <= a_end <= b_end)):
-        return True
-
+def create_blacklist(l):
+    blacklist = set()
+    for x in l:
+        if x[0][0] in blacklist or x[1][0] in blacklist:
+            continue
+        else:
+            if x[0][1] > x[1][1]:
+                blacklist.add(x[1][0])
+            else:
+                blacklist.add(x[0][0])
+    h.dumpfile(list(blacklist), "tmp/blacklist.json")
 
 if __name__ == "__main__":
     path = "data"
     d, f = load(path)
     l = find_collisions(d, f)
+    create_blacklist(l)
