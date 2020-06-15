@@ -8,6 +8,7 @@ from pprint import pprint
 def compare(a, b):
     a_1, a_2 = a[0].split("-")
     b_1, b_2 = b[0].split("-")
+    a_1, a_2, b_1, b_2 = int(a_1), int(a_2), int(b_1), int(b_2)
     if a_1 > a_2:
         a_1, a_2 = a_2, a_1
     if b_1 > b_2:
@@ -73,7 +74,7 @@ def find_collisions(seqdict, filedict):
     
     print(f"Subsets: {len(allcol)-len(not_subset)}")
     print(Counter(l).most_common(5))
-    return not_subset # Instead of return add to "tmp/blacklist.json"
+    return not_subset
 
 def create_blacklist(l):
     blacklist = set()
@@ -90,5 +91,5 @@ def create_blacklist(l):
 if __name__ == "__main__":
     path = "data"
     d, f = load(path)
-    l = find_collisions(d, f)
-    create_blacklist(l)
+    not_subset = find_collisions(d, f)
+    create_blacklist(not_subset)
