@@ -4,7 +4,6 @@ import os
 import other.feat as feat
 import numpy as np
 import json
-import other.help_functions as h
 
 
   
@@ -335,6 +334,7 @@ def fnames_to_dict(fnames, yao_scores):
 
         
 def loaddata(path, numneg = 10000, pos='both', seed=None):
+    import other.help_functions as h
     random.seed(seed)
     if os.path.isfile("tmp/blacklist.json"):
         blacklist = set(h.loadfile("tmp/blacklist.json"))
