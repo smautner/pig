@@ -73,12 +73,12 @@ def maketasks(folds, df, debug=False):
                 tasks.append((foldnr, "Lasso", X_train, y_train, df, alpha))
             for features in [40, 60, 80]:  # Relief
                 tasks.append((foldnr, "Relief", X_train, y_train, df, features))
-            for threshold in [1]:  # Variance Threshold
+            for threshold in [1, 1.5, 2]:  # Variance Threshold
                 tasks.append((foldnr, "VarThresh", X_train, y_train, df, threshold))
             for k in [20]:  # Select K Best
                 tasks.append((foldnr, "SelKBest", X_train, y_train, df, k))
-            for stepsize in [1, 2, 3]:  # RFECV (Testing)
-                tasks.append((foldnr, "RFECV", X_train, y_train, df, stepsize))
+##            for stepsize in [1, 2, 3]:  # RFECV (Testing)
+##                tasks.append((foldnr, "RFECV", X_train, y_train, df, stepsize))
         foldnr += 1
 
     np.array(tasks).dump("tmp/fs_tasks")
