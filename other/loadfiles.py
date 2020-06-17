@@ -343,8 +343,8 @@ def loaddata(path, numneg = 10000, pos='both', seed=None):
     ##############
     # positives
     ##############
-    pos1 = [ "%s/pos/%s" %(path,f) for f in  os.listdir("%s/pos" % path) if f"{path}/pos/{f}" not in blacklist]  
-    pos2 = [ "%s/pos2/%s" %(path,f) for f in  os.listdir("%s/pos2" % path) if f"{path}/pos2/{f}" not in blacklist] 
+    pos1 = [ "%s/pos/%s" %(path,f) for f in  os.listdir("%s/pos" % path) if f not in blacklist]  
+    pos2 = [ "%s/pos2/%s" %(path,f) for f in  os.listdir("%s/pos2" % path) if f not in blacklist] 
     if pos == 'both':
         pos = pos1+pos2
     elif pos == '1':
@@ -359,7 +359,7 @@ def loaddata(path, numneg = 10000, pos='both', seed=None):
     negfnames =   list(os.listdir("%s/neg" % path ))
     random.shuffle(negfnames)
     print(negfnames[:5])
-    neg = [ "%s/neg/%s" %(path,f) for f in  negfnames[:numneg] if f"{path}/neg/{f}" not in blacklist] 
+    neg = [ "%s/neg/%s" %(path,f) for f in  negfnames[:numneg] if f not in blacklist] 
 
     
     if len(pos) > numneg:

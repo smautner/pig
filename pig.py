@@ -138,7 +138,7 @@ def makeall(n_splits, randseed, debug):
 #############
 
 if __name__ == "__main__":
-    debug = True
+    debug = False
     n_splits = 10 if not debug else 2
     randseed = 42
 
