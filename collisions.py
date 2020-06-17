@@ -14,8 +14,7 @@ def compare(a, b):
     if ((a_1 > a_2 and b_1 < b_2) or (a_1 < a_2 and b_1 > b_2)):
         # Make sure both sequences go into the same direction..
         return False
-    else:
-        if a_1 > a_2:
+    elif a_1 > a_2:
             a_1, a_2 = a_2, a_1
             b_2, b_1 = b_1, b_2
     if ((a_1 <= b_1 <= a_2) or
