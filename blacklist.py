@@ -87,6 +87,7 @@ def create_blacklist(l):
             blacklist.add(x[1][0])
         else:
             blacklist.add(x[0][0])
+    blacklist.add("416-60776-0-1.sto") # Incompatible with RNAz
     h.dumpfile(list(blacklist), "tmp/blacklist.json")
     print(f"{len(blacklist)} blacklisted files")
 
