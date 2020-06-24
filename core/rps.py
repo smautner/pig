@@ -1,4 +1,6 @@
 import numpy as np
+from sklearn.base import clone
+from sklearn.metrics import f1_score
 from sklearn.model_selection import RandomizedSearchCV as RSCV
 from sklearn.preprocessing import StandardScaler
 import other.randomsearch as  rs
@@ -21,11 +23,11 @@ def score(X, y, clf_param, n_jobs, debug):
                 error_score=np.nan,
                 return_train_score=False)
     searcher.fit(X, y)
+    best_esti_score = searcher.best_score_
     best_esti = searcher.best_estimator_
-    best_score = searcher.best_score_
-    return best_score, best_esti
+    return best_esti_score, best_esti
 
-def maketasks(featurelists, p, n, randseed, n_splits):
+def maketasks(featurelists, p, n, randseed):
     """Creates tasks that can be used for random_param_search.
     Args:
       featurelists: A dictionary of featurelists each entry is a fold of featurelists.
@@ -37,11 +39,11 @@ def maketasks(featurelists, p, n, randseed, n_splits):
         for flist in featurelists[i]: # Each fold contains featurelists.
             FEATURELIST = flist[0]
             FUNCNAME = flist[1]
-            X,y,df = h.makeXY(FEATURELIST, p, n)
-            X = StandardScaler().fit_transform(X)
-            tasks.extend([(i, X, y, cp, FEATURELIST, FUNCNAME) for cp in zip(rs.classifiers,rs.param_lists)])
+            FXY = flist[2]
+            fx,fy,df = h.makeXY(FEATURELIST, p, n)
+            fx = StandardScaler().fit_transform(fx)
+            tasks.extend([(i, fx, fy, cp, FEATURELIST, FUNCNAME, FXY) for cp in zip(rs.classifiers,rs.param_lists)])
     tasks = np.array(tasks)
-    print(len(tasks)) # = 18 !
     tasks.dump("tmp/rps_tasks")
     return tasks
 
@@ -52,32 +54,10 @@ def random_param_search(task, n_jobs=4, debug=False):
       n_jobs: Number of parallel jobs used by score().
       debug: True if debug mode.
     """
-    best_score, best_esti = score(task[1], task[2], task[3], n_jobs, debug)
-    return task[0], best_score, best_esti, task[4], task[5]
-
-
-if __name__ == "__main__":
-    from feature_selection import feature_selection
-    debug = True
-    randseed = 42
-
-    p, n = h.load_data(debug)
-    X, Y, df = h.pd_dataframe(p, n)
-    folds = h.kfold(X, Y, n_splits=2, randseed=randseed)
-    featurelists = []
-    func_names = []
-  
-    for X_train, X_test, y_train, y_test in folds:
-        fs = feature_selection(X_train, y_train, df, debug=debug)
-        featurelists.append(fs[0])
-        func_names.append(fs[1])
-
-    maketasks(featurelists, p, n, randseed, n_splits=2)
-    tasks = np.load("tmp/tasks", allow_pickle=True)
-    for task in tasks:
-        random_param_search(task, debug=debug)
-        
-# vor every fold: 
-# use trainXY to get featurelists =>
-# dann alle featurelists x classifiers (x2000) ;; dump score, classifier+params, feature_list (und wie generiert); (1)
-# report (1) and score(best_esti, testXY) 
+    X_train, X_test, y_train, y_test = task[6]
+    best_esti_score, best_esti = score(task[1], task[2], task[3], n_jobs, debug)
+    clf = clone(best_esti)
+    clf.fit(X_train, y_train) #
+    y_pred = clf.predict(X_test)
+    test_score = f1_score(y_test, y_pred)
+    return task[0], best_esti_score, test_score, best_esti, task[4], task[5]

@@ -84,12 +84,15 @@ def showresults(args=""):
     from collections import Counter
     from pprint import pprint
     results = loadfile("results.json")
-    scores = []
+    best_esti_scores = []
+    test_scores = []
     estimators = {}
     ftlists = []
     c = Counter()
-    for best_score, best_esti, ftlist, fname in results.values():
-        scores.append(best_score)
+    #for best_score, best_esti, ftlist, fname in results.values():
+    for best_esti_score, test_score, best_esti, ftlist, fname in results.values():
+        best_esti_scores.append(best_esti_score)
+        test_scores.append(test_score)
         esti_name, params = best_esti
         if esti_name not in estimators:
             estimators[esti_name] = {}
@@ -102,7 +105,11 @@ def showresults(args=""):
         c.update(ftlist)
     print_help = True
     if "s" in args:
-        pprint(scores)
+        pprint(best_esti_scores)
+        print("\n")
+        print_help = False
+    if "t" in args:
+        pprint(test_scores)
         print("\n")
         print_help = False
     if "f" in args:
@@ -122,7 +129,8 @@ def showresults(args=""):
             pprint((x[0], len(x[1]), x[1]))
         print_help = False
     if print_help:
-        print("Usage: pig.py showresults {sfen}\n s - scores\n", \
+        print("Usage: pig.py showresults {stfen}\n s - best_esti_scores\n", \
+              "t - test scores\n", \
               "f - featurelists with number of occurences\n e - estimators\n", \
               "n - Shows ALL featurelists with the info used to create them")
     return estimators, c.most_common()

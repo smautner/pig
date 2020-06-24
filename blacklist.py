@@ -67,24 +67,22 @@ def find_collisions(seqdict, filedict):
                 col += 1
     print (f"Total comparisons: {cou}, Collisions: {col}")
     allcol = Counter(l).most_common()
-    print(f"Different collisions: {len(allcol)}")
     results = []
     for x in allcol:
         a = x[0][0]
         b = x[0][1]
+        a_name = a.split("-")
+        b_name = b.split("-")
+        if not a_name[:2] == b_name[:2]:
+            if x[1] < 2:  # If the first 2 parts of the filename arent identical,
+                continue  # Require at least 2 collisions to be added
         results.append(((a, filedict[a]), (b, filedict[b]), x[1]))
+    print(f"Different collisions: {len(results)}")
     return results
 
 def create_blacklist(l):
     blacklist = set()
     for x in l:
-##        if x[0][0] in blacklist or x[1][0] in blacklist:
-##            continue
-        a_name = x[0][0].split("-")
-        b_name = x[1][0].split("-")
-        if not (a_name[0] == b_name[0] and a_name[1] == b_name[1]):
-            if x[2] < 2:  # If the first 2 parts of the filename arent identical,
-                continue  # Require at least 2 collisions to be added
         if x[0][1] > x[1][1]:
             blacklist.add(x[1][0])
         else:
@@ -92,7 +90,11 @@ def create_blacklist(l):
     h.dumpfile(list(blacklist), "tmp/blacklist.json")
     print(f"{len(blacklist)} blacklisted files")
 
-def show(a, b, path="data/neg"):
+def show(a, b=None, path="data/neg", open_files=True):
+    import subprocess
+    if type(a) == tuple:
+        b = a[1][0]
+        a = a[0][0]
     with open(f"{path}/{a}") as af:
         for aline in af.readlines()[2:]:
             if aline.startswith("#"): # Last Sequence of a reached
@@ -108,9 +110,15 @@ def show(a, b, path="data/neg"):
                         if compare(asplit[1], bsplit[1]):
                             print(f"{asplit[0]}: {asplit[1]}  {bsplit[1]}")
 
+    if open_files and os.name == "nt": # Only for testing to make reading easier
+        print(f"opening {path}/{a} and {path}/{b}")
+        subprocess.Popen(["notepad.exe", f"{path}/{a}"])
+        subprocess.Popen(["notepad.exe", f"{path}/{b}"])
+
+
 if __name__ == "__main__":
     path = "data"
     d, f = load(path)
     col = find_collisions(d, f)
     create_blacklist(col)
-    show('94-1130-0-1.sto','94-2294-0-1.sto')
+    #show('94-1130-0-1.sto','94-2294-0-1.sto')
