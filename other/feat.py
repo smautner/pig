@@ -163,7 +163,24 @@ def get_sloppy( ali):
         #print ("getsloppy: p con.both ali.name, ali.blocks", p, ali.basepairs.both, ali.name,ali.blockstartend )
 
        
+#####
+# Big mysterious hairpin
+######
 
+def bmm(ali):
+    counter = 0 # Bracket counter
+    target = False # Outermost bracket
+    for x in ali.structure:
+        if x == "<" and target == True:
+            return {"Big Mysterious Hairpin": 0}
+        elif x == "<":
+            counter += 1
+        elif x == ">" and counter == 1:
+            target = True
+        elif x == ">":
+                counter -= 1
+
+    return {"Big Mysterious Hairpin": 1}
              
 
 
@@ -183,7 +200,7 @@ def yao_score(ali):
 def getfeatures(ali):
     d={}
     for f in [conservation,blocktype,stemlength,stemflankconservation,
-             percstem, lencount, stemcov, get_sloppy]:
+             percstem, lencount, stemcov, get_sloppy, bmm]:
         d.update(f(ali))
     return d
             

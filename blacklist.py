@@ -43,9 +43,11 @@ def load(path):
                     else:
                         split = line.split(sep=" ", maxsplit=1)[0].split(sep="/")
                         seqdict[split[0]].append((split[1], i_name))
-                        filedict[i_name] += 1
+                        coord = split[1].split("-")
+                        distance = abs(int(coord[0])-int(coord[1]))
+                        filedict[i_name] += distance
             
-        h.dumpfile((seqdict, filedict), "tmp/seq_dict.json") # Saves only around 8 seconds per execution
+        h.dumpfile((seqdict, filedict), "tmp/seq_dict.json")
                 
     return seqdict, filedict
 
@@ -122,4 +124,3 @@ if __name__ == "__main__":
     d, f = load(path)
     col = find_collisions(d, f)
     create_blacklist(col)
-    #show('94-1130-0-1.sto','94-2294-0-1.sto')

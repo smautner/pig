@@ -317,7 +317,8 @@ def ali_to_dict(name, alignments, yao_scores, rnaz):
     ####
     r['name'] = name
     r['yao_score'] = yao_scores[name]
-    r['rnaz_score'] = rnaz[name]
+    if rnaz: # Only add RNAz as a feature if "use_rnaz in loaddata() is True
+        r['rnaz_score'] = rnaz[name]
     return r 
 
 def fnames_to_dict(fnames, yao_scores, rnaz):
@@ -334,7 +335,7 @@ def fnames_to_dict(fnames, yao_scores, rnaz):
         yield z
 
         
-def loaddata(path, numneg = 10000, pos='both', seed=None):
+def loaddata(path, numneg = 10000, pos='both', seed=None, use_rnaz=True):
     import other.help_functions as h
     random.seed(seed)
     if os.path.isfile("tmp/blacklist.json"):
@@ -370,8 +371,11 @@ def loaddata(path, numneg = 10000, pos='both', seed=None):
 
     with open(f"{path}/yaoscores.json") as f:
         yao = json.load(f)
-    with open(f"{path}/rnaz_scores.json") as f:
-        rnaz = json.load(f)
+    if use_rnaz:
+        with open(f"{path}/rnaz_scores.json") as f:
+            rnaz = json.load(f)
+    else:
+        rnaz = False
 
     pos = list(fnames_to_dict(pos, yao, rnaz))
     neg = list(fnames_to_dict(neg, yao, rnaz))

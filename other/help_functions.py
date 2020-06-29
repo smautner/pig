@@ -9,12 +9,12 @@ def scorer(esti,x,y):
     yh = esti.predict(x)
     return f1_score(y,yh)
 
-def load_data(debug=False):
+def load_data(debug=False, use_rnaz=True):
     fn = "tmp/pnd.json" if debug else "tmp/pn.json" # Different file for debug mode.
     if os.path.isfile(fn):
         p, n = loadfile(fn)
     else:
-        p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=9)
+        p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=9, use_rnaz=True)
         dumpfile((p,n), fn)
     return p, n
 
