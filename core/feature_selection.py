@@ -62,23 +62,24 @@ def maketasks(folds, df, debug=False):
     tasks = []
     foldnr = 0
     for X_train, X_test, y_train, y_test in folds:
-        # Each task: (i, type, X, y, df, (args)
+        Xy = (X_train, X_test, y_train, y_test)
+        # Each task: (i, type, Xy, df, (args)
         if debug:
-            tasks.extend([(foldnr, "Lasso", X_train, y_train, df, .05),
-                          (foldnr, "Relief", X_train, y_train, df, 40),
-                          (foldnr, "VarThresh", X_train, y_train, df, 1)])
+            tasks.extend([(foldnr, "Lasso", Xy, df, .05),
+                          (foldnr, "Relief", Xy, df, 40),
+                          (foldnr, "VarThresh", Xy, df, 1)])
 
         else:
             for alpha in [.05, 0.1]:  # Lasso
-                tasks.append((foldnr, "Lasso", X_train, y_train, df, alpha))
-            for features in [40, 60, 80]:  # Relief
-                tasks.append((foldnr, "Relief", X_train, y_train, df, features))
-            for threshold in [1, 1.5, 2]:  # Variance Threshold
-                tasks.append((foldnr, "VarThresh", X_train, y_train, df, threshold))
+                tasks.append((foldnr, "Lasso", Xy, df, alpha))
+##            for features in [40, 60, 80]:  # Relief
+##                tasks.append((foldnr, "Relief", Xy, df, features))
+            for threshold in [.99, 1, 1.01]:  # Variance Threshold
+                tasks.append((foldnr, "VarThresh", Xy, df, threshold))
             for k in [20]:  # Select K Best
-                tasks.append((foldnr, "SelKBest", X_train, y_train, df, k))
-##            for stepsize in [1, 2, 3]:  # RFECV (Testing)
-##                tasks.append((foldnr, "RFECV", X_train, y_train, df, stepsize))
+                tasks.append((foldnr, "SelKBest", Xy, df, k))
+##            for stepsize in [1, 2, 3]:  # RFECV
+##                tasks.append((foldnr, "RFECV", Xy, df, stepsize))
         foldnr += 1
 
     np.array(tasks).dump("tmp/fs_tasks")
@@ -94,7 +95,8 @@ def feature_selection(taskid):
       featurelist(List)
       """
     tasks = np.load("tmp/fs_tasks", allow_pickle=True)
-    foldnr, fstype, X_train, y_train, df, args = tasks[taskid]
+    foldnr, fstype, Xy, df, args = tasks[taskid]
+    X_train, X_test, y_train, y_test = Xy
     if fstype == "Lasso":
         fl = lasso(X_train, y_train, df, args)
     elif fstype == "Relief":
@@ -107,24 +109,4 @@ def feature_selection(taskid):
         fl = rfecv(X_train, y_train, df, args)
     else:
         raise ValueError(f"'{fstype}' is not a valid Feature selection method.")
-    return foldnr, fl, f"{fstype}: {args}"
-
-
-if __name__ == "__main__":
-    randseed = 42
-    debug = True
-
-    p, n = h.load_data(debug)
-    X, Y, df = h.pd_dataframe(p, n)
-    folds = h.kfold(X, Y, n_splits=2, randseed=randseed)
-    featurelists = []
-    func_names = []
-    maketasks(folds, df, debug)
-    tasks = np.load("tmp/fs_tasks", allow_pickle=True)
-    featurelists = {}
-    for taskid in range(0, len(tasks)):
-        foldnr, fl, fname = feature_selection(taskid) # This is what the Cluster would compute.
-        if foldnr in featurelists:
-            featurelists[foldnr].append((fl, fname))
-        else:
-            featurelists[foldnr] = [(fl, fname)]
+    return foldnr, fl, f"{fstype}: {args}", Xy

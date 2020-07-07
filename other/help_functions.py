@@ -9,12 +9,12 @@ def scorer(esti,x,y):
     yh = esti.predict(x)
     return f1_score(y,yh)
 
-def load_data(debug=False):
+def load_data(debug=False, use_rnaz=True):
     fn = "tmp/pnd.json" if debug else "tmp/pn.json" # Different file for debug mode.
     if os.path.isfile(fn):
         p, n = loadfile(fn)
     else:
-        p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=9)
+        p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=9, use_rnaz=True)
         dumpfile((p,n), fn)
     return p, n
 
@@ -84,13 +84,14 @@ def showresults(args=""):
     from collections import Counter
     from pprint import pprint
     results = loadfile("results.json")
-    scores = []
     estimators = {}
     ftlists = []
     c = Counter()
-    for best_score, best_esti, ftlist, fname in results.values():
-        scores.append(best_score)
+    #for best_score, best_esti, ftlist, fname in results.values():
+    for best_esti_score, test_score, best_esti, ftlist, fname in results.values():
         esti_name, params = best_esti
+        params["test_score"] = round(test_score, 4)
+        params["best_esti_score"] = round(best_esti_score, 4)
         if esti_name not in estimators:
             estimators[esti_name] = {}
         for key, value in params.items():
@@ -101,10 +102,6 @@ def showresults(args=""):
         ftlists.append((fname, ftlist)) # ?
         c.update(ftlist)
     print_help = True
-    if "s" in args:
-        pprint(scores)
-        print("\n")
-        print_help = False
     if "f" in args:
         pprint(c.most_common())
         print("\n")
@@ -122,7 +119,7 @@ def showresults(args=""):
             pprint((x[0], len(x[1]), x[1]))
         print_help = False
     if print_help:
-        print("Usage: pig.py showresults {sfen}\n s - scores\n", \
+        print("Usage: pig.py showresults {fen}\n", \
               "f - featurelists with number of occurences\n e - estimators\n", \
               "n - Shows ALL featurelists with the info used to create them")
     return estimators, c.most_common()
