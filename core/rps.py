@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.base import clone
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 from sklearn.model_selection import RandomizedSearchCV as RSCV
 from sklearn.preprocessing import StandardScaler
 import other.randomsearch as  rs
@@ -39,11 +39,11 @@ def maketasks(featurelists, p, n, randseed):
         for flist in featurelists[i]: # Each fold contains featurelists.
             FEATURELIST = flist[0]
             FUNCNAME = flist[1]
-            FXY = flist[2]
-            fx,fy,df = h.makeXY(FEATURELIST, p, n)
-            fx = StandardScaler().fit_transform(fx)
-            tasks.extend([(i, fx, fy, cp, FEATURELIST, FUNCNAME, FXY) for cp in zip(rs.classifiers,rs.param_lists)])
-    tasks = np.array(tasks)
+            FOLDXY = flist[2] # Includes X and y train/test from the fold
+            X,y,df = h.makeXY(FEATURELIST, p, n)
+            X = StandardScaler().fit_transform(X)
+            tasks.extend([(i, X, y, cp, FEATURELIST, FUNCNAME, FOLDXY) for cp in zip(rs.classifiers,rs.param_lists)])
+    tasks = np.array(tasks) # task = (FoldNr., X, y, classifier/param, Featurelist, Function_name, FoldXY)
     tasks.dump("tmp/rps_tasks")
     return tasks
 
@@ -54,10 +54,12 @@ def random_param_search(task, n_jobs=4, debug=False):
       n_jobs: Number of parallel jobs used by score().
       debug: True if debug mode.
     """
-    X_train, X_test, y_train, y_test = task[6]
+    X_train, X_test, y_train, y_test = task[6] # FOLDXY
     best_esti_score, best_esti = score(task[1], task[2], task[3], n_jobs, debug)
     clf = clone(best_esti)
-    clf.fit(X_train, y_train) #
+    clf.fit(X_train, y_train) 
     y_pred = clf.predict(X_test)
-    test_score = f1_score(y_test, y_pred)
-    return task[0], best_esti_score, test_score, best_esti, task[4], task[5]
+    test_score = f1_score(y_test, y_pred) #
+    acc_score = accuracy_score(y_test, y_pred)#
+    scores = (best_esti_score, test_score, acc_score)
+    return task[0], scores, best_esti, task[4], task[5]

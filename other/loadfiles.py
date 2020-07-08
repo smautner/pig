@@ -336,11 +336,13 @@ def fnames_to_dict(fnames, yao_scores, rnaz):
 
         
 def loaddata(path, numneg = 10000, pos='both', seed=None, use_rnaz=True):
-    import other.help_functions as h
+    import json
     random.seed(seed)
     if os.path.isfile("tmp/blacklist.json"):
-        blacklist = set(h.loadfile("tmp/blacklist.json"))
+        with open("tmp/blacklist.json", "r") as f:
+            blacklist = set(json.load(f))
     else:
+        print("No Blacklist found in 'tmp/'")
         blacklist = set()
     ##############
     # positives

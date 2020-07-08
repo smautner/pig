@@ -168,19 +168,31 @@ def get_sloppy( ali):
 ######
 
 def bmm(ali):
-    counter = 0 # Bracket counter
-    target = False # Outermost bracket
+    open_brackets = {"<", "(", "[", "{"}
+    close_brackets = {">", ")", "]", "}"}
+    counter = 0
+    stem_counter = 0
+    state = "no structure"
     for x in ali.structure:
-        if x == "<" and target == True:
-            return {"Big Mysterious Hairpin": 0}
-        elif x == "<":
-            counter += 1
-        elif x == ">" and counter == 1:
-            target = True
-        elif x == ">":
-                counter -= 1
-
-    return {"Big Mysterious Hairpin": 1}
+        counter += 1
+        if state == "no structure":
+            if x in open_brackets:
+                stem_counter += 1
+                state = "brackets open"
+        elif state == "brackets open":
+            if x in close_brackets:
+                state = "brackets closing"
+            elif x in open_brackets:
+                stem_counter += 1
+        elif state == "brackets closing":
+            if x in open_brackets:
+                return {"Big Mysterious Hairpin": 0} # Cannot be BMM
+    #print(ali.structure)
+    percentage = (stem_counter*2)/counter
+    if percentage >= 0.7:
+        return {"Big Mysterious Hairpin": 1} # BMM found
+    else:
+        return {"Big Mysterious Hairpin": 0} # Hairpin to small
              
 
 
