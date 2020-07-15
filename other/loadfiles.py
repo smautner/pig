@@ -3,7 +3,6 @@ from collections import defaultdict
 import os 
 import other.feat as feat
 import numpy as np
-import json
 
 
   
@@ -79,18 +78,31 @@ class Alignment:
         
         sets = self.makerealblock(stru, blocks,self.basepairs)
         block,stem = list(zip(*sets))
-        def setify(x):
-            s = set()
-            for li in x:
-                for e in li:
-                    s.add(e)
-            return s
+
+        setify = lambda x:{e for li in x for e in li} ##
 
         self.blockmask=list(setify(block))
         self.flankmask = list(setify(stem))
         self.blockstartend=blocks
 
     def makerealblock( self, stru,blocks,bdir):
+        """
+        Looks at surrounding parts of blocks and yields the blocks with them.
+
+        Attributes
+        ----------
+        stru: str
+            Structure of the alignment
+
+        blocks: list of tuples
+            Contains start and end points of the blocks
+
+        bdir: Object of bidir class
+
+        Returns
+        -------
+        Generator object that yields blocks and their surroundings
+        """
         lstru = len(stru)
         op='<([{'
         cl= '>)]}'
@@ -158,7 +170,7 @@ class Alignment:
 # parse a file
 #############
         
-def readfile(fname="asd.sto"):
+def readfile(fname="data/asd.sto"):
     def start(st,text):
         return st[:len(text)]==text
 
@@ -185,8 +197,9 @@ def readfile(fname="asd.sto"):
 ################
 
 def weirdo_detection(ali):
+    """Ranks alignments by counting weirdopoints."""
     height, length = ali.shape
-    points = [0]*height
+    points = [0]*height # weirdopoints
     for a in range(length): # for every possition 
         items = ali[:,a]
         dots = (items == '.').sum()
@@ -241,6 +254,7 @@ def structurecheck(ali,stru,basepairs):
     return ali[:,aliindices], ''.join(stru2)
             
 def rm_small_stems(stru):
+    """Removes small stems."""
     stru = list(stru)
     basepairs = bidir(stru)
     last_char = ''
@@ -263,6 +277,7 @@ def rm_small_stems(stru):
     return ''.join(stru) 
     
 def vary_alignment(fname,ali,stru,cov):
+    """Create different versions of alignments"""
     weird = weirdo_detection(ali)
     
     alignments = []
@@ -286,11 +301,13 @@ def vary_alignment(fname,ali,stru,cov):
     
     return [ (ali,st,text) for ali,st,text in zip(alis+alis,
                                                   structures+alternative_str,
-                                                  [a+b for a in ['allblock','delblock'] for b in ['ali','Xali','1ali','2ali']])]
+                                                  [a+b for a in ['allblock-','delblock-'] for b in ['ali-','Xali-','1ali-','2ali-']])]
 
     
     
 def ali_to_dict(name, alignments, yao_scores, rnaz):
+    """Create a dictionary for features from the alignments."""
+    
     #block =  [feat.conservation(ali),
     #                    feat.cov_sloppycov_disturbance_instem(ali),
     #                    feat.stemconservation(ali), 
@@ -299,9 +316,15 @@ def ali_to_dict(name, alignments, yao_scores, rnaz):
 
     #print (block)
     list_of_dict = [feat.getfeatures(A) for A in alignments]
-    master = list_of_dict[0]
-    ld2= [master]
-    for d,ali in zip(list_of_dict[1:],alignments[1:]):
+
+
+##    ##########
+##    master = list_of_dict[0]
+##    ld2= [master]
+##    for d,ali in zip(list_of_dict[1:],alignments[1:]):
+##    ##########
+    ld2= []
+    for d,ali in zip(list_of_dict,alignments):
         #print (ali.name)
         ld2.append({  ali.name+k:v  for k,v in d.items()}) 
         #ld2.append({  "diff %s %s" % (ali.name, k): v-d[k]   for k,v in master.items()}) 
@@ -336,11 +359,13 @@ def fnames_to_dict(fnames, yao_scores, rnaz):
 
         
 def loaddata(path, numneg = 10000, pos='both', seed=None, use_rnaz=True):
-    import other.help_functions as h
+    import json
     random.seed(seed)
     if os.path.isfile("tmp/blacklist.json"):
-        blacklist = set(h.loadfile("tmp/blacklist.json"))
+        with open("tmp/blacklist.json", "r") as f:
+            blacklist = set(json.load(f))
     else:
+        print("No Blacklist found in 'tmp/'")
         blacklist = set()
     ##############
     # positives

@@ -9,12 +9,12 @@ def scorer(esti,x,y):
     yh = esti.predict(x)
     return f1_score(y,yh)
 
-def load_data(debug=False, use_rnaz=True):
+def load_data(debug, randseed, use_rnaz):
     fn = "tmp/pnd.json" if debug else "tmp/pn.json" # Different file for debug mode.
     if os.path.isfile(fn):
         p, n = loadfile(fn)
     else:
-        p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=9, use_rnaz=True)
+        p, n = loadfiles.loaddata("data", numneg=3000 if not debug else 200, pos='1' if debug else 'both', seed=randseed, use_rnaz=use_rnaz)
         dumpfile((p,n), fn)
     return p, n
 
@@ -33,12 +33,12 @@ def makeXY(featurelist, p, n):
     y = [1]*len(p)+[0]*len(n)
     return X, y, df
 
-
-def pd_dataframe(p, n):
-    allfeatures = list(p[1].keys())  # the filenames are the last one and we dont need that (for now)
-    allfeatures.remove("name")
-    X, Y, df = makeXY(allfeatures, p, n)
-    return X, Y, df
+##
+##def pd_dataframe(p, n):
+##    allfeatures = list(p[1].keys())  # the filenames are the last one and we dont need that (for now)
+##    allfeatures.remove("name")
+##    X, Y, df = makeXY(allfeatures, p, n)
+##    return X, Y, df
 
 
 ###################
@@ -88,10 +88,12 @@ def showresults(args=""):
     ftlists = []
     c = Counter()
     #for best_score, best_esti, ftlist, fname in results.values():
-    for best_esti_score, test_score, best_esti, ftlist, fname in results.values():
+    for scores, best_esti, ftlist, fname in results.values():
         esti_name, params = best_esti
+        best_esti_score, test_score, accuracy_score = scores
         params["test_score"] = round(test_score, 4)
         params["best_esti_score"] = round(best_esti_score, 4)
+        params["accuracy_score"] = [round(acc, 4) for acc in accuracy_score]
         if esti_name not in estimators:
             estimators[esti_name] = {}
         for key, value in params.items():
@@ -122,4 +124,3 @@ def showresults(args=""):
         print("Usage: pig.py showresults {fen}\n", \
               "f - featurelists with number of occurences\n e - estimators\n", \
               "n - Shows ALL featurelists with the info used to create them")
-    return estimators, c.most_common()
