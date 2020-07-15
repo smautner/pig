@@ -43,32 +43,33 @@ def makefltasks(n_splits, randseed, debug , use_rnaz):
     X = StandardScaler().fit_transform(X)
     folds = h.kfold(X, Y, n_splits=n_splits, randseed=randseed)
     tasks = fs.maketasks(folds, df, debug)
-    print(f"Created {len(tasks)} FS tasks.")
-    return len(tasks)
+    numtasks = len(tasks)
+    print(f"Created {numtasks} FS tasks.")
+    return numtasks
 
 
 def calculate_featurelists(idd):
     """Executes FS for a given task. Executed by cluster."""
-    foldnr, fl, fname, FOLDXY = fs.feature_selection(idd)
+    foldnr, fl, mask, fname, FOLDXY = fs.feature_selection(idd)
     FOLDXY = (FOLDXY[0].tolist(), FOLDXY[1].tolist(), FOLDXY[2], FOLDXY[3])
-    h.dumpfile((foldnr, fl, fname, FOLDXY), f"tmp/fs_results/{idd}.json")
+    h.dumpfile((foldnr, fl, mask, fname, FOLDXY), f"tmp/fs_results/{idd}.json")
 
 
-def gather_featurelists(debug, use_rnaz):
+def gather_featurelists(debug, randseed):
     """Collect results to create the proper featurelists.
     Also creates tmp/rps_tasks for RPS.
     Note: The debug variable needs to be the same value as makefltasks uses."""
     featurelists = {}
     for ftfile in os.listdir("tmp/fs_results"):
-        foldnr, fl, fname, FOLDXY = h.loadfile(f"tmp/fs_results/{ftfile}")
+        foldnr, fl, mask, fname, FOLDXY = h.loadfile(f"tmp/fs_results/{ftfile}")
         if foldnr in featurelists: # Append the Featurelists to a dict with their fold number as key
-            featurelists[foldnr].append((fl, fname, FOLDXY))
+            featurelists[foldnr].append((fl, mask, fname, FOLDXY))
         else:
-            featurelists[foldnr] = [(fl, fname, FOLDXY)]
-    p, n = h.load_data(debug, randseed, use_rnaz) # Get pos and neg files
-    tasks = rps.maketasks(featurelists, p, n, randseed) # Creates "tmp/rps_tasks"
-    print(f"Created {len(tasks)} RPS tasks.")
-    return len(tasks)
+            featurelists[foldnr] = [(fl, mask, fname, FOLDXY)]
+    tasks = rps.maketasks(featurelists, randseed) # Creates "tmp/rps_tasks"
+    numtasks = len(tasks)
+    print(f"Created {numtasks} RPS tasks.")
+    return numtasks
 
 
 #############
@@ -97,7 +98,6 @@ def getresults():
         else:
             results[f[0]] = f[1:]
     h.dumpfile(results, "results.json")
-    return results
 
 #############
 # Additional Options
@@ -117,7 +117,7 @@ def makeall(n_splits, randseed, debug, use_rnaz):
     print("...Cluster finished")
     # RPS tasks
     print("Assembling FS lists and RPS tasks...")
-    rpstasklen = gather_featurelists(debug, use_rnaz)
+    rpstasklen = gather_featurelists(debug, randseed)
     print(f"Sending {rpstasklen} RPS tasks to cluster...")
     #Calc RPS Part -> Cluster
     ret,stderr,out = b.shexec(f"qsub -V -t 1-{rpstasklen} runall_rps_sge.sh")
@@ -160,7 +160,7 @@ if __name__ == "__main__":
         calculate_featurelists(idd)
 
     elif sys.argv[1] == 'gatherfl':
-        gather_featurelists(debug, use_rnaz=use_rnaz)
+        gather_featurelists(debug, randseed)
 
     elif sys.argv[1] == 'calcrps':
         idd = int(sys.argv[2])-1

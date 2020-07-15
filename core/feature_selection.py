@@ -3,7 +3,6 @@ from sklearn.feature_selection import (RFECV, VarianceThreshold,
 from sklearn.linear_model import Lasso
 from skrebate import ReliefF
 from sklearn.svm import SVC
-import other.help_functions as h
 import numpy as np
 #####################
 # Feature selection methods.
@@ -109,4 +108,5 @@ def feature_selection(taskid):
         fl = rfecv(X_train, y_train, df, args)
     else:
         raise ValueError(f"'{fstype}' is not a valid Feature selection method.")
-    return foldnr, fl, f"{fstype}: {args}", FOLDXY
+    mask = [True if f in fl else False for f in df.columns]
+    return foldnr, fl, mask, f"{fstype}: {args}", FOLDXY

@@ -62,10 +62,10 @@ def conservation(ali):
     ali.cons = r 
     ali.cons_nuc = r2
     return  {
-            f"total conservation":np.mean(r), 
-            f"total conservation +cov":np.mean([ 1 if b == '2' else a for a,b in zip(r,ali.covariance)  ]),
-            f"total conservation_nuc":np.mean(r2), 
-            f"total conservation_nuc +cov":np.mean([ 1 if b == '2' else a  for a,b in zip(r2,ali.covariance)  ]) 
+            f" total conservation":np.mean(r), 
+            f" total conservation +cov":np.mean([ 1 if b == '2' else a for a,b in zip(r,ali.covariance)  ]),
+            f" total conservation_nuc":np.mean(r2), 
+            f" total conservation_nuc +cov":np.mean([ 1 if b == '2' else a  for a,b in zip(r2,ali.covariance)  ]) 
     }
 
 
@@ -186,13 +186,13 @@ def bmm(ali):
                 stem_counter += 1
         elif state == "brackets closing":
             if x in open_brackets:
-                return {"Big Mysterious Hairpin": 0} # Cannot be BMM
+                return {" Big Mysterious Hairpin": 0} # Cannot be BMM
     #print(ali.structure)
     percentage = (stem_counter*2)/counter
     if percentage >= 0.7:
-        return {"Big Mysterious Hairpin": 1} # BMM found
+        return {" Big Mysterious Hairpin": 1} # BMM found
     else:
-        return {"Big Mysterious Hairpin": 0} # Hairpin to small
+        return {" Big Mysterious Hairpin": 0} # Hairpin to small
              
 
 

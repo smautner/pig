@@ -93,7 +93,7 @@ def showresults(args=""):
         best_esti_score, test_score, accuracy_score = scores
         params["test_score"] = round(test_score, 4)
         params["best_esti_score"] = round(best_esti_score, 4)
-        params["accuracy_score"] = round(accuracy_score, 4)
+        params["accuracy_score"] = [round(acc, 4) for acc in accuracy_score]
         if esti_name not in estimators:
             estimators[esti_name] = {}
         for key, value in params.items():
@@ -124,4 +124,3 @@ def showresults(args=""):
         print("Usage: pig.py showresults {fen}\n", \
               "f - featurelists with number of occurences\n e - estimators\n", \
               "n - Shows ALL featurelists with the info used to create them")
-    return estimators, c.most_common()
