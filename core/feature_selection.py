@@ -55,7 +55,7 @@ def rfecv(X_data, y_data, df, step=1, cv=3):
 #######################
 
 
-def maketasks(folds, df, debug=False):
+def maketasks(folds, df, use_relief, debug=False):
     """Creates the feature selection tasks"""
 
     tasks = []
@@ -71,14 +71,17 @@ def maketasks(folds, df, debug=False):
         else:
             for alpha in [.05, 0.1]:  # Lasso
                 tasks.append((foldnr, "Lasso", FOLDXY, df, alpha))
-##            for features in [40, 60, 80]:  # Relief
-##                tasks.append((foldnr, "Relief", FOLDXY, df, features))
+            for features in [40, 60, 80]:  # Relief
+                tasks.append((foldnr, "Relief", FOLDXY, df, features))
             for threshold in [.99, 1, 1.01]:  # Variance Threshold
                 tasks.append((foldnr, "VarThresh", FOLDXY, df, threshold))
             for k in [20]:  # Select K Best
                 tasks.append((foldnr, "SelKBest", FOLDXY, df, k))
-##            for stepsize in [1, 2, 3]:  # RFECV
-##                tasks.append((foldnr, "RFECV", FOLDXY, df, stepsize))
+            if use_relief:
+                for features in [40, 60, 80]:  # Relief
+                    tasks.append((foldnr, "Relief", FOLDXY, df, features))
+                for stepsize in [1, 2, 3]:  # RFECV
+                    tasks.append((foldnr, "RFECV", FOLDXY, df, stepsize))
         foldnr += 1
 
     np.array(tasks, dtype=object).dump("tmp/fs_tasks")

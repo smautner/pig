@@ -62,10 +62,10 @@ def conservation(ali):
     ali.cons = r 
     ali.cons_nuc = r2
     return  {
-            f" total conservation":np.mean(r), 
-            f" total conservation +cov":np.mean([ 1 if b == '2' else a for a,b in zip(r,ali.covariance)  ]),
-            f" total conservation_nuc":np.mean(r2), 
-            f" total conservation_nuc +cov":np.mean([ 1 if b == '2' else a  for a,b in zip(r2,ali.covariance)  ]) 
+            f"total conservation":np.mean(r), 
+            f"total conservation +cov":np.mean([ 1 if b == '2' else a for a,b in zip(r,ali.covariance)  ]),
+            f"total conservation_nuc":np.mean(r2), 
+            f"total conservation_nuc +cov":np.mean([ 1 if b == '2' else a  for a,b in zip(r2,ali.covariance)  ]) 
     }
 
 
@@ -100,9 +100,9 @@ def stemlength(ali):
         s=[0,0,s[0]]
     elif len(s) == 0:
         s=[0,0,0]
-    return {f" stem length smallest":s[0],
-            f" stem length last-1":s[-2],
-            f" stem length max":s[-1]}
+    return {f"stem length smallest":s[0],
+            f"stem length last-1":s[-2],
+            f"stem length max":s[-1]}
 
 ###
 # stem and flank conservation 
@@ -113,10 +113,10 @@ def stemlength(ali):
 def stemflankconservation(ali):
     #scons, sconsn = cons_stem(ali.blockstartend,ali.ali)
     return {
-            f" stem cons": np.mean(ali.cons[ali.blockmask]) if len(ali.blockmask)> 0 else 0,
-            f" stem cons nuc": np.mean(ali.cons_nuc[ali.blockmask]) if len(ali.blockmask)> 0 else 0,
-            f" flank cons": np.mean(ali.cons[ali.flankmask]) if len(ali.flankmask)> 0 else 0,
-            f" flank cons nuc": np.mean(ali.cons_nuc[ali.flankmask]) if len(ali.flankmask)> 0 else 0
+            f"stem cons": np.mean(ali.cons[ali.blockmask]) if len(ali.blockmask)> 0 else 0,
+            f"stem cons nuc": np.mean(ali.cons_nuc[ali.blockmask]) if len(ali.blockmask)> 0 else 0,
+            f"flank cons": np.mean(ali.cons[ali.flankmask]) if len(ali.flankmask)> 0 else 0,
+            f"flank cons nuc": np.mean(ali.cons_nuc[ali.flankmask]) if len(ali.flankmask)> 0 else 0
            }
 
 def percstem(ali):
@@ -127,12 +127,12 @@ def percstem(ali):
 
 def lencount(ali):
     return {
-        f" length":ali.ali.shape[1],
-        f" count":ali.ali.shape[0]
+        f"length":ali.ali.shape[1],
+        f"count":ali.ali.shape[0]
     }
 
 def stemcov(ali):
-    return {f" stem covariance": sum([a=='2' for a in ali.covariance])/len(ali.blockmask) if len(ali.blockmask)>0 else 0 }
+    return {f"stem covariance": sum([a=='2' for a in ali.covariance])/len(ali.blockmask) if len(ali.blockmask)>0 else 0 }
  
 ########
 # sloppy
@@ -154,8 +154,8 @@ def get_sloppy( ali):
                     ok +=1
                  
         return  {
-            f" sloppy gu":(sloppy/(sloppy+ok+sloppy_all)) if sloppy+ok+sloppy_all > 0 else 0, 
-            f" sloppy all ":((sloppy_all+sloppy)/(sloppy+ok+sloppy_all) ) if sloppy+ok+sloppy_all > 0 else 0, 
+            f"sloppy gu":(sloppy/(sloppy+ok+sloppy_all)) if sloppy+ok+sloppy_all > 0 else 0, 
+            f"sloppy all ":((sloppy_all+sloppy)/(sloppy+ok+sloppy_all) ) if sloppy+ok+sloppy_all > 0 else 0, 
         }
     except Exception as ex: 
         print ("getsloppy fehlt",ex,ali.ali, ali.structure)
@@ -186,13 +186,13 @@ def bmm(ali):
                 stem_counter += 1
         elif state == "brackets closing":
             if x in open_brackets:
-                return {" Big Mysterious Hairpin": 0} # Cannot be BMM
+                return {"Big Mysterious Hairpin": 0} # Cannot be BMM
     #print(ali.structure)
     percentage = (stem_counter*2)/counter
     if percentage >= 0.7:
-        return {" Big Mysterious Hairpin": 1} # BMM found
+        return {"Big Mysterious Hairpin": 1} # BMM found
     else:
-        return {" Big Mysterious Hairpin": 0} # Hairpin to small
+        return {"Big Mysterious Hairpin": 0} # Hairpin to small
              
 
 

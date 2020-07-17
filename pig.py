@@ -1,5 +1,4 @@
 import sys
-import time
 import numpy as np
 import os
 import other.help_functions as h
@@ -34,7 +33,7 @@ def cleanup(pn=False):
 #############
 
 
-def makefltasks(n_splits, randseed, debug , use_rnaz):
+def makefltasks(use_rnaz, use_relief, n_splits, randseed, debug):
     """Creates tasks the cluster uses to create featurelists."""
     p, n = h.load_data(debug, randseed, use_rnaz)
     allfeatures = list(p[1].keys())  # the filenames are the last one and we dont need that (for now)
@@ -42,7 +41,7 @@ def makefltasks(n_splits, randseed, debug , use_rnaz):
     X, Y, df = h.makeXY(allfeatures, p, n)
     X = StandardScaler().fit_transform(X)
     folds = h.kfold(X, Y, n_splits=n_splits, randseed=randseed)
-    tasks = fs.maketasks(folds, df, debug)
+    tasks = fs.maketasks(folds, df, use_relief, debug)
     numtasks = len(tasks)
     print(f"Created {numtasks} FS tasks.")
     return numtasks
@@ -55,7 +54,7 @@ def calculate_featurelists(idd):
     h.dumpfile((foldnr, fl, mask, fname, FOLDXY), f"tmp/fs_results/{idd}.json")
 
 
-def gather_featurelists(debug, randseed):
+def gather_featurelists(use_mlpc, debug):
     """Collect results to create the proper featurelists.
     Also creates tmp/rps_tasks for RPS.
     Note: The debug variable needs to be the same value as makefltasks uses."""
@@ -66,7 +65,7 @@ def gather_featurelists(debug, randseed):
             featurelists[foldnr].append((fl, mask, fname, FOLDXY))
         else:
             featurelists[foldnr] = [(fl, mask, fname, FOLDXY)]
-    tasks = rps.maketasks(featurelists, randseed) # Creates "tmp/rps_tasks"
+    tasks = rps.maketasks(featurelists, use_mlpc) # Creates "tmp/rps_tasks"
     numtasks = len(tasks)
     print(f"Created {numtasks} RPS tasks.")
     return numtasks
@@ -103,44 +102,41 @@ def getresults():
 # Additional Options
 #############
 
-def makeall(n_splits, randseed, debug, use_rnaz):
+def makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug):
     # FL tasks
     print("Making Featurelist tasks...")
-    fstasklen = makefltasks(n_splits, randseed, debug, use_rnaz)
+    fstasklen = makefltasks(use_rnaz, use_relief, n_splits, randseed, debug)
     #Calc FL Part -> Cluster
     print(f"Sending {fstasklen} FS tasks to cluster...")
-    ret,stderr,out = b.shexec(f"qsub -V -t 1-{fstasklen} runall_fs_sge.sh")
-    taskid = out.split()[2][:7]
-    print("taskid:", int(taskid))
-    while taskid in b.shexec("qstat")[2]: # "not ba.shexc("qstat"[2]" would be enough if user only runs 1 thing at a time
-        time.sleep(10)
+    b.shexec_and_wait(f"qsub -V -t 1-{fstasklen} runall_fs_sge.sh")
     print("...Cluster finished")
     # RPS tasks
     print("Assembling FS lists and RPS tasks...")
-    rpstasklen = gather_featurelists(debug, randseed)
-    print(f"Sending {rpstasklen} RPS tasks to cluster...")
+    rpstasklen = gather_featurelists(use_mlpc, debug)
     #Calc RPS Part -> Cluster
-    ret,stderr,out = b.shexec(f"qsub -V -t 1-{rpstasklen} runall_rps_sge.sh")
-    taskid = out.split()[2][:7]
-    print("taskid:", int(taskid))
-    while taskid in b.shexec("qstat")[2]:
-        time.sleep(10)
+    print(f"Sending {rpstasklen} RPS tasks to cluster...")
+    b.shexec_and_wait(f"qsub -V -t 1-{rpstasklen} runall_rps_sge.sh")
     # Results
     print("Gathering results...")
     getresults()
     print("Done")
 
+def makeall_all(n_splits, randseed, debug):
+    """Temporary function because of lazyness.
+    Executes all parameter combinations and saves the results
+    """
+    from itertools import product
+    cleanup(True)
+    for p in product([True, False], repeat=3):
+        cleanup(True)
+        create_directories()
+        name = f"MLPC-{p[0]}_RNAz-{p[1]}_Relief-{p[2]}"
+        print(f"----- {name} -----")
+        use_mlpc, use_rnaz, use_relief = p
+        makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug)
+        b.shexec(f"python pig.py showresults fen > {name}.txt")
 
-#############
-# Main Function
-#############
-
-if __name__ == "__main__":
-    debug = True
-    use_rnaz = True
-    n_splits = 10 if not debug else 2
-    randseed = 42
-
+def create_directories():
     if not os.path.exists("tmp"):
         print("Creating tmp directory")
         os.makedirs("tmp")
@@ -151,16 +147,29 @@ if __name__ == "__main__":
         print("Creating tmp/rps_results directory")
         os.makedirs("tmp/rps_results") 
 
+#############
+# Main Function
+#############
+
+if __name__ == "__main__":
+    debug = True
+    use_mlpc = True # If True MLPClassifier will be used
+    use_rnaz = True # If True RNAz scores will be added as a feature
+    use_relief = True # If True relief and RFECV will be used
+    n_splits = 5 if not debug else 2 # Number of splits kfold makes
+    randseed = 42
+
+    create_directories()
 
     if sys.argv[1] == 'makefltasks':
-        makefltasks(n_splits, randseed, debug, use_rnaz=use_rnaz)
+        makefltasks(use_rnaz, use_relief, n_splits, randseed, debug)
 
     elif sys.argv[1] == 'calcfl':
         idd = int(sys.argv[2])-1
         calculate_featurelists(idd)
 
     elif sys.argv[1] == 'gatherfl':
-        gather_featurelists(debug, randseed)
+        gather_featurelists(use_mlpc, debug)
 
     elif sys.argv[1] == 'calcrps':
         idd = int(sys.argv[2])-1
@@ -170,7 +179,10 @@ if __name__ == "__main__":
         getresults()
 
     elif sys.argv[1] == 'makeall':
-        makeall(n_splits, randseed, debug, use_rnaz)
+        if len(sys.argv) == 2:
+            makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug)
+        elif sys.argv[2] == 'lazy': ### TMP
+            makeall_all(n_splits, randseed, debug) ###
 
     elif sys.argv[1] == 'showresults':
         if len(sys.argv) == 3:

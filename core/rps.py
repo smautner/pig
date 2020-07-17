@@ -26,12 +26,17 @@ def score(X, y, clf_param, n_jobs, debug):
     best_esti = searcher.best_estimator_
     return best_esti_score, best_esti
 
-def maketasks(featurelists, randseed):
+def maketasks(featurelists, use_mlpc):
     """Creates tasks that can be used for random_param_search.
     Args:
       featurelists: A dictionary of featurelists each entry is a fold of featurelists.
-      randseed: The seed used.
     """
+    clfnames = ['xtratrees', 'gradientboosting']
+    if use_mlpc:
+        clfnames.append('neuralnet')
+    clf =   [rs.classifiers[clfname][0] for clfname in clfnames]
+    param = [rs.classifiers[clfname][1] for clfname in clfnames]
+
     tasks = []
     for i in range(0, len(featurelists)): # Each list is a fold
         for flist in featurelists[i]: # Each fold contains featurelists.
@@ -43,7 +48,7 @@ def maketasks(featurelists, randseed):
             X_train = StandardScaler().fit_transform(X_train) ##### ?
             FOLDXY[0] = np.array(X_train)[:,mask]
             FOLDXY[1] = np.array(X_test)[:,mask]
-            tasks.extend([(i, FOLDXY, cp, FEATURELIST, FUNCNAME) for cp in zip(rs.classifiers,rs.param_lists)])
+            tasks.extend([(i, FOLDXY, cp, FEATURELIST, FUNCNAME) for cp in zip(clf, param)])
     tasks = np.array(tasks) # task = (FoldNr., FOLDXY, classifier/param, Featurelist, Function_name)
     tasks.dump("tmp/rps_tasks")
     return tasks

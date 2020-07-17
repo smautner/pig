@@ -3,6 +3,7 @@ lzip = lambda *x: list(zip(*x))
 
 
 import dill
+import time
 dumpfile = lambda thing, filename: dill.dump(thing, open(filename, "wb"))
 loadfile = lambda filename: dill.load(open(filename, "rb"))
 
@@ -37,6 +38,13 @@ def shexec(cmd):
     output, stderr = process.communicate()
     retcode = process.poll()
     return (retcode,stderr,output) # .decode('utf-8') something like this might be necessary for py3
+
+def shexec_and_wait(cmd):
+    ret,stderr,out = shexec(cmd)
+    taskid = out.split()[2][:7]
+    print("taskid:", int(taskid))
+    while taskid in shexec("qstat")[2]:
+        time.sleep(10)
 
 def interact():
     import code
