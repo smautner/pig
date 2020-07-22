@@ -126,15 +126,13 @@ def makeall_all(n_splits, randseed, debug):
     Executes all parameter combinations and saves the results
     """
     from itertools import product
-    cleanup(True)
-    for p in product([True, False], repeat=3):
+    for use_rnaz, use_relief, use_mlpc  in product([False, True], repeat=3):
         cleanup(True)
         create_directories()
-        name = f"MLPC-{p[0]}_RNAz-{p[1]}_Relief-{p[2]}"
+        name = f"RNAz-{use_rnaz}_Relief-{use_relief}_MLPC-{use_mlpc}"
         print(f"----- {name} -----")
-        use_mlpc, use_rnaz, use_relief = p
         makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug)
-        b.shexec(f"python pig.py showresults fen > {name}.txt")
+        b.shexec(f"python pig.py showresults fen > output_{name}.txt")
 
 def create_directories():
     if not os.path.exists("tmp"):
@@ -152,7 +150,7 @@ def create_directories():
 #############
 
 if __name__ == "__main__":
-    debug = True
+    debug = False
     use_mlpc = True # If True MLPClassifier will be used
     use_rnaz = True # If True RNAz scores will be added as a feature
     use_relief = True # If True relief and RFECV will be used

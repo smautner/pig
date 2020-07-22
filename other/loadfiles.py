@@ -301,7 +301,7 @@ def vary_alignment(fname,ali,stru,cov):
     
     return [ (ali,st,text) for ali,st,text in zip(alis+alis,
                                                   structures+alternative_str,
-                                                  [a+b for a in ['','delblock '] for b in ['','remove_1/3_seq - ','remove_1_seq - ','remove_2_seq - ']])]
+                                                  [a+b for a in ['','rm_small_stems '] for b in ['','remove_1/3_seq ','remove_1_seq ','remove_2_seq ']])]
 
     
     
