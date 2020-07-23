@@ -29,7 +29,8 @@ def score(X, y, clf_param, n_jobs, debug):
 def maketasks(featurelists, use_mlpc):
     """Creates tasks that can be used for random_param_search.
     Args:
-      featurelists: A dictionary of featurelists each entry is a fold of featurelists.
+      featurelists (dict): A dictionary of featurelists each entry is a fold of featurelists.
+      use_mlpc (bool): If False MLPClassifier will not be used.
     """
     clfnames = ['xtratrees', 'gradientboosting']
     if use_mlpc:
@@ -60,10 +61,12 @@ def random_param_search(task, n_jobs=4, debug=False):
       n_jobs: Number of parallel jobs used by score().
       debug: True if debug mode.
     """
+    from sklearn.ensemble import GradientBoostingClassifier###
     X_train, X_test, y_train, y_test = task[1] # FOLDXY
     best_esti_score, best_esti = score(X_train, y_train, task[2], n_jobs, debug)
     clf = clone(best_esti)
     clf.fit(X_train, y_train)
+    y_labels = (y_test, list(clf.predict_proba(X_test)[:,1]))
     y_test = np.array(y_test)
     y_pred = clf.predict(X_test)
     y_pred = np.array(y_pred)
@@ -72,4 +75,4 @@ def random_param_search(task, n_jobs=4, debug=False):
     tnr = sum(y_pred[y_test == 0] == 0)/sum(y_test == 0)
     acc_score = (tpr, tnr)
     scores = (best_esti_score, test_score, acc_score)
-    return task[0], scores, best_esti, task[3], task[4]
+    return task[0], scores, best_esti, task[3], task[4], y_labels

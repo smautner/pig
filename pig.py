@@ -79,9 +79,9 @@ def gather_featurelists(use_mlpc, debug):
 def calcrps(idd, debug):
     """Executes RPS for a given task. Executed by cluster."""
     tasks = np.load("tmp/rps_tasks", allow_pickle=True)
-    foldnr, scores, best_esti, ftlist, fname = rps.random_param_search(tasks[idd], n_jobs=24, debug=debug)
+    foldnr, scores, best_esti, ftlist, fname, y_labels = rps.random_param_search(tasks[idd], n_jobs=24, debug=debug)
     best_esti = (type(best_esti).__name__, best_esti.get_params()) # Creates readable tuple that can be dumped.
-    h.dumpfile([foldnr, scores, best_esti, ftlist, fname], f"tmp/rps_results/{idd}.json")
+    h.dumpfile([foldnr, scores, best_esti, ftlist, fname, y_labels], f"tmp/rps_results/{idd}.json")
     return best_esti
 
 def getresults():
@@ -106,14 +106,14 @@ def makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug):
     # FL tasks
     print("Making Featurelist tasks...")
     fstasklen = makefltasks(use_rnaz, use_relief, n_splits, randseed, debug)
-    #Calc FL Part -> Cluster
+    # Calc FL part -> Cluster
     print(f"Sending {fstasklen} FS tasks to cluster...")
     b.shexec_and_wait(f"qsub -V -t 1-{fstasklen} runall_fs_sge.sh")
     print("...Cluster finished")
     # RPS tasks
     print("Assembling FS lists and RPS tasks...")
     rpstasklen = gather_featurelists(use_mlpc, debug)
-    #Calc RPS Part -> Cluster
+    # Calc RPS part -> Cluster
     print(f"Sending {rpstasklen} RPS tasks to cluster...")
     b.shexec_and_wait(f"qsub -V -t 1-{rpstasklen} runall_rps_sge.sh")
     # Results
@@ -123,16 +123,39 @@ def makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug):
 
 def makeall_all(n_splits, randseed, debug):
     """Temporary function because of lazyness.
-    Executes all parameter combinations and saves the results
+    Executes all parameter combinations and saves the results.
     """
     from itertools import product
-    for use_rnaz, use_relief, use_mlpc  in product([False, True], repeat=3):
+    from sklearn.metrics import roc_curve
+    import matplotlib.pyplot as plt
+    if not os.path.exists("results"):
+        os.makedirs("results")
+    else:
+        for file in os.listdir("results"):
+            os.remove(f"results/{file}")
+    plt.figure(figsize=(25.6, 19.2))
+    plt.plot([0, 1], [0, 1], 'k--')
+    for use_rnaz, use_relief, use_mlpc  in product([0, 1], repeat=3):
         cleanup(True)
         create_directories()
         name = f"RNAz-{use_rnaz}_Relief-{use_relief}_MLPC-{use_mlpc}"
         print(f"----- {name} -----")
         makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug)
-        b.shexec(f"python pig.py showresults fen > output_{name}.txt")
+        b.shexec(f"python pig.py showresults fen > results/output_{name}.txt")
+        ### The following part saves the data needed for drawing roc curves
+        ### For each parameter combination.
+        y_true, y_score = [], []
+        for sc, be, ft, fn, y_labels in h.loadfile("results.json").values():
+            y_true.extend(y_labels[0])
+            y_score.extend(y_labels[1])
+        fpr, tpr, thresholds = roc_curve(y_true, y_score)
+        plt.plot(fpr, tpr, label=name)
+        h.dumpfile((y_true, y_score), f"results/y_data_{name}")
+        os.rename("results.json", f"results/results_{name}.json")
+    plt.xlabel('False positive rate')
+    plt.ylabel('True positive rate')
+    plt.legend(loc='best')
+    plt.savefig("results/roc_curves")
 
 def create_directories():
     if not os.path.exists("tmp"):
@@ -151,9 +174,9 @@ def create_directories():
 
 if __name__ == "__main__":
     debug = False
-    use_mlpc = True # If True MLPClassifier will be used
-    use_rnaz = True # If True RNAz scores will be added as a feature
-    use_relief = True # If True relief and RFECV will be used
+    use_mlpc = False # If True MLPClassifier will be used
+    use_rnaz = False # If True RNAz scores will be added as a feature
+    use_relief = False # If True relief and RFECV will be used
     n_splits = 5 if not debug else 2 # Number of splits kfold makes
     randseed = 42
 

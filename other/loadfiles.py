@@ -385,7 +385,6 @@ def loaddata(path, numneg = 10000, pos='both', seed=None, use_rnaz=True):
     ##############
     negfnames =   list(os.listdir("%s/neg" % path ))
     random.shuffle(negfnames)
-    print(negfnames[:5])
     neg = [ "%s/neg/%s" %(path,f) for f in  negfnames[:numneg] if f not in blacklist] 
 
     
