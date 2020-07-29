@@ -12,7 +12,7 @@ import numpy as np
 def lasso(X_data, y_data, df, alpha=.06):
     mod = Lasso(alpha=alpha)
     mod.fit(X_data, y_data)
-    return [b for a, b in zip(mod.coef_, df.columns) if a != 0]
+    return [b for a, b in zip(mod.coef_, df.columns) if a]
 
 
 def relief(X_data, y_data, df, param):
@@ -25,7 +25,7 @@ def relief(X_data, y_data, df, param):
 def variance_threshold(X_data, y_data, df, threshold=0.0):
     clf = VarianceThreshold(threshold)
     clf.fit(X_data, y_data)
-    return [b for a, b in zip(clf.get_support(), df.columns) if a != False]
+    return [b for a, b in zip(clf.get_support(), df.columns) if a]
 
 
 def select_k_best(X_data, y_data, df, k=20):
@@ -40,7 +40,7 @@ def select_k_best(X_data, y_data, df, k=20):
             for y in range(0, len(X_data[x])):
                 X_data[x][y] -= mini
     clf.fit(X_data, y_data)
-    return [b for a, b in zip(clf.get_support(), df.columns) if a != False]
+    return [b for a, b in zip(clf.get_support(), df.columns) if a]
 
 
 def rfecv(X_data, y_data, df, step=1, cv=3):
@@ -48,7 +48,7 @@ def rfecv(X_data, y_data, df, step=1, cv=3):
 
     clf = RFECV(rfecv_estimator, step=step, cv=cv)
     clf.fit(X_data, y_data)
-    return [b for a, b in zip(clf.get_support(), df.columns) if a != False]
+    return [b for a, b in zip(clf.get_support(), df.columns) if a]
 
 #######################
 # The actual feature selection code.

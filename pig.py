@@ -33,9 +33,9 @@ def cleanup(pn=False):
 #############
 
 
-def makefltasks(use_rnaz, use_relief, n_splits, randseed, debug):
+def makefltasks(use_rnaz, use_relief, n_splits, numneg, randseed, debug):
     """Creates tasks the cluster uses to create featurelists."""
-    p, n = h.load_data(debug, randseed, use_rnaz)
+    p, n = h.load_data(debug, numneg, randseed, use_rnaz)
     allfeatures = list(p[1].keys())  # the filenames are the last one and we dont need that (for now)
     allfeatures.remove("name")
     X, Y, df = h.makeXY(allfeatures, p, n)
@@ -76,10 +76,11 @@ def gather_featurelists(use_mlpc, debug):
 #############
 
 
-def calcrps(idd, debug):
+def calcrps(idd, n_jobs, debug, randseed):
     """Executes RPS for a given task. Executed by cluster."""
+
     tasks = np.load("tmp/rps_tasks", allow_pickle=True)
-    foldnr, scores, best_esti, ftlist, fname, y_labels = rps.random_param_search(tasks[idd], n_jobs=24, debug=debug)
+    foldnr, scores, best_esti, ftlist, fname, y_labels = rps.random_param_search(tasks[idd], n_jobs, debug, randseed)
     best_esti = (type(best_esti).__name__, best_esti.get_params()) # Creates readable tuple that can be dumped.
     h.dumpfile([foldnr, scores, best_esti, ftlist, fname, y_labels], f"tmp/rps_results/{idd}.json")
     return best_esti
@@ -102,10 +103,10 @@ def getresults():
 # Additional Options
 #############
 
-def makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug):
+def makeall(use_rnaz, use_relief, use_mlpc, n_splits, numneg, randseed, debug):
     # FL tasks
     print("Making Featurelist tasks...")
-    fstasklen = makefltasks(use_rnaz, use_relief, n_splits, randseed, debug)
+    fstasklen = makefltasks(use_rnaz, use_relief, n_splits, numneg, randseed, debug)
     # Calc FL part -> Cluster
     print(f"Sending {fstasklen} FS tasks to cluster...")
     b.shexec_and_wait(f"qsub -V -t 1-{fstasklen} runall_fs_sge.sh")
@@ -121,26 +122,26 @@ def makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug):
     getresults()
     print("Done")
 
-def makeall_all(n_splits, randseed, debug):
+def makeall_all(n_splits, numneg, randseed, debug):
     """Temporary function because of lazyness.
     Executes all parameter combinations and saves the results.
     """
     from itertools import product
-    from sklearn.metrics import roc_curve
+    from sklearn.metrics import roc_curve, roc_auc_score
     import matplotlib.pyplot as plt
     if not os.path.exists("results"):
         os.makedirs("results")
     else:
         for file in os.listdir("results"):
             os.remove(f"results/{file}")
-    plt.figure(figsize=(25.6, 19.2))
+    plt.figure(figsize=(12.8, 9.6))
     plt.plot([0, 1], [0, 1], 'k--')
     for use_rnaz, use_relief, use_mlpc  in product([0, 1], repeat=3):
         cleanup(True)
         create_directories()
         name = f"RNAz-{use_rnaz}_Relief-{use_relief}_MLPC-{use_mlpc}"
         print(f"----- {name} -----")
-        makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug)
+        makeall(use_rnaz, use_relief, use_mlpc, n_splits, numneg, randseed, debug)
         b.shexec(f"python pig.py showresults fen > results/output_{name}.txt")
         ### The following part saves the data needed for drawing roc curves
         ### For each parameter combination.
@@ -149,7 +150,8 @@ def makeall_all(n_splits, randseed, debug):
             y_true.extend(y_labels[0])
             y_score.extend(y_labels[1])
         fpr, tpr, thresholds = roc_curve(y_true, y_score)
-        plt.plot(fpr, tpr, label=name)
+        auc = roc_auc_score(y_true, y_score)
+        plt.plot(fpr, tpr, label=f"{name} - {round(auc,4)}")
         h.dumpfile((y_true, y_score), f"results/y_data_{name}")
         os.rename("results.json", f"results/results_{name}.json")
     plt.xlabel('False positive rate')
@@ -173,17 +175,19 @@ def create_directories():
 #############
 
 if __name__ == "__main__":
-    debug = False
+    debug = True
     use_mlpc = False # If True MLPClassifier will be used
     use_rnaz = False # If True RNAz scores will be added as a feature
     use_relief = False # If True relief and RFECV will be used
+    numneg = 3000 # Number of negative files beeing read by h.loaddata()
     n_splits = 5 if not debug else 2 # Number of splits kfold makes
+    n_jobs = 24
     randseed = 42
 
     create_directories()
 
     if sys.argv[1] == 'makefltasks':
-        makefltasks(use_rnaz, use_relief, n_splits, randseed, debug)
+        makefltasks(use_rnaz, use_relief, n_splits, numneg, randseed, debug)
 
     elif sys.argv[1] == 'calcfl':
         idd = int(sys.argv[2])-1
@@ -194,16 +198,16 @@ if __name__ == "__main__":
 
     elif sys.argv[1] == 'calcrps':
         idd = int(sys.argv[2])-1
-        calcrps(idd, debug)
+        calcrps(idd, n_jobs, debug, randseed)
 
     elif sys.argv[1] == 'getresults':
         getresults()
 
     elif sys.argv[1] == 'makeall':
         if len(sys.argv) == 2:
-            makeall(use_rnaz, use_relief, use_mlpc, n_splits, randseed, debug)
+            makeall(use_rnaz, use_relief, use_mlpc, n_splits, numneg, randseed, debug)
         elif sys.argv[2] == 'lazy': ### TMP
-            makeall_all(n_splits, randseed, debug) ###
+            makeall_all(n_splits, numneg, randseed, debug) ###
 
     elif sys.argv[1] == 'showresults':
         if len(sys.argv) == 3:
