@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 import other.randomsearch as  rs
 
 
-def score(X, y, clf_param, n_jobs, debug):
+def score(X, y, clf_param, n_jobs, debug, randseed):
     clf, param = clf_param
     searcher = RSCV(clf, 
                 param, 
@@ -18,7 +18,7 @@ def score(X, y, clf_param, n_jobs, debug):
                 cv=5,
                 verbose=0,
                 pre_dispatch="2*n_jobs",
-                random_state=None,
+                random_state=randseed,
                 error_score=np.nan,
                 return_train_score=False)
     searcher.fit(X, y)
@@ -26,12 +26,19 @@ def score(X, y, clf_param, n_jobs, debug):
     best_esti = searcher.best_estimator_
     return best_esti_score, best_esti
 
-def maketasks(featurelists, randseed):
+def maketasks(featurelists, use_mlpc):
     """Creates tasks that can be used for random_param_search.
     Args:
-      featurelists: A dictionary of featurelists each entry is a fold of featurelists.
-      randseed: The seed used.
+      featurelists (dict): A dictionary of featurelists each entry is a fold of featurelists.
+      use_mlpc (bool): If False MLPClassifier will not be used.
+      randseed (int): Seed used.
     """
+    clfnames = ['xtratrees', 'gradientboosting']
+    if use_mlpc:
+        clfnames.append('neuralnet')
+    clf =   [rs.classifiers[clfname][0] for clfname in clfnames]
+    param = [rs.classifiers[clfname][1] for clfname in clfnames]
+
     tasks = []
     for i in range(0, len(featurelists)): # Each list is a fold
         for flist in featurelists[i]: # Each fold contains featurelists.
@@ -40,25 +47,29 @@ def maketasks(featurelists, randseed):
             FUNCNAME = flist[2]
             FOLDXY = flist[3] # Includes X and y train/test from the fold
             X_train, X_test = FOLDXY[0], FOLDXY[1]
-            X_train = StandardScaler().fit_transform(X_train) ##### ?
+            X_train = StandardScaler().fit_transform(X_train)
             FOLDXY[0] = np.array(X_train)[:,mask]
             FOLDXY[1] = np.array(X_test)[:,mask]
-            tasks.extend([(i, FOLDXY, cp, FEATURELIST, FUNCNAME) for cp in zip(rs.classifiers,rs.param_lists)])
-    tasks = np.array(tasks) # task = (FoldNr., FOLDXY, classifier/param, Featurelist, Function_name)
+            tasks.extend([[i, FOLDXY, list(cp), FEATURELIST, FUNCNAME] for cp in zip(clf, param)])
+    tasks = np.array(tasks) # task = [FoldNr., FOLDXY, classifier/param, Featurelist, Function_name]
     tasks.dump("tmp/rps_tasks")
     return tasks
 
-def random_param_search(task, n_jobs=4, debug=False):
+def random_param_search(task, n_jobs, debug, randseed):
     """
     Args:
-      task: A task made by maketasks().
-      n_jobs: Number of parallel jobs used by score().
-      debug: True if debug mode.
+      task (list): A task made by maketasks().
+      n_jobs (int): Number of parallel jobs used by score().
+      debug (bool): True if debug mode.
+      randseed (int): Seed used.
     """
+    from sklearn.ensemble import GradientBoostingClassifier###
     X_train, X_test, y_train, y_test = task[1] # FOLDXY
-    best_esti_score, best_esti = score(X_train, y_train, task[2], n_jobs, debug)
+    task[2][1]["random_state"] = [randseed]
+    best_esti_score, best_esti = score(X_train, y_train, task[2], n_jobs, debug, randseed)
     clf = clone(best_esti)
     clf.fit(X_train, y_train)
+    y_labels = (y_test, list(clf.predict_proba(X_test)[:,1]))
     y_test = np.array(y_test)
     y_pred = clf.predict(X_test)
     y_pred = np.array(y_pred)
@@ -67,4 +78,4 @@ def random_param_search(task, n_jobs=4, debug=False):
     tnr = sum(y_pred[y_test == 0] == 0)/sum(y_test == 0)
     acc_score = (tpr, tnr)
     scores = (best_esti_score, test_score, acc_score)
-    return task[0], scores, best_esti, task[3], task[4]
+    return task[0], scores, best_esti, task[3], task[4], y_labels

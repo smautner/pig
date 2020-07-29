@@ -6,27 +6,6 @@ from sklearn.model_selection import cross_val_score
 from sklearn.metrics import f1_score
 from other.draw import matrix
 import json
-#from loadfiles import loaddata
-
-
-# Currently not needed:
-# def save_loadeddata(p, n):
-#     """saves with loaddata() loaded data as a JSON file."""
-#     import json
-#     with open("p_loaded_data.json", "w") as f:
-#         json.dump(p, f)
-#     with open("n_loaded_data.json", "w") as f:
-#         json.dump(n, f)
-#
-# def load_loadeddata():
-#     """loads with save_loadeddata() saved files
-#     and returns its p and n again."""
-#     import json
-#     with open("p_loaded_data.json", "r") as f:
-#         p = json.load(f)
-#     with open("n_loaded_data.json", "r") as f:
-#         n = json.load(f)
-#     return p, n
 
 def log_reg(pos, neg, conf_matrix = True):
     """Builds a Logistic Regression model using the Yao-score

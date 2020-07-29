@@ -12,7 +12,7 @@ import numpy as np
 def lasso(X_data, y_data, df, alpha=.06):
     mod = Lasso(alpha=alpha)
     mod.fit(X_data, y_data)
-    return [b for a, b in zip(mod.coef_, df.columns) if a != 0]
+    return [b for a, b in zip(mod.coef_, df.columns) if a]
 
 
 def relief(X_data, y_data, df, param):
@@ -25,7 +25,7 @@ def relief(X_data, y_data, df, param):
 def variance_threshold(X_data, y_data, df, threshold=0.0):
     clf = VarianceThreshold(threshold)
     clf.fit(X_data, y_data)
-    return [b for a, b in zip(clf.get_support(), df.columns) if a != False]
+    return [b for a, b in zip(clf.get_support(), df.columns) if a]
 
 
 def select_k_best(X_data, y_data, df, k=20):
@@ -40,7 +40,7 @@ def select_k_best(X_data, y_data, df, k=20):
             for y in range(0, len(X_data[x])):
                 X_data[x][y] -= mini
     clf.fit(X_data, y_data)
-    return [b for a, b in zip(clf.get_support(), df.columns) if a != False]
+    return [b for a, b in zip(clf.get_support(), df.columns) if a]
 
 
 def rfecv(X_data, y_data, df, step=1, cv=3):
@@ -48,14 +48,14 @@ def rfecv(X_data, y_data, df, step=1, cv=3):
 
     clf = RFECV(rfecv_estimator, step=step, cv=cv)
     clf.fit(X_data, y_data)
-    return [b for a, b in zip(clf.get_support(), df.columns) if a != False]
+    return [b for a, b in zip(clf.get_support(), df.columns) if a]
 
 #######################
 # The actual feature selection code.
 #######################
 
 
-def maketasks(folds, df, debug=False):
+def maketasks(folds, df, use_relief, debug=False):
     """Creates the feature selection tasks"""
 
     tasks = []
@@ -71,14 +71,15 @@ def maketasks(folds, df, debug=False):
         else:
             for alpha in [.05, 0.1]:  # Lasso
                 tasks.append((foldnr, "Lasso", FOLDXY, df, alpha))
-##            for features in [40, 60, 80]:  # Relief
-##                tasks.append((foldnr, "Relief", FOLDXY, df, features))
             for threshold in [.99, 1, 1.01]:  # Variance Threshold
                 tasks.append((foldnr, "VarThresh", FOLDXY, df, threshold))
             for k in [20]:  # Select K Best
                 tasks.append((foldnr, "SelKBest", FOLDXY, df, k))
-##            for stepsize in [1, 2, 3]:  # RFECV
-##                tasks.append((foldnr, "RFECV", FOLDXY, df, stepsize))
+            if use_relief:
+                for features in [40, 60, 80]:  # Relief
+                    tasks.append((foldnr, "Relief", FOLDXY, df, features))
+                for stepsize in [1, 2, 3]:  # RFECV
+                    tasks.append((foldnr, "RFECV", FOLDXY, df, stepsize))
         foldnr += 1
 
     np.array(tasks, dtype=object).dump("tmp/fs_tasks")

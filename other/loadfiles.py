@@ -301,7 +301,7 @@ def vary_alignment(fname,ali,stru,cov):
     
     return [ (ali,st,text) for ali,st,text in zip(alis+alis,
                                                   structures+alternative_str,
-                                                  [a+b for a in ['allblock-','delblock-'] for b in ['ali-','Xali-','1ali-','2ali-']])]
+                                                  [a+b for a in ['','rm_small_stems '] for b in ['','remove_1/3_seq ','remove_1_seq ','remove_2_seq ']])]
 
     
     
@@ -385,7 +385,6 @@ def loaddata(path, numneg = 10000, pos='both', seed=None, use_rnaz=True):
     ##############
     negfnames =   list(os.listdir("%s/neg" % path ))
     random.shuffle(negfnames)
-    print(negfnames[:5])
     neg = [ "%s/neg/%s" %(path,f) for f in  negfnames[:numneg] if f not in blacklist] 
 
     
