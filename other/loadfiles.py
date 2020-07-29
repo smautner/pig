@@ -344,10 +344,14 @@ def ali_to_dict(name, alignments, yao_scores, rnaz):
         r['rnaz_score'] = rnaz[name]
     return r 
 
-def fnames_to_dict(fnames, yao_scores, rnaz):
+  
+def check_seq_count(prealignment): 
+  return prealignmnet[1].shape[0] > 2
+
+def fnames_to_dict(fnames, yao_scores, rnaz, check_prealignment = check_seq_count):
     for f in fnames:
         parsed = readfile(f)
-        if parsed[1].shape[0] < 3:
+        if  not filter_prealignment(parsed):
             continue
         alignments = vary_alignment(*parsed)
         #print ('lena',len(alignments)) # 8
@@ -358,11 +362,13 @@ def fnames_to_dict(fnames, yao_scores, rnaz):
         yield z
 
         
-def loaddata(path, numneg = 10000, pos='both', seed=None, use_rnaz=True):
+def loaddata(path, numneg = 10000, 
+                   pos='both', 
+                   seed=None, use_rnaz=True, check_prealignment = check_seq_count, blacklist_file = "tmp/blacklist.json"):  
     import json
     random.seed(seed)
-    if os.path.isfile("tmp/blacklist.json"):
-        with open("tmp/blacklist.json", "r") as f:
+    if os.path.isfile(blacklist_file):
+        with open(blacklist_file, "r") as f:
             blacklist = set(json.load(f))
     else:
         print("No Blacklist found in 'tmp/'")
@@ -401,8 +407,8 @@ def loaddata(path, numneg = 10000, pos='both', seed=None, use_rnaz=True):
     else:
         rnaz = False
 
-    pos = list(fnames_to_dict(pos, yao, rnaz))
-    neg = list(fnames_to_dict(neg, yao, rnaz))
+    pos = list(fnames_to_dict(pos, yao, rnaz,check_prealignment = check_prealignment))
+    neg = list(fnames_to_dict(neg, yao, rnaz,check_prealignment = check_prealignment))
     
     return pos, neg
 
