@@ -6,6 +6,7 @@ import other.basics as b
 import core.feature_selection as fs
 import core.rps as rps
 from sklearn.preprocessing import StandardScaler
+from collections import defaultdict
 
 
 
@@ -58,14 +59,11 @@ def gather_featurelists(use_mlpc, debug):
     """Collect results to create the proper featurelists.
     Also creates tmp/rps_tasks for RPS.
     Note: The debug variable needs to be the same value as makefltasks uses."""
-    featurelists = {}
+    featurelists = defaultdict(list)
     for ftfile in os.listdir("tmp/fs_results"):
         foldnr, fl, mask, fname, FOLDXY = h.loadfile(f"tmp/fs_results/{ftfile}")
-        if foldnr in featurelists: # Append the Featurelists to a dict with their fold number as key
-            featurelists[foldnr].append((fl, mask, fname, FOLDXY))
-        else:
-            featurelists[foldnr] = [(fl, mask, fname, FOLDXY)]
-    tasks = rps.maketasks(featurelists, use_mlpc) # Creates "tmp/rps_tasks"
+        # Append the Featurelists to a dict with their fold number as key
+        featurelists[foldnr].append((fl, mask, fname, FOLDXY))
     numtasks = len(tasks)
     print(f"Created {numtasks} RPS tasks.")
     return numtasks
@@ -89,15 +87,14 @@ def getresults():
     """Analyzes the result files in rps_results and
     returns only the ones with the best best_esti_score in each fold.
     """
-    results = {}
+    results = defaultdict(lambda: [[0]])
     for rfile in os.listdir("tmp/rps_results"):
         f = h.loadfile(f"tmp/rps_results/{rfile}")
-        if f[0] in results:
-            if f[1][0] > results[f[0]][0][0]: # best_esti_score
-                results[f[0]] = f[1:]
-        else:
+        if f[1][0] > results[f[0]][0][0]: # best_esti_score better than saved one
             results[f[0]] = f[1:]
-    h.dumpfile(results, "results.json")
+        for rfile in os.listdir("tmp/rps_results"):
+            f = h.loadfile(f"tmp/rps_results/{rfile}")
+        h.dumpfile(results, "results.json")
 
 #############
 # Additional Options
