@@ -84,7 +84,8 @@ classifiers = { # {clfname: (Classifier, {parameters}), ...}
      'tol': [0.0001],
      'validation_fraction': [0.1],
      'verbose': [0],
-     'warm_start': [False]})
+     'warm_start': [False]})#,#
+    #{'over_sampling': (
     }
 
 ##classifiers = [

@@ -13,7 +13,7 @@ def score(X, y, clf_param, n_jobs, debug, randseed):
                 n_iter=50 if not debug else 5, 
                 scoring="f1",
                 n_jobs=n_jobs,
-                iid=False,
+                #iid=False,
                 #fefit=True,
                 cv=5,
                 verbose=0,
@@ -31,7 +31,6 @@ def maketasks(featurelists, use_mlpc):
     Args:
       featurelists (dict): A dictionary of featurelists each entry is a fold of featurelists.
       use_mlpc (bool): If False MLPClassifier will not be used.
-      randseed (int): Seed used.
     """
     clfnames = ['xtratrees', 'gradientboosting']
     if use_mlpc:
@@ -63,7 +62,6 @@ def random_param_search(task, n_jobs, debug, randseed):
       debug (bool): True if debug mode.
       randseed (int): Seed used.
     """
-    from sklearn.ensemble import GradientBoostingClassifier###
     X_train, X_test, y_train, y_test = task[1] # FOLDXY
     task[2][1]["random_state"] = [randseed]
     best_esti_score, best_esti = score(X_train, y_train, task[2], n_jobs, debug, randseed)

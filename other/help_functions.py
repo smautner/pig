@@ -1,22 +1,6 @@
 import pandas as pd
 import copy
-from sklearn.metrics import f1_score
 from sklearn.model_selection import StratifiedKFold
-import other.loadfiles as loadfiles
-import os
-
-def scorer(esti,x,y):
-    yh = esti.predict(x)
-    return f1_score(y,yh)
-
-def load_data(debug, numneg, randseed, use_rnaz):
-    fn = "tmp/pnd.json" if debug else "tmp/pn.json" # Different file for debug mode.
-    if os.path.isfile(fn):
-        p, n = loadfile(fn)
-    else:
-        p, n = loadfiles.loaddata("data", numneg=numneg if not debug else 200, pos='1' if debug else 'both', seed=randseed, use_rnaz=use_rnaz)
-        dumpfile((p,n), fn)
-    return p, n
 
 
 def clean(di, oklist):
@@ -74,9 +58,8 @@ def loadfile(fn):
 ###################
 
 def showresults(args=""):
-    from collections import Counter
+    from collections import Counter, defaultdict
     from pprint import pprint
-    from collections import defaultdict
     from sklearn.metrics import roc_curve, roc_auc_score
     import matplotlib.pyplot as plt
     results = loadfile("results.json")

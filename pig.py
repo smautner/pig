@@ -3,6 +3,7 @@ import numpy as np
 import os
 import other.help_functions as h
 import other.basics as b
+import other.loadfiles as loadfiles
 import core.feature_selection as fs
 import core.rps as rps
 from sklearn.preprocessing import StandardScaler
@@ -34,11 +35,22 @@ def cleanup(pn=False):
 #############
 
 
-def makefltasks(use_rnaz, use_relief, n_splits, numneg, randseed, debug):
+def makefltasks(use_rnaz, use_relief, use_filters, n_splits, numneg, randseed, debug):
     """Creates tasks the cluster uses to create featurelists."""
-    p, n = h.load_data(debug, numneg, randseed, use_rnaz)
-    allfeatures = list(p[1].keys())  # the filenames are the last one and we dont need that (for now)
-    allfeatures.remove("name")
+    fn = "tmp/pnd.json" if debug else "tmp/pnf.json" if use_filters else "tmp/pn.json" # Different file for debug mode.
+
+    # If a file with the loaded files already exists, skip loadfiles.loaddata()
+    if os.path.isfile(fn):
+        p, n = h.loadfile(fn) # pos, neg from loaded file
+    else:
+        if use_filters:
+            p, n = loadfiles.loaddata("data", debug, numneg, randseed, use_rnaz)
+        else:
+            p, n = loadfiles.loaddata("data", debug, numneg, randseed, use_rnaz, 'both', False, "noblacklist")
+        h.dumpfile((p, n), fn)
+
+    allfeatures = list(p[1].keys())
+    allfeatures.remove("name")  # We dont need the filenames (for now)
     X, Y, df = h.makeXY(allfeatures, p, n)
     X = StandardScaler().fit_transform(X)
     folds = h.kfold(X, Y, n_splits=n_splits, randseed=randseed)
@@ -64,6 +76,7 @@ def gather_featurelists(use_mlpc, debug):
         foldnr, fl, mask, fname, FOLDXY = h.loadfile(f"tmp/fs_results/{ftfile}")
         # Append the Featurelists to a dict with their fold number as key
         featurelists[foldnr].append((fl, mask, fname, FOLDXY))
+    tasks = rps.maketasks(featurelists, use_mlpc)
     numtasks = len(tasks)
     print(f"Created {numtasks} RPS tasks.")
     return numtasks
@@ -90,7 +103,8 @@ def getresults():
     results = defaultdict(lambda: [[0]])
     for rfile in os.listdir("tmp/rps_results"):
         f = h.loadfile(f"tmp/rps_results/{rfile}")
-        if f[1][0] > results[f[0]][0][0]: # best_esti_score better than saved one
+        if f[1][0] > results[f[0]][0][0]:
+            # For each fold the result with the best best_esti_score is saved
             results[f[0]] = f[1:]
         for rfile in os.listdir("tmp/rps_results"):
             f = h.loadfile(f"tmp/rps_results/{rfile}")
@@ -100,10 +114,10 @@ def getresults():
 # Additional Options
 #############
 
-def makeall(use_rnaz, use_relief, use_mlpc, n_splits, numneg, randseed, debug):
+def makeall(use_rnaz, use_relief, use_mlpc, use_filters, n_splits, numneg, randseed, debug):
     # FL tasks
     print("Making Featurelist tasks...")
-    fstasklen = makefltasks(use_rnaz, use_relief, n_splits, numneg, randseed, debug)
+    fstasklen = makefltasks(use_rnaz, use_relief, use_filters, n_splits, numneg, randseed, debug)
     # Calc FL part -> Cluster
     print(f"Sending {fstasklen} FS tasks to cluster...")
     b.shexec_and_wait(f"qsub -V -t 1-{fstasklen} runall_fs_sge.sh")
@@ -138,7 +152,7 @@ def makeall_all(n_splits, numneg, randseed, debug):
         create_directories()
         name = f"RNAz-{use_rnaz}_Relief-{use_relief}_MLPC-{use_mlpc}"
         print(f"----- {name} -----")
-        makeall(use_rnaz, use_relief, use_mlpc, n_splits, numneg, randseed, debug)
+        makeall(use_rnaz, use_relief, use_mlpc, use_filters, n_splits, numneg, randseed, debug)
         b.shexec(f"python pig.py showresults fen > results/output_{name}.txt")
         ### The following part saves the data needed for drawing roc curves
         ### For each parameter combination.
@@ -172,19 +186,29 @@ def create_directories():
 #############
 
 if __name__ == "__main__":
-    debug = True
-    use_mlpc = False # If True MLPClassifier will be used
+    debug = False
     use_rnaz = False # If True RNAz scores will be added as a feature
-    use_relief = False # If True relief and RFECV will be used
-    numneg = 3000 # Number of negative files beeing read by h.loaddata()
+    use_relief = True # If True relief and RFECV will be used
+    use_mlpc = True # If True MLPClassifier will be used
+    use_filters = True # If False, blacklist and "check_prealignment" filter in loadfiles will not be used.
+    numneg = 3000 if not debug else 200 # Number of negative files beeing read by h.loaddata()
     n_splits = 5 if not debug else 2 # Number of splits kfold makes
     n_jobs = 24
     randseed = 42
 
     create_directories()
 
+    sys.argv = [[0], 'therun'] ##############
+        
+
     if sys.argv[1] == 'makefltasks':
-        makefltasks(use_rnaz, use_relief, n_splits, numneg, randseed, debug)
+        makefltasks(use_rnaz, use_relief, use_filters, n_splits, numneg, randseed, debug)
+
+    elif sys.argv[1] == 'therun': # Oh god what are you doing
+        from time import time
+        starttime = time()
+        makefltasks(use_rnaz, use_relief, use_filters, n_splits, 80000, randseed, debug)
+        print(time() - starttime)
 
     elif sys.argv[1] == 'calcfl':
         idd = int(sys.argv[2])-1
