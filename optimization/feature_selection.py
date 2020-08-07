@@ -69,9 +69,9 @@ def maketasks(folds, df, use_relief, debug=False):
                           (foldnr, "VarThresh", FOLDXY, df, 1)])
 
         else:
-            for alpha in [.05, 0.1]:  # Lasso
-                tasks.append((foldnr, "Lasso", FOLDXY, df, alpha))
-            for threshold in [.99, 1, 1.01]:  # Variance Threshold
+##            for alpha in [.05, 0.1]:  # Lasso, Somehow doesnt work with large datasets
+##                tasks.append((foldnr, "Lasso", FOLDXY, df, alpha))
+            for threshold in [.99, .995, 1, 1.005, 1.01]:  # Variance Threshold
                 tasks.append((foldnr, "VarThresh", FOLDXY, df, threshold))
             for k in [20]:  # Select K Best
                 tasks.append((foldnr, "SelKBest", FOLDXY, df, k))

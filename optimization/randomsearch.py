@@ -12,29 +12,37 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier
 from scipy.stats import randint as rint
+from imblearn.over_sampling import RandomOverSampler
 
-clfnames = [
-#'kneighbors',
-#'SVC',
-#'TREE',
-'neuralnet',  #
-#'random forest',
-'xtratrees',
-'gradientboosting'
-]
-classifiers = { # {clfname: (Classifier, {parameters}), ...}
-    'neuralnet': (MLPClassifier(), # MLP
-    {'activation': ['relu','tanh','logistic','identity'],
+class OS_MLPClassifier(MLPClassifier):
+    def fit(self, X, y):
+        os = RandomOverSampler(random_state=42)
+        X_re, y_re = os.fit_sample(X, y)
+        MLPClassifier.fit(self, X_re, y_re)
+
+class OS_ExtraTreesClassifier(ExtraTreesClassifier):
+    def fit(self, X, y):
+        os = RandomOverSampler(random_state=42)
+        X_re, y_re = os.fit_sample(X, y)
+        ExtraTreesClassifier.fit(self, X_re, y_re)
+
+class OS_GradientBoostingClassifier(GradientBoostingClassifier):
+    def fit(self, X, y):
+        os = RandomOverSampler(random_state=42)
+        X_re, y_re = os.fit_sample(X, y)
+        GradientBoostingClassifier.fit(self, X_re, y_re)
+
+neuralnet_params = {'activation': ['relu','tanh','logistic','identity'], # MLP
      'alpha': [0.0001,0.001,0.01,0.00001],
      'batch_size': ['auto'],
      'beta_1': [0.9],
      'beta_2': [0.999],
      'early_stopping': [False],
      'epsilon': [1e-08],
-     'hidden_layer_sizes': [(x,)for x in range(20,500)],
+     'hidden_layer_sizes': [(x,)for x in range(300,700)],
      'learning_rate': ['constant','adaptive'],
      'learning_rate_init': [0.001],
-     'max_iter': list(range(200,2000)),
+     'max_iter': list(range(500,2000)),
      'momentum': [0.9],
      'n_iter_no_change': [10],
      'nesterovs_momentum': [True],
@@ -45,9 +53,8 @@ classifiers = { # {clfname: (Classifier, {parameters}), ...}
      'tol': [0.0001],
      'validation_fraction': [0.1],
      'verbose': [False],
-     'warm_start': [False]}),
-    'xtratrees': (ExtraTreesClassifier(), # xtra trees
-    {'bootstrap': [False,True],
+     'warm_start': [False]}
+xtratrees_params = {'bootstrap': [False,True], # xtra trees
      'class_weight': ['balanced'],
      'criterion': ['gini','entropy'],
      'max_depth': [None],
@@ -63,9 +70,8 @@ classifiers = { # {clfname: (Classifier, {parameters}), ...}
      'oob_score': [False],
      'random_state': [None],
      'verbose': [0],
-     'warm_start': [False]}),
-    'gradientboosting': (GradientBoostingClassifier(), # gradient boosting
-    {'criterion': ['friedman_mse'],
+     'warm_start': [False]}
+gradientboosting_params = {'criterion': ['friedman_mse'],  # gradient boosting
      'init': [None],
      'learning_rate': [0.1,0.001,0.0001,0.3],
      'loss': ['deviance','exponential'],
@@ -84,9 +90,18 @@ classifiers = { # {clfname: (Classifier, {parameters}), ...}
      'tol': [0.0001],
      'validation_fraction': [0.1],
      'verbose': [0],
-     'warm_start': [False]})#,#
-    #{'over_sampling': (
+     'warm_start': [False]}
+
+
+classifiers = { # {clfname: (Classifier, {parameters}), ...}
+    'neuralnet': (MLPClassifier(), neuralnet_params), 
+    'xtratrees': (ExtraTreesClassifier(), xtratrees_params), 
+    'gradientboosting': (GradientBoostingClassifier(), gradientboosting_params),
+    'os_neuralnet': (OS_MLPClassifier(), neuralnet_params),
+    'os_xtratrees': (OS_ExtraTreesClassifier(), xtratrees_params),
+    'os_gradientboosting': (OS_GradientBoostingClassifier(), gradientboosting_params)
     }
+
 
 ##classifiers = [
 ##    #KNeighborsClassifier(),

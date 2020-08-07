@@ -3,7 +3,7 @@ from sklearn.base import clone
 from sklearn.metrics import f1_score
 from sklearn.model_selection import RandomizedSearchCV as RSCV
 from sklearn.preprocessing import StandardScaler
-import other.randomsearch as  rs
+import optimization.randomsearch as  rs
 
 
 def score(X, y, clf_param, n_jobs, debug, randseed):
@@ -26,15 +26,12 @@ def score(X, y, clf_param, n_jobs, debug, randseed):
     best_esti = searcher.best_estimator_
     return best_esti_score, best_esti
 
-def maketasks(featurelists, use_mlpc):
+def maketasks(featurelists, clfnames):
     """Creates tasks that can be used for random_param_search.
     Args:
       featurelists (dict): A dictionary of featurelists each entry is a fold of featurelists.
-      use_mlpc (bool): If False MLPClassifier will not be used.
+      clfnames (list): A list of classifiernames. A list of options can be found in "randomsearch.py"
     """
-    clfnames = ['xtratrees', 'gradientboosting']
-    if use_mlpc:
-        clfnames.append('neuralnet')
     clf =   [rs.classifiers[clfname][0] for clfname in clfnames]
     param = [rs.classifiers[clfname][1] for clfname in clfnames]
 

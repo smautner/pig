@@ -4,7 +4,7 @@ from numpy import chararray, unique
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import f1_score
-from other.draw import matrix
+from input.draw import matrix
 import json
 
 def log_reg(pos, neg, conf_matrix = True):
