@@ -1,13 +1,12 @@
 import random
 from collections import defaultdict
-import os 
-import other.feat as feat
+import os
+import input.feat as feat
 import numpy as np
 
 
-  
 #############################
-# relevant classes for operation,... read on :) 
+# relevant classes for operation,... read on :)
 #############################
 
 class bidir:
@@ -17,23 +16,22 @@ class bidir:
         stack=defaultdict(list)
         op='<([{'
         cl='>)]}'
-        d={z:i for i,z in enumerate(op)} 
+        d={z:i for i,z in enumerate(op)}
         d.update({z:i for i,z in enumerate(cl)})
         for i,l in enumerate(stru):
             if l in op:
                 stack[d[l]].append(i)
             if l in cl:
                 self.lol(stack[d[l]].pop(),i)
-        self.fin()   
-        
+        self.fin()
     def lol(self,a,b):
         self.f[a]=b
         self.b[b]=a
-        
+
     def fin(self):
         self.both = dict(self.f)
         self.both.update(self.b)
-        
+
 
 class Alignment:
     def __init__(self,fname, ali,stru,name):
@@ -43,13 +41,13 @@ class Alignment:
         self.fname = fname
         self.getblocks(stru)
         self.covariance=self.covariance()
-        
+
         def __str__(self):
             return f"Alignment: {ali.name} {ali.fname}"
 
     def getblocks(self,stru):
         # shoud return a list of (start,stop)
-        # get start/end 
+        # get start/end
         self.basepairs=bidir(stru)
         unpaired= '._:-,'
         #allowed = '._:-,()<>'
@@ -57,25 +55,25 @@ class Alignment:
         blocktypes="()<>{}[]"
         blocks = []
         for i,l in enumerate(stru):
-            # i am in default mode, 
+            # i am in default mode,
             # i encounter a bracket, mode=current  symbol
             # else continue
             if mode == 'def':
                 if l in blocktypes:
-                    start = i 
+                    start = i
                     mode = l
-            # i am in reading block mode, 
+            # i am in reading block mode,
             # the new element is not the block i was reading so far...
             elif mode in blocktypes:
-                if l != mode: 
+                if l != mode:
                     blocks.append((start,i-1)) # end block  and decide if a new block starts or we are in unpaired territory
-                    if l in unpaired: 
+                    if l in unpaired:
                         mode = 'def'
                     if l in blocktypes:
-                        start = i 
+                        start = i
                         mode  = l
-        
-        
+
+
         sets = self.makerealblock(stru, blocks,self.basepairs)
         block,stem = list(zip(*sets))
 
@@ -106,7 +104,7 @@ class Alignment:
         lstru = len(stru)
         op='<([{'
         cl= '>)]}'
-        for a,e in blocks: 
+        for a,e in blocks:
             blockset = set()
             surroundset = set()
             for x in range(a,e+1):
@@ -141,13 +139,13 @@ class Alignment:
 
 
     def covariance(self):
-        # return covariance string 
-        
+        # return covariance string
+
         cov = ["0"]*len(self.structure)
-        
+
         for Open,Close in self.basepairs.f.items():
                 A=-1
-                B=-1 
+                B=-1
                 try:
                     for a,b in zip(self.ali[:,Open], self.ali[:,Close]):
                         if a != '.' and b!='.':
@@ -160,16 +158,16 @@ class Alignment:
                                 break
                     else:
                         pass  # all are the sam
-                except Exception as ex: 
+                except Exception as ex:
                     print ("covcheckproblem:", self.ali[:,Open],self.ali[:,Close],ex)
 
         return ''.join(cov)
-    
+
 
 ############
 # parse a file
 #############
-        
+
 def readfile(fname="data/asd.sto"):
     def start(st,text):
         return st[:len(text)]==text
@@ -184,12 +182,12 @@ def readfile(fname="data/asd.sto"):
             # ignore all other lines
             continue
         elif line.startswith("/"):
-            # end of file somehow there is a marker for that 
+            # end of file somehow there is a marker for that
             continue
         else:
             alignment.append(line.split()[-1])
     alignment = np.array([list(a) for a in alignment])
-    return fname, alignment, stru, cov 
+    return fname, alignment, stru, cov
 
 
 ################
@@ -200,15 +198,15 @@ def weirdo_detection(ali):
     """Ranks alignments by counting weirdopoints."""
     height, length = ali.shape
     points = [0]*height # weirdopoints
-    for a in range(length): # for every possition 
+    for a in range(length): # for every possition
         items = ali[:,a]
         dots = (items == '.').sum()
         notdot = height - dots
-        if dots > notdot: # dots are the norm 
+        if dots > notdot: # dots are the norm
             for i,e in enumerate(items):
                 if e != '.':
                     points[i]+=1
-        if notdot > dots: # not dots are the norm 
+        if notdot > dots: # not dots are the norm
             for i,e in enumerate(items):
                 if e == '.':  # if you have a dot you get a minus point
                     points[i]+=1
@@ -218,7 +216,7 @@ def weirdo_detection(ali):
 
 
 def structurecheck(ali,stru,basepairs):
-    '''return 
+    '''return
         1. astructure that is possible when considering the altered aligment
         2. alignments
     '''
@@ -230,14 +228,14 @@ def structurecheck(ali,stru,basepairs):
     for i in z:
         a = ali[:,i]
         s= stru[i]
-        if all(a=='.'): # no nucleotides 
-            aliindices.append(False) # mark column for deletion 
+        if all(a=='.'): # no nucleotides
+            aliindices.append(False) # mark column for deletion
             if i in basepairs.b: stru[basepairs.b[i]] = '.' # if there is a corresponding bracket, delete that also
             continue
         aliindices.append(True)
         if s not in  ")>]}": #  no h-bonds,  keep letter
             stru2.append(s)
-        else:  # ok so there is a closing bracket, so we need to decide what to do 
+        else:  # ok so there is a closing bracket, so we need to decide what to do
             other = basepairs.b[i]
             b = ali[:,other]
             for x,z in zip(a,b):
@@ -250,22 +248,22 @@ def structurecheck(ali,stru,basepairs):
                 stru2.append('.')
                 stru[basepairs.b[i]] = '.'
     aliindices.reverse()
-    stru2.reverse()        
+    stru2.reverse()
     return ali[:,aliindices], ''.join(stru2)
-            
+
 def rm_small_stems(stru):
     """Removes small stems."""
     stru = list(stru)
     basepairs = bidir(stru)
     last_char = ''
-    state = 0 
+    state = 0
     bracket = "{([<>])}"
-    for i in range(len(stru)): 
+    for i in range(len(stru)):
         e = stru[i]
         if e == last_char:
             state += 1
         else:
-            if last_char in bracket and state < 3: 
+            if last_char in bracket and state < 3:
                 if stru[i-1]==last_char:
                     stru[i-1]='.'
                     stru[basepairs.both[i-1]]='.'
@@ -273,13 +271,13 @@ def rm_small_stems(stru):
                     stru[i-2]='.'
                     stru[basepairs.both[i-2]]='.'
             state = 0
-        last_char = e 
-    return ''.join(stru) 
-    
+        last_char = e
+    return ''.join(stru)
+
 def vary_alignment(fname,ali,stru,cov):
     """Create different versions of alignments"""
     weird = weirdo_detection(ali)
-    
+
     alignments = []
     alignments.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-max(1,int(ali.shape[0]/3)):]]] )
     alignments.append( ali[[ a for a  in range(ali.shape[0]) if a not in weird[-1:]]])
@@ -289,25 +287,25 @@ def vary_alignment(fname,ali,stru,cov):
     structures = [stru]
     alis = [ali]
     basepairs = bidir(stru)
-    
+
     for ali in alignments:
         nuali,nustru = structurecheck(ali,stru,basepairs)
         alis.append(nuali)
         structures.append(nustru)
-        
+
     # then make variations where i am ignoring small stacks
     alternative_str=[rm_small_stems(s) for s in structures]
-    
-    
+
+
     return [ (ali,st,text) for ali,st,text in zip(alis+alis,
                                                   structures+alternative_str,
                                                   [a+b for a in ['','rm_small_stems '] for b in ['','remove_1/3_seq ','remove_1_seq ','remove_2_seq ']])]
 
-    
-    
+
+
 def ali_to_dict(name, alignments, yao_scores, rnaz):
     """Create a dictionary for features from the alignments."""
-    
+
     #block =  [feat.conservation(ali),
     #                    feat.cov_sloppycov_disturbance_instem(ali),
     #                    feat.stemconservation(ali), 
@@ -344,16 +342,16 @@ def ali_to_dict(name, alignments, yao_scores, rnaz):
         r['rnaz_score'] = rnaz[name]
     return r 
 
-  
 def check_seq_count(prealignment): 
-  return prealignmnet[1].shape[0] > 2
+  return prealignment[1].shape[0] > 2
 
 def fnames_to_dict(fnames, yao_scores, rnaz, check_prealignment = check_seq_count):
     for f in fnames:
         parsed = readfile(f)
-        if  not filter_prealignment(parsed):
+        if check_prealignment and not check_prealignment(parsed):
             continue
         alignments = vary_alignment(*parsed)
+        #alignments = [ali for ali in alignments if len(ali[0]) > 0]
         #print ('lena',len(alignments)) # 8
         alignments2 = [Alignment(f, *a) for a in alignments]
         #print ('lenb',len(alignments2)) # 8 ok
@@ -361,17 +359,20 @@ def fnames_to_dict(fnames, yao_scores, rnaz, check_prealignment = check_seq_coun
         #print ('lenc',len(z)) # 64 to few
         yield z
 
+
         
-def loaddata(path, numneg = 10000, 
-                   pos='both', 
-                   seed=None, use_rnaz=True, check_prealignment = check_seq_count, blacklist_file = "tmp/blacklist.json"):  
+def loaddata(path, debug, numneg = 10000,
+             randseed=None, use_rnaz=True,
+             pos='both', check_prealignment = check_seq_count, blacklist_file = "data/blacklist.json"):  
     import json
-    random.seed(seed)
+
+
+    random.seed(randseed)
     if os.path.isfile(blacklist_file):
         with open(blacklist_file, "r") as f:
             blacklist = set(json.load(f))
     else:
-        print("No Blacklist found in 'tmp/'")
+        print(f"No Blacklist found in {blacklist_file}")
         blacklist = set()
     ##############
     # positives
@@ -407,11 +408,10 @@ def loaddata(path, numneg = 10000,
     else:
         rnaz = False
 
-    pos = list(fnames_to_dict(pos, yao, rnaz,check_prealignment = check_prealignment))
-    neg = list(fnames_to_dict(neg, yao, rnaz,check_prealignment = check_prealignment))
-    
-    return pos, neg
+    pos = list(fnames_to_dict(pos, yao, rnaz, check_prealignment))
+    neg = list(fnames_to_dict(neg, yao, rnaz, check_prealignment))
 
+    return pos, neg
    
 
     
