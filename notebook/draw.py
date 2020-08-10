@@ -1,14 +1,12 @@
-import numpy as np
 import matplotlib.pyplot as plt
-
-from sklearn import svm, datasets
-from sklearn.model_selection import train_test_split
+import numpy as np
 from sklearn.metrics import confusion_matrix
 from sklearn.utils.multiclass import unique_labels
 
-def matrix(y_true, y_pred, classes,normalize=False,
-                          title=None,
-                          cmap=plt.cm.Blues):
+
+def matrix(y_true, y_pred, classes, normalize=False,
+           title=None,
+           cmap=plt.cm.Blues):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
@@ -56,13 +54,11 @@ def matrix(y_true, y_pred, classes,normalize=False,
                     ha="center", va="center",
                     color="white" if cm[i, j] > thresh else "black")
     fig.tight_layout()
-    #return ax
+    # return ax
 
     np.set_printoptions(precision=2)
     plt.show()
 
-
 # Plot non-normalized confusion matrix
-#plot_confusion_matrix(y_test, y_pred, classes=class_names,
+# plot_confusion_matrix(y_test, y_pred, classes=class_names,
 #                      title='Confusion matrix, without normalization')
-
