@@ -1,11 +1,12 @@
-from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
-from numpy import reshape, concatenate
-from numpy import chararray, unique
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import cross_val_score
-from sklearn.metrics import f1_score
-from input.draw import matrix
 import json
+
+from numpy import chararray
+from numpy import reshape
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_val_score
+
+from notebook.draw import matrix
+
 
 def log_reg(pos, neg, conf_matrix = True):
     """Builds a Logistic Regression model using the Yao-score
