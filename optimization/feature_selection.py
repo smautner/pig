@@ -69,27 +69,23 @@ def maketasks(folds, df, selection_methods, debug=False):
                           (foldnr, "VarThresh", FOLDXY, df, 1)])
 
         else:
-##            for alpha in [.05, 0.1]:  # Lasso, Somehow doesnt work with large datasets
-##                tasks.append((foldnr, "Lasso", FOLDXY, df, alpha))
             for method, parameters in selection_methods.items():
-                if method == 'variance thresh':
-                   for threshold in parameters: 
-                       tasks.append((foldnr, "VarThresh", FOLDXY, df, threshold))
-            
-                if method == 'k-best':
-                   for threshold in parameters: 
-                       tasks.append((foldnr, "SelKBest", FOLDXY, df, k))
-                       
+                if method == 'Lasso':
+                    for alpha in parameters: # [.05, 0.1]
+                        tasks.append((foldnr, "Lasso", FOLDXY, df, alpha))
+                if method == 'VarThresh':
+                    for threshold in parameters: # [.99, .995, 1, 1.005, 1.01]
+                        tasks.append((foldnr, "VarThresh", FOLDXY, df, threshold))
+                if method == 'SelKBest':
+                    for threshold in parameters: # [20]
+                        tasks.append((foldnr, "SelKBest", FOLDXY, df, k))
                 if method == 'Relief':
-                   for threshold in parameters: 
-                      tasks.append((foldnr, "Relief", FOLDXY, df, threshold))          
-            
+                    for features in parameters: # [40, 60, 80]
+                        tasks.append((foldnr, "Relief", FOLDXY, df, features))          
                 if method == 'RFECV':
-                   for threshold in parameters:  
-                       tasks.append((foldnr, "RFECV", FOLDXY, df, threshold))
-                      
-                      
-     foldnr += 1
+                    for stepsize in parameters: # [1, 2, 3]
+                        tasks.append((foldnr, "RFECV", FOLDXY, df, stepsize))
+        foldnr += 1
 
                     
       
