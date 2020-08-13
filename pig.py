@@ -1,6 +1,7 @@
-import sys
-import numpy as np
 import os
+import sys
+import argparse
+import numpy as np
 import input.basics as b
 import input.loadfiles as loadfiles
 import optimization.feature_selection as fs
@@ -11,6 +12,7 @@ from collections import defaultdict
 
 def cleanup(pn=False):
     """Cleans up the tmp folder to prevent inconsistencies when toggling debug.
+    Other users will need to change the path with /scratch/bi01/...
     """
     import shutil
     if os.path.exists("tmp/fs_results"):
@@ -18,9 +20,10 @@ def cleanup(pn=False):
     if os.path.exists("tmp/rps_results"):
         shutil.rmtree("tmp/rps_results")
     for folder in ["pig_o", "pig_e"]:
-        for file in os.listdir(f"/scratch/bi01/mautner/guest10/JOBZ/{folder}"):
-            os.remove(f"/scratch/bi01/mautner/guest10/JOBZ/{folder}/{file}")
-        print(f"Cleaned up {folder}")
+        if os.path.exists(f"/scratch/bi01/mautner/guest10/JOBZ/{folder}"):
+            for file in os.listdir(f"/scratch/bi01/mautner/guest10/JOBZ/{folder}"):
+                os.remove(f"/scratch/bi01/mautner/guest10/JOBZ/{folder}/{file}")
+            print(f"Cleaned up {folder}")
     for file in os.listdir("tmp"):
         if not file == "blacklist.json": 
             if not (file == "pn.json" or file == "pnd.json") or pn:
@@ -51,7 +54,7 @@ def kfold(X, y, n_splits=2, randseed=None, shuffle=True):
 #############
 
 
-def makefltasks(use_rnaz, use_relief, use_filters, n_splits, numneg, randseed, debug):
+def makefltasks(use_rnaz, selection_methods, use_filters, n_splits, numneg, randseed, debug):
     """Creates tasks the cluster uses to create featurelists."""
     fn = "tmp/pnd.json" if debug else "tmp/pnf.json" if use_filters else "tmp/pn.json" # Different file for debug mode.
 
@@ -70,7 +73,7 @@ def makefltasks(use_rnaz, use_relief, use_filters, n_splits, numneg, randseed, d
     X, Y, df = b.makeXY(allfeatures, p, n)
     X = StandardScaler().fit_transform(X)
     folds = kfold(X, Y, n_splits=n_splits, randseed=randseed)
-    tasks = fs.maketasks(folds, df, use_relief, debug)
+    tasks = fs.maketasks(folds, df, selection_methods, debug)
     numtasks = len(tasks)
     print(f"Created {numtasks} FS tasks.")
     return numtasks
@@ -103,7 +106,7 @@ def gather_featurelists(clfnames, debug):
 #############
 
 
-def calcrps(idd, n_jobs, debug, randseed):
+def calculate_rps(idd, n_jobs, debug, randseed):
     """Executes RPS for a given task. Executed by cluster."""
 
     tasks = np.load("tmp/rps_tasks", allow_pickle=True)
@@ -129,12 +132,12 @@ def getresults():
 # Additional Options
 #############
 
-def makeall(use_rnaz, use_relief, use_filters, clfnames, n_splits, numneg, randseed, debug):
+def makeall(use_rnaz, selection_methods, use_filters, clfnames, n_splits, numneg, randseed, debug):
     from time import time
     starttime = time()
     # FL tasks
     print("Making Featurelist tasks...")
-    fstasklen = makefltasks(use_rnaz, use_relief, use_filters, n_splits, numneg, randseed, debug)
+    fstasklen = makefltasks(use_rnaz, selection_methods, use_filters, n_splits, numneg, randseed, debug)
     print(f"Time since start: {time() - starttime}")
     # Calc FL part -> Cluster
     print(f"Sending {fstasklen} FS tasks to cluster...")
@@ -155,7 +158,7 @@ def makeall(use_rnaz, use_relief, use_filters, clfnames, n_splits, numneg, rands
     print("Done")
     print(f"Time since start: {time() - starttime}")
 
-def makeall_all(use_rnaz, use_relief, use_filters, n_splits, numneg, randseed, debug):
+def lazymake(use_rnaz, selection_methods, use_filters, n_splits, numneg, randseed, debug):
     """Temporary function because of lazyness.
     Executes parameter combinations and saves the results.
     """
@@ -173,8 +176,8 @@ def makeall_all(use_rnaz, use_relief, use_filters, n_splits, numneg, randseed, d
         cleanup(True)
         create_directories()
         print(f"----- {name} -----")
-        makeall(use_rnaz, use_relief, use_filters, clfname, n_splits, numneg, randseed, debug)
-        b.shexec(f"python pig.py showresults fen > results/output_{name}.txt")
+        makeall(use_rnaz, selection_methods, use_filters, clfname, n_splits, numneg, randseed, debug)
+        b.shexec(f"python pig.py --results fen > results/output_{name}.txt")
         ### The following part saves the data needed for drawing roc curves
         ### For each parameter combination.
         y_true, y_score = [], []
@@ -207,64 +210,66 @@ def create_directories():
 #############
 
 if __name__ == "__main__":
-    debug = True
-    use_rnaz = False # If True RNAz scores will be added as a feature
-    use_relief = False # If True relief and RFECV will be used
-    use_mlpc = True # If True MLPClassifier will be used
-    use_filters = True # If False, blacklist in loadfiles will not be used.
-    use_oversampling = False # If True, oversampling versions of classifiers will be used instead
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--clean', type=int, default=0, help='0-no cleanup, 1-normal cleanup, 2-cleanup also removes pn files')
+    parser.add_argument('--calcfl', type=int, help='Feature selection process for the cluster')
+    parser.add_argument('--calcrps', type=int, help='Random Parameter Search process for the cluster')
+    parser.add_argument('-a', '--makeall', action='store_true', help='Ignore given clfnames (--clf) and execute the program with every classifier seperately. Also plots and saves all useful data')
+    parser.add_argument('-d', '--debug', action='store_true', help='Use if debug. Overwrites FS arguments')
+    parser.add_argument('-r', '--rnaz', action='store_true', help='If used RNAz scores will be added as a feature')
+    parser.add_argument('-f', '--filters', action='store_true', help='If used, blacklist will be used in loadfiles')
+    parser.add_argument('-o', '--oversample', action='store_true', help='If used, oversampling versions of classifiers will be used')
+    parser.add_argument('--lasso', nargs='+', type=int, default=[], help='Lasso for Feature Selection. Warning: Probably cant handle the full 70k+ files and in turn select 0 features and break the program')
+    parser.add_argument('--varthresh', nargs='+', type=float, default=[], help='Variance Treshold for Feature Selection. Recommended values: .99 .995 1 1.005 1.01')
+    parser.add_argument('--kbest', nargs='+', type=int, default=[], help='Select-K-Best for Feature Selection. Recommended values: 20')
+    parser.add_argument('--relief', nargs='+', type=int, default=[], help='Relief for Feature Selection. Recommended values: 40 60 80. Warning: Needs very high memory (with the 70k files >12gb)')
+    parser.add_argument('--rfecv', nargs='+', type=int, default=[], help='RFECV for Feature Selection. Warning: Insane runtime. Might never end')
+    parser.add_argument('--clf', nargs='+', type=str, choices=('xtratrees', 'gradientboosting', 'neuralnet'), default=['xtratrees', 'gradientboosting', 'neuralnet'], help='Needs to be any of: xtratrees, gradientboosting, neuralnet')
+    parser.add_argument('-n', '--nsplits', type=int, default=5, help='Number of splits kfold creates')
+    parser.add_argument('--results', type=str, default="", help='If used ignore all other arguments and show selected results (options: fenr)')
+
+    args = vars(parser.parse_args())
+    debug = args['debug']
+    use_rnaz = args['rnaz']
+    use_filters = args['filters']
+    use_oversampling = args['oversample']
+    selection_methods = {'Lasso': args['lasso'], 'VarThresh': args['varthresh'], 'SelKBest': args['kbest'], 'Relief': args['relief'], 'RFECV': args['rfecv']}
+    clfnames = args['clf']
+    n_splits = args['nsplits']
     numneg = 80000 if not debug else 200 # Number of negative files beeing read by b.loaddata()
-    n_splits = 5 if not debug else 2 # Number of splits kfold makes
-    n_jobs = 24
+    n_jobs = 24 # Number of parallel jobs used by RandomizedSearchCV
     randseed = 42
+    print(selection_methods)
 
-    if use_oversampling: # Sets the used classifiers based on the parameters above
-        clfnames = ['os_xtratrees', 'os_gradientboosting']
-        if use_mlpc:
-            clfnames.append('os_neuralnet')
-    else:
-        clfnames = ['xtratrees', 'gradientboosting']
-        if use_mlpc:
-            clfnames.append('neuralnet')
+    if use_oversampling: # Turns the used classifiers into their oversampling equivalents
+        clfnames = ['os_' + s for s in clfnames]
 
-    create_directories()
+    create_directories() # Create all needed directories
 
-    if sys.argv[1] == 'makefltasks':
-        makefltasks(use_rnaz, use_relief, use_filters, n_splits, numneg, randseed, debug)
-
-    elif sys.argv[1] == 'calcfl':
-        idd = int(sys.argv[2])-1
+    if args['results']: # Instead of executing other functions show previous results
+        b.showresults(args['results'])
+    elif args['calcfl']:
+        idd = args['calcfl'] - 1
         calculate_featurelists(idd)
-
-    elif sys.argv[1] == 'gatherfl':
-        gather_featurelists(clfnames, debug)
-
-    elif sys.argv[1] == 'calcrps':
-        idd = int(sys.argv[2])-1
-        calcrps(idd, n_jobs, debug, randseed)
-
-    elif sys.argv[1] == 'getresults':
-        getresults()
-
-    elif sys.argv[1] == 'makeall':
-        if len(sys.argv) == 2:
-            makeall(use_rnaz, use_relief, use_filters, clfnames, n_splits, numneg, randseed, debug)
-        elif sys.argv[2] == 'lazy': ### TMP
-            makeall_all(use_rnaz, use_relief, use_filters, n_splits, numneg, randseed, debug) ###
-
-    elif sys.argv[1] == 'showresults':
-        if len(sys.argv) == 3:
-            b.showresults(sys.argv[2])
-        else:
-            b.showresults("")
-
-    elif sys.argv[1] == 'cleanup':
-        if len(sys.argv) == 2:
-            cleanup()
-        elif sys.argv[2] == 'True':
-            cleanup(True)
-        else:
-            print("Usage: cleanup (True if pn and pnd should also be removed)")
-
+    elif args['calcrps']:
+        idd = args['calcrps'] - 1
+        calculate_rps(idd, n_jobs, debug, randseed)
     else:
-        print("Usage: makefltasks -> calcfl(Cluster) -> gatherfl -> calcrps(Cluster) -> getresults -> showresults")
+        if args['clean']==1: # Removes previously created temporary files to prevent issues
+            cleanup(False)
+        elif args['clean']==2: # Also removes pn.json or pnd.json so they will need to be reloaded
+            cleanup(True)
+        if args['makeall']:
+            lazymake(use_rnaz, selection_methods, use_filters, n_splits, numneg, randseed, debug) ###
+        else:
+            makeall(use_rnaz, selection_methods, use_filters, clfnames, n_splits, numneg, randseed, debug)
+
+
+##    elif sys.argv[1] == 'cleanup':
+##        if len(sys.argv) == 2:
+##            cleanup()
+##        else:
+##            print("Usage: cleanup (True if pn and pnd should also be removed)")
+
+##    else:
+##        print("Usage: makefltasks -> calcfl(Cluster) -> gatherfl -> calcrps(Cluster) -> getresults -> showresults")
