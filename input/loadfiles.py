@@ -360,7 +360,7 @@ def fnames_to_dict(fnames, yao_scores, rnaz, check_prealignment=check_seq_count)
         yield z
 
 
-def loaddata(path, debug, numneg=10000,
+def loaddata(path, numneg=10000,
              randseed=None, use_rnaz=True,
              pos='both', check_prealignment=check_seq_count, blacklist_file="data/blacklist.json"):
     import json

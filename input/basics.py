@@ -91,12 +91,13 @@ def loadfile(fn):
 # Printing out Results
 ###################
 
-def showresults(args=""):
+def showresults(args, resultfile):
     from collections import Counter, defaultdict
     from pprint import pprint
     from sklearn.metrics import roc_curve, roc_auc_score
     import matplotlib.pyplot as plt
-    results = loadfile("results.json")
+    from sklearn.metrics import precision_recall_curve
+    results = loadfile(resultfile)
     estimators = defaultdict(lambda: defaultdict(list))
     ftlists = []
     c = Counter()
@@ -126,7 +127,7 @@ def showresults(args=""):
             print("\n")
     if "n" in args:
         for x in ftlists:
-            pprint((x[0], len(x[1]), x[1]))
+            pprint((x[0], len(x[1]), sorted(x[1])))
     if "r" in args:
         fpr, tpr, thresholds = roc_curve(y_true, y_score)
         auc = roc_auc_score(y_true, y_score)
@@ -136,9 +137,16 @@ def showresults(args=""):
         plt.ylabel('True positive rate')
         plt.legend(loc='best')
         plt.show()
+    if "p" in args:
+        precision, recall, thresholds = precision_recall_curve(y_true, y_score)
+        plt.plot(recall, precision)
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        plt.show()
     if  "h" in args:
         print("Usage: pig.py showresults {fen}\n", \
               "f - featurelists with number of occurences\n", \
               "e - estimators\n", \
               "n - Shows ALL featurelists with the info used to create them\n", \
-              "r - Creates and plots the roc_curve")
+              "r - Creates and plots the roc_curve", \
+              "p - Creates and plots the precision_recall_curve")
