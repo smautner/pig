@@ -31,7 +31,7 @@ def variance_threshold(X_data, y_data, df, threshold=0.0):
 def select_k_best(X_data, y_data, df, k=20):
     score_func=chi2
 
-    clf = SelectKBest(score_func, k)
+    clf = SelectKBest(score_func, k=k)
     mini = 0
     for x in range(0, len(X_data)):
         mini = min(min(X_data[x]), mini)
@@ -77,7 +77,7 @@ def maketasks(folds, df, selection_methods, debug=False):
                     for threshold in parameters: # [.99, .995, 1, 1.005, 1.01]
                         tasks.append((foldnr, "VarThresh", FOLDXY, df, threshold))
                 if method == 'SelKBest':
-                    for threshold in parameters: # [20]
+                    for k in parameters: # [20]
                         tasks.append((foldnr, "SelKBest", FOLDXY, df, k))
                 if method == 'Relief':
                     for features in parameters: # [40, 60, 80]

@@ -39,7 +39,7 @@ neuralnet_params = {'activation': ['relu','tanh','logistic','identity'], # MLP
      'beta_2': [0.999],
      'early_stopping': [False],
      'epsilon': [1e-08],
-     'hidden_layer_sizes': [(x,)for x in range(300,700)],
+     'hidden_layer_sizes': [(x,y)for x in range(50,251) for y in range(1,6)],
      'learning_rate': ['constant','adaptive'],
      'learning_rate_init': [0.001],
      'max_iter': list(range(500,2000)),
