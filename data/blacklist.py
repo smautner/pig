@@ -1,12 +1,15 @@
 import os
-import other.help_functions as h
+import sys
+sys.path.append("../input")
+import basics as b
 from collections import Counter, defaultdict
+from operator import itemgetter
 from itertools import combinations
-from pprint import pprint
 
 
 def compare(a, b):
     """Compares 2 sequences and checks if their coordinates overlap.
+    Returns: True if overlap, else False
     """
     a_1, a_2 = a.split("-")
     b_1, b_2 = b.split("-")
@@ -24,30 +27,33 @@ def compare(a, b):
         return True
 
 
-def load(path):
+def load():
+    if not os.path.exists("tmp"):
+        print("Creating tmp directory")
+        os.makedirs("tmp")
     if os.path.isfile("tmp/seq_dict.json"):
         print("Loading saved seq_dict.json")
-        seqdict, filedict = h.loadfile("tmp/seq_dict.json")
+        seqdict, filedict = b.loadfile("tmp/seq_dict.json")
     else:
-        p1 = [ "%s/pos/%s" %(path,f) for f in  os.listdir("%s/pos" % path )]
-        p2 = [ "%s/pos2/%s" %(path,f) for f in  os.listdir("%s/pos2" % path )]
-        n = [ "%s/neg/%s" %(path,f) for f in  os.listdir("%s/neg" % path )]
+        p1 = [ f"pos/{f}" for f in  os.listdir("pos")]
+        p2 = [ f"pos2/{f}" for f in  os.listdir("pos2")]
+        n = [ f"neg/{f}" for f in  os.listdir("neg")]
         seqdict = defaultdict(list)
         filedict = defaultdict(int)
         for i in p1+p2+n:
-            i_name = i.split("/")[2]
+            i_name = i.split("/")[1]
             with open(i) as f:
                 for line in f.readlines()[2:]: # Skip first 2 lines of files
                     if line.startswith("#"):
                         break # Last Sequence of File has been read
                     else:
                         split = line.split(sep=" ", maxsplit=1)[0].split(sep="/")
-                        seqdict[split[0]].append((split[1], i_name))
+                        seqdict[split[0]].append((split[1], i))
                         coord = split[1].split("-")
                         distance = abs(int(coord[0])-int(coord[1]))
                         filedict[i_name] += distance
             
-        h.dumpfile((seqdict, filedict), "tmp/seq_dict.json")
+        b.dumpfile((seqdict, filedict), "../tmp/seq_dict.json")
                 
     return seqdict, filedict
 
@@ -56,6 +62,8 @@ def find_collisions(seqdict, filedict):
     cou = 0
     col = 0
     l = []
+    d = defaultdict(int)
+    
     for key in seqdict:
         for a, b in combinations(seqdict[key], 2):
             cou += 1
@@ -67,33 +75,46 @@ def find_collisions(seqdict, filedict):
                 else:
                     l.append((b[1], a[1]))
                 col += 1
-    print (f"Total comparisons: {cou}, Collisions: {col}")
+    print (f"Total comparisons: {cou}, Overlaps: {col}")
     allcol = Counter(l).most_common()
     results = []
     for x in allcol:
         a = x[0][0]
         b = x[0][1]
+        a_loc, a = a.split("/") # a/b_loc will be pos/pos2 or neg
+        b_loc, b = b.split("/") # Meanwhile a and b is the filename
         a_name = a.split("-")
         b_name = b.split("-")
         if not a_name[:2] == b_name[:2]:
             if x[1] < 2:  # If the first 2 parts of the filename arent identical,
                 continue  # Require at least 2 collisions to be added
-        results.append(((a, filedict[a]), (b, filedict[b]), x[1]))
-    print(f"Different collisions: {len(results)}")
+        results.append(((a, filedict[a], a_loc), (b, filedict[b], b_loc), x[1]))
+        d[a] += 1
+        d[b] += 1
+        if not a_loc == b_loc:
+            print(a_loc, b_loc, a, b)
+    print(f"Different overlaps: {len(results)}")
+    print(sorted(d.items(), key=itemgetter(1), reverse=True)[:5]) # Files that cause most overlaps 
     return results
+
 
 def create_blacklist(l):
     blacklist = set()
+    d = {"pos":0, "pos2":0, "neg":0}
     for x in l:
         if x[0][1] > x[1][1]:
             blacklist.add(x[1][0])
+            d[x[1][2]] += 1
         else:
             blacklist.add(x[0][0])
+            d[x[0][2]] += 1
     blacklist.add("416-60776-0-1.sto") # Incompatible with RNAz
-    h.dumpfile(list(blacklist), "tmp/blacklist.json")
+    b.dumpfile(list(blacklist), "blacklist.json")
     print(f"{len(blacklist)} blacklisted files")
+    print(f"{d['pos']} from pos, {d['pos2']} from pos2 and {d['neg']} from neg ")
 
-def show(a, b=None, path="data/neg", open_files=True):
+
+def show(a, b=None, path="neg", open_files=True):
     import subprocess
     if type(a) == tuple:
         b = a[1][0]
@@ -120,7 +141,6 @@ def show(a, b=None, path="data/neg", open_files=True):
 
 
 if __name__ == "__main__":
-    path = "data"
-    d, f = load(path)
+    d, f = load()
     col = find_collisions(d, f)
     create_blacklist(col)
