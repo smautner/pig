@@ -8,6 +8,26 @@ import numpy as np
 # Feature selection methods.
 #####################
 
+def svcl1(X_data, y_data, df, C):
+    """
+    Linear Support Vector Classification with L1 Regularization.
+    """
+    clf = LinearSVC(penalty="l1", dual=False, C=C)
+    clf.fit(X_data, y_data)
+    print(np.count_nonzero(clf.coef_))
+    return [b for a, b in zip(clf.coef_[0], df.columns) if a]
+
+def svcl2(X_data, y_data, df, C):
+    """
+    Linear Support Vector Classification with L2 Regularization.
+    """
+    clf = LinearSVC(penalty="l2", C=C)
+    clf.fit(X_data, y_data)
+    sel = SelectFromModel(clf, prefit=True)
+    support = sel.get_support(True)
+    print(len(support))
+    return [b for a, b in zip(clf.coef_[0][support],  df.columns[support])]
+
 
 def lasso(X_data, y_data, df, alpha=.06):
     mod = Lasso(alpha=alpha)
@@ -85,6 +105,12 @@ def maketasks(folds, df, selection_methods, debug=False):
                 if method == 'RFECV':
                     for stepsize in parameters: # [1, 2, 3]
                         tasks.append((foldnr, "RFECV", FOLDXY, df, stepsize))
+                if method == 'SVC1':
+                    for C in parameters:
+                        tasks.append((foldnr, "SVC1", FOLDXY, df, C))
+                if method == 'SVC2':
+                    for C in parameters:
+                        tasks.append((foldnr, "SVC2", FOLDXY, df, C))
         foldnr += 1
 
                     
@@ -114,6 +140,10 @@ def feature_selection(taskid):
         fl = select_k_best(X_train, y_train, df, args)
     elif fstype == "RFECV":
         fl = rfecv(X_train, y_train, df, args)
+    elif fstype == "SVC1":
+        fl = svcl1(X_train, y_train, df, args)
+    elif fstype == "SVC2":
+        fl = svcl2(X_train, y_train, df, args)
     else:
         raise ValueError(f"'{fstype}' is not a valid Feature selection method.")
     mask = [True if f in fl else False for f in df.columns]

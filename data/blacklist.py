@@ -1,7 +1,7 @@
 import os
 import sys
-sys.path.append("../input")
-import basics as b
+sys.path.append("../")
+import input.basics as b
 from collections import Counter, defaultdict
 from operator import itemgetter
 from itertools import combinations
@@ -33,9 +33,12 @@ def compare(a, b):
         return True
 
 
-def load():
+def load(path):
     """
     Loads all files in pos, pos2 and neg, reads through them and orders them.
+
+    Args:
+      path (str): Path to the pos/neg directories 
 
     Returns:
       seqdict (dict): A dictionary that contains coordinates for every sequence
@@ -45,13 +48,13 @@ def load():
     if not os.path.exists("tmp"):
         print("Creating tmp directory")
         os.makedirs("tmp")
-    p1 = [ f"pos/{f}" for f in  os.listdir("pos")]
-    p2 = [ f"pos2/{f}" for f in  os.listdir("pos2")]
-    n = [ f"neg/{f}" for f in  os.listdir("neg")]
+    p1 = [ f"{path}pos/{f}" for f in  os.listdir(f"{path}pos")]
+    p2 = [ f"{path}pos2/{f}" for f in  os.listdir(f"{path}pos2")]
+    n = [ f"{path}neg/{f}" for f in  os.listdir(f"{path}neg")]
     seqdict = defaultdict(list)
     filedict = defaultdict(int)
     for i in p1+p2+n:
-        i_name = i.split("/")[1]
+        i_name = i.split("/")[-1]
         with open(i) as f:
             for line in f.readlines()[2:]: # Skip first 2 lines of files
                 if line.startswith("#"):
@@ -62,8 +65,6 @@ def load():
                     coord = split[1].split("-")
                     distance = abs(int(coord[0])-int(coord[1]))
                     filedict[i_name] += distance
-        
-    b.dumpfile((seqdict, filedict), "../tmp/seq_dict.json")
                 
     return seqdict, filedict
 
@@ -100,8 +101,8 @@ def find_collisions(seqdict, filedict):
     for x in allcol:
         a = x[0][0]
         b = x[0][1]
-        a_loc, a = a.split("/") # a/b_loc will be pos/pos2 or neg
-        b_loc, b = b.split("/") # Meanwhile a and b is the filename
+        a_loc, a = a.split("/")[-2:] # a/b_loc will be pos/pos2 or neg
+        b_loc, b = b.split("/")[-2:] # Meanwhile a and b is the filename
         a_name = a.split("-")
         b_name = b.split("-")
         if not a_name[:2] == b_name[:2]:
@@ -125,11 +126,16 @@ def find_collisions(seqdict, filedict):
     return results
 
 
-def create_blacklist():
+def create_blacklist(path=""):
     """
     Main blacklist function. Creates the actual blacklist and dumps it.
+
+    Args:
+      path (str): Path to the pos/neg directories. Also dumps blacklist here
     """
-    seqdict, filedict = load()
+    if path:
+        path += "/"
+    seqdict, filedict = load(path)
     l = find_collisions(seqdict, filedict)
     blacklist = set()
     d = {"pos":0, "pos2":0, "neg":0}
@@ -141,7 +147,7 @@ def create_blacklist():
             blacklist.add(x[0][0])
             d[x[0][2]] += 1
     blacklist.add("416-60776-0-1.sto") # Incompatible with RNAz
-    b.dumpfile(list(blacklist), "blacklist.json")
+    b.dumpfile(list(blacklist), f"{path}blacklist.json")
     print(f"{len(blacklist)} blacklisted files")
     print(f"{d['pos']} from pos, {d['pos2']} from pos2 and {d['neg']} from neg ")
 
@@ -177,7 +183,3 @@ def show(a, b=None, a_path="neg", b_path="neg", open_files=True):
         print(f"Opening {path}/{a} and {path}/{b}")
         subprocess.Popen(["notepad.exe", f"{a_path}/{a}"])
         subprocess.Popen(["notepad.exe", f"{b_path}/{b}"])
-
-
-if __name__ == "__main__":
-    create_blacklist()
