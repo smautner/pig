@@ -1,8 +1,8 @@
 from sklearn.feature_selection import (RFECV, VarianceThreshold,
-                                       chi2, SelectKBest)
+                                       chi2, SelectKBest, SelectFromModel)
 from sklearn.linear_model import Lasso
 from skrebate import ReliefF
-from sklearn.svm import SVC
+from sklearn.svm import SVC, LinearSVC
 import numpy as np
 #####################
 # Feature selection methods.

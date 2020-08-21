@@ -88,7 +88,7 @@ def calculate_featurelists(idd):
     b.dumpfile((foldnr, fl, mask, fname, FOLDXY), f"tmp/fs_results/{idd}.json")
 
 
-def gather_featurelists(clfnames, debug):
+def gather_featurelists(clfnames, debug, randseed):
     """Collect results to create the proper featurelists.
     Also creates tmp/rps_tasks for RPS.
     Note: The debug variable needs to be the same value as makefltasks uses."""
@@ -97,7 +97,7 @@ def gather_featurelists(clfnames, debug):
         foldnr, fl, mask, fname, FOLDXY = b.loadfile(f"tmp/fs_results/{ftfile}")
         # Append the Featurelists to a dict with their fold number as key
         featurelists[foldnr].append((fl, mask, fname, FOLDXY))
-    tasks = rps.maketasks(featurelists, clfnames)
+    tasks = rps.maketasks(featurelists, clfnames, randseed)
     numtasks = len(tasks)
     print(f"Created {numtasks} RPS tasks.")
     return numtasks
@@ -108,11 +108,11 @@ def gather_featurelists(clfnames, debug):
 #############
 
 
-def calculate_rps(idd, n_jobs, debug, randseed):
+def calculate_rps(idd, n_jobs, debug):
     """Executes RPS for a given task. Executed by cluster."""
 
     tasks = np.load("tmp/rps_tasks", allow_pickle=True)
-    foldnr, scores, best_esti, ftlist, fname, y_labels = rps.random_param_search(tasks[idd], n_jobs, debug, randseed)
+    foldnr, scores, best_esti, ftlist, fname, y_labels = rps.random_param_search(tasks[idd], n_jobs, debug)
     best_esti = (type(best_esti).__name__, best_esti.get_params()) # Creates readable tuple that can be dumped.
     b.dumpfile([foldnr, scores, best_esti, ftlist, fname, y_labels], f"tmp/rps_results/{idd}.json")
 
@@ -149,7 +149,7 @@ def makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg
     print(f"{time() - starttime}: ...Cluster finished")
     # RPS tasks
     print("Assembling FS lists and RPS tasks...")
-    rpstasklen = gather_featurelists(clfnames, debug)
+    rpstasklen = gather_featurelists(clfnames, debug, randseed)
     if rpstasklen == 0:
         print("No RPS tasks were created. Possibly used wrong parameters.")
         return
@@ -249,8 +249,6 @@ if __name__ == "__main__":
     randseed = args['seed']
     numneg = 800 if not debug else 200 # Number of negative files beeing read by b.loaddata()
     n_jobs = 24 # Number of parallel jobs used by RandomizedSearchCV
-    print(selection_methods)
-    print(f"Used Seed: {randseed}")
 
     if args['blacklist']:
         blacklist.create_blacklist("data")
@@ -267,7 +265,7 @@ if __name__ == "__main__":
         calculate_featurelists(idd)
     elif args['calcrps']:
         idd = args['calcrps'] - 1
-        calculate_rps(idd, n_jobs, debug, randseed)
+        calculate_rps(idd, n_jobs, debug)
     else:
         if args['clean']==1: # Removes previously created temporary files to prevent issues
             cleanup(False)
@@ -276,6 +274,8 @@ if __name__ == "__main__":
         if not any(selection_methods.values()):
             pass # No Selection method was given so just return
         elif args['makeall']:
+            print(selection_methods)
+            print(f"Used Seed: {randseed}")
             lazymake(use_rnaz, use_filters, selection_methods, n_splits, numneg, randseed, debug) ###
         else:
             makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg, randseed, debug)

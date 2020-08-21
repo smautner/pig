@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -cwd
-#$ -l h_vmem=15G
+#$ -l h_vmem=1G
 ##$ -pe smp 2
 #$ -R y
 # -o and -e need to different for each user.
