@@ -6,6 +6,7 @@ import input.basics as b
 import input.loadfiles as loadfiles
 import optimization.feature_selection as fs
 import optimization.estimator_parameter as rps
+import data.blacklist as blacklist
 from sklearn.preprocessing import StandardScaler
 from collections import defaultdict
 
@@ -87,7 +88,7 @@ def calculate_featurelists(idd):
     b.dumpfile((foldnr, fl, mask, fname, FOLDXY), f"tmp/fs_results/{idd}.json")
 
 
-def gather_featurelists(clfnames, debug):
+def gather_featurelists(clfnames, debug, randseed):
     """Collect results to create the proper featurelists.
     Also creates tmp/rps_tasks for RPS.
     Note: The debug variable needs to be the same value as makefltasks uses."""
@@ -96,7 +97,7 @@ def gather_featurelists(clfnames, debug):
         foldnr, fl, mask, fname, FOLDXY = b.loadfile(f"tmp/fs_results/{ftfile}")
         # Append the Featurelists to a dict with their fold number as key
         featurelists[foldnr].append((fl, mask, fname, FOLDXY))
-    tasks = rps.maketasks(featurelists, clfnames)
+    tasks = rps.maketasks(featurelists, clfnames, randseed)
     numtasks = len(tasks)
     print(f"Created {numtasks} RPS tasks.")
     return numtasks
@@ -107,11 +108,11 @@ def gather_featurelists(clfnames, debug):
 #############
 
 
-def calculate_rps(idd, n_jobs, debug, randseed):
+def calculate_rps(idd, n_jobs, debug):
     """Executes RPS for a given task. Executed by cluster."""
 
     tasks = np.load("tmp/rps_tasks", allow_pickle=True)
-    foldnr, scores, best_esti, ftlist, fname, y_labels = rps.random_param_search(tasks[idd], n_jobs, debug, randseed)
+    foldnr, scores, best_esti, ftlist, fname, y_labels = rps.random_param_search(tasks[idd], n_jobs, debug)
     best_esti = (type(best_esti).__name__, best_esti.get_params()) # Creates readable tuple that can be dumped.
     b.dumpfile([foldnr, scores, best_esti, ftlist, fname, y_labels], f"tmp/rps_results/{idd}.json")
 
@@ -142,16 +143,13 @@ def makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg
     # FL tasks
     print(f"{time() - starttime}: Making Featurelist tasks...")
     fstasklen = makefltasks(p, n, selection_methods, n_splits, randseed, debug)
-    if fstasklen == 0:
-        print("No FS tasks were created because no valid selection methods were given.")
-        return
     # Calc FL part -> Cluster
     print(f"{time() - starttime}: Sending {fstasklen} FS tasks to cluster...")
     b.shexec_and_wait(f"qsub -V -t 1-{fstasklen} runall_fs_sge.sh")
     print(f"{time() - starttime}: ...Cluster finished")
     # RPS tasks
     print("Assembling FS lists and RPS tasks...")
-    rpstasklen = gather_featurelists(clfnames, debug)
+    rpstasklen = gather_featurelists(clfnames, debug, randseed)
     if rpstasklen == 0:
         print("No RPS tasks were created. Possibly used wrong parameters.")
         return
@@ -218,6 +216,7 @@ def create_directories():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--clean', type=int, default=0, help='0-no cleanup, 1-normal cleanup, 2-cleanup also removes pn files')
+    parser.add_argument('-b', '--blacklist', action='store_true', help='If selected the blacklist will be (re-)created first')
     parser.add_argument('--calcfl', type=int, help='Feature selection process for the cluster')
     parser.add_argument('--calcrps', type=int, help='Random Parameter Search process for the cluster')
     parser.add_argument('-a', '--makeall', action='store_true', help='Ignore given clfnames (--clf) and execute the program with every classifier seperately. Also plots and saves all useful data')
@@ -230,8 +229,11 @@ if __name__ == "__main__":
     parser.add_argument('--kbest', nargs='+', type=int, default=[], help='Select-K-Best for Feature Selection. Uses Chi2')
     parser.add_argument('--relief', nargs='+', type=int, default=[], help='Relief for Feature Selection. Recommended values: 40 60 80. Warning: Needs very high memory (with the 70k files >12gb)')
     parser.add_argument('--rfecv', nargs='+', type=int, default=[], help='RFECV for Feature Selection. Warning: Insane runtime. Might never end')
+    parser.add_argument('--svc1', nargs='+', type=float, default=[], help='SVC with L1 Regularization')
+    parser.add_argument('--svc2', nargs='+', type=float, default=[], help='SVC with L2 Regularization')
     parser.add_argument('--clf', nargs='+', type=str, choices=('xtratrees', 'gradientboosting', 'neuralnet'), default=['xtratrees', 'gradientboosting', 'neuralnet'], help='Needs to be any of: xtratrees, gradientboosting, neuralnet')
     parser.add_argument('-n', '--nsplits', type=int, default=5, help='Number of splits kfold creates')
+    parser.add_argument('-s', '--seed', type=int, default=42, help='Random Seed used for execution')
     parser.add_argument('--results', type=str, default="", help='If used ignore all other arguments and show selected results (options: fenr)')
 
     args = vars(parser.parse_args())
@@ -239,13 +241,17 @@ if __name__ == "__main__":
     use_rnaz = args['rnaz']
     use_filters = args['filters']
     use_oversampling = args['oversample']
-    selection_methods = {'Lasso': args['lasso'], 'VarThresh': args['varthresh'], 'SelKBest': args['kbest'], 'Relief': args['relief'], 'RFECV': args['rfecv']}
+    selection_methods = {'Lasso': args['lasso'], 'VarThresh': args['varthresh'],
+                         'SelKBest': args['kbest'], 'Relief': args['relief'],
+                         'RFECV': args['rfecv'], 'SVC1': args['svc1'], 'SVC2': args['svc2']}
     clfnames = args['clf']
     n_splits = args['nsplits']
+    randseed = args['seed']
     numneg = 800 if not debug else 200 # Number of negative files beeing read by b.loaddata()
     n_jobs = 24 # Number of parallel jobs used by RandomizedSearchCV
-    randseed = 42
-    print(selection_methods)
+
+    if args['blacklist']:
+        blacklist.create_blacklist("data")
 
     if use_oversampling: # Turns the used classifiers into their oversampling equivalents
         clfnames = ['os_' + s for s in clfnames]
@@ -259,13 +265,17 @@ if __name__ == "__main__":
         calculate_featurelists(idd)
     elif args['calcrps']:
         idd = args['calcrps'] - 1
-        calculate_rps(idd, n_jobs, debug, randseed)
+        calculate_rps(idd, n_jobs, debug)
     else:
         if args['clean']==1: # Removes previously created temporary files to prevent issues
             cleanup(False)
         elif args['clean']==2: # Also removes pn.json or pnd.json so they will need to be reloaded
             cleanup(True)
-        if args['makeall']:
+        if not any(selection_methods.values()):
+            pass # No Selection method was given so just return
+        elif args['makeall']:
+            print(selection_methods)
+            print(f"Used Seed: {randseed}")
             lazymake(use_rnaz, use_filters, selection_methods, n_splits, numneg, randseed, debug) ###
         else:
             makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg, randseed, debug)

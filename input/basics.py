@@ -6,6 +6,11 @@ import dill
 import time
 import pandas as pd
 import copy
+from collections import Counter, defaultdict
+from pprint import pprint
+from sklearn.metrics import roc_curve, roc_auc_score
+import matplotlib.pyplot as plt
+from sklearn.metrics import precision_recall_curve
 
 def mpmap(func, iterable, chunksize=10, poolsize=2):
     import multiprocessing as mp
@@ -92,11 +97,6 @@ def loadfile(fn):
 ###################
 
 def showresults(args, resultfile):
-    from collections import Counter, defaultdict
-    from pprint import pprint
-    from sklearn.metrics import roc_curve, roc_auc_score
-    import matplotlib.pyplot as plt
-    from sklearn.metrics import precision_recall_curve
     results = loadfile(resultfile)
     estimators = defaultdict(lambda: defaultdict(list))
     ftlists = []
