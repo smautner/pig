@@ -53,8 +53,8 @@ def kfold(X, y, n_splits=2, randseed=None, shuffle=True):
 # Make Featurelists
 #############
 def load_pn_files(use_rnaz, use_filters, numneg, randseed, debug):
-    fn = "tmp/pnd.json" if debug else "tmp/pnf.json" if use_filters else "tmp/pn.json" # Different file for debug mode.
-
+    fn=f"{use_rnaz}_{use_filters}_{numneg}_{randseed}_{debug}.json"
+ 
     # If a file with the loaded files already exists, skip loadfiles.loaddata()
     if os.path.isfile(fn):
         p, n = b.loadfile(fn) # pos, neg from loaded file
@@ -68,7 +68,6 @@ def load_pn_files(use_rnaz, use_filters, numneg, randseed, debug):
 
 def makefltasks(p, n, selection_methods, n_splits, randseed, debug):
     """Creates tasks the cluster uses to create featurelists."""
-    
 
     allfeatures = list(p[1].keys())
     allfeatures.remove("name")  # We dont need the filenames (for now)
