@@ -26,7 +26,7 @@ def cleanup(pn=False):
                 os.remove(f"/scratch/bi01/mautner/guest10/JOBZ/{folder}/{file}")
             print(f"Cleaned up {folder}")
     for file in os.listdir("tmp"):
-        if not (file in ["pn.json", "pnd.json", "pnf.json"]) or pn:
+        if not (file.startswith("pn_")) or pn:
             os.remove(f"tmp/{file}")
             print(f"Removed tmp/{file}")
 
@@ -53,7 +53,7 @@ def kfold(X, y, n_splits=2, randseed=None, shuffle=True):
 # Make Featurelists
 #############
 def load_pn_files(use_rnaz, use_filters, numneg, randseed, debug):
-    fn=f"{use_rnaz}_{use_filters}_{numneg}_{randseed}_{debug}.json"
+    fn=f"pn_{use_rnaz}_{use_filters}_{numneg}_{randseed}_{debug}.json"
  
     # If a file with the loaded files already exists, skip loadfiles.loaddata()
     if os.path.isfile(fn):
@@ -232,6 +232,7 @@ if __name__ == "__main__":
     parser.add_argument('--svc2', nargs='+', type=float, default=[], help='SVC with L2 Regularization')
     parser.add_argument('--clf', nargs='+', type=str, choices=('xtratrees', 'gradientboosting', 'neuralnet'), default=['xtratrees', 'gradientboosting', 'neuralnet'], help='Needs to be any of: xtratrees, gradientboosting, neuralnet')
     parser.add_argument('-n', '--nsplits', type=int, default=5, help='Number of splits kfold creates')
+    parser.add_argument('--numneg', type=int, default=5, help='Number of negative (and max of positive) files beeing loaded')
     parser.add_argument('-s', '--seed', type=int, default=42, help='Random Seed used for execution')
     parser.add_argument('--results', type=str, default="", help='If used ignore all other arguments and show selected results (options: fenr)')
 
@@ -246,7 +247,7 @@ if __name__ == "__main__":
     clfnames = args['clf']
     n_splits = args['nsplits']
     randseed = args['seed']
-    numneg = 800 if not debug else 200 # Number of negative files beeing read by b.loaddata()
+    numneg = args['numneg'] # Number of negative files beeing read by b.loaddata()
     n_jobs = 24 # Number of parallel jobs used by RandomizedSearchCV
 
     if args['blacklist']:

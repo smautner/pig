@@ -5,6 +5,7 @@ import input.basics as b
 from collections import Counter, defaultdict
 from operator import itemgetter
 from itertools import combinations
+from matplotlib import pyplot as plt
 
 
 def compare(a, b):
@@ -42,29 +43,35 @@ def load(path):
 
     Returns:
       seqdict (dict): A dictionary that contains coordinates for every sequence
-      filedict (dict): A dictionary that contains the size
-                       (num(seq) * len(seq)) for each file
+      filedict (dict): A dictionary that contains the sum of nucleotides
+                       for each file
     """
-    if not os.path.exists("tmp"):
-        print("Creating tmp directory")
-        os.makedirs("tmp")
     p1 = [ f"{path}pos/{f}" for f in  os.listdir(f"{path}pos")]
     p2 = [ f"{path}pos2/{f}" for f in  os.listdir(f"{path}pos2")]
     n = [ f"{path}neg/{f}" for f in  os.listdir(f"{path}neg")]
     seqdict = defaultdict(list)
     filedict = defaultdict(int)
     for i in p1+p2+n:
+        state = "start of file"
         i_name = i.split("/")[-1]
+        nuc_sum = 0
+        num_seq = 0
         with open(i) as f:
             for line in f.readlines()[2:]: # Skip first 2 lines of files
                 if line.startswith("#"):
-                    break # Last Sequence of File has been read
+                    if state == "start of file":
+                        continue
+                    else:
+                        break # Last Sequence of File has been read
                 else:
+                    state = "reading sequences"
                     split = line.split(sep=" ", maxsplit=1)[0].split(sep="/")
                     seqdict[split[0]].append((split[1], i))
                     coord = split[1].split("-")
-                    distance = abs(int(coord[0])-int(coord[1]))
-                    filedict[i_name] += distance
+                    nuc_sum += (abs(int(coord[0])-int(coord[1])))
+                    num_seq += 1
+        average_nuc = nuc_sum / num_seq
+        filedict[i] = (nuc_sum, average_nuc, num_seq)
                 
     return seqdict, filedict
 
@@ -101,18 +108,18 @@ def find_collisions(seqdict, filedict):
     for x in allcol:
         a = x[0][0]
         b = x[0][1]
-        a_loc, a = a.split("/")[-2:] # a/b_loc will be pos/pos2 or neg
-        b_loc, b = b.split("/")[-2:] # Meanwhile a and b is the filename
-        a_name = a.split("-")
-        b_name = b.split("-")
+        a_loc, a_split = a.split("/")[-2:] # a/b_loc will be pos/pos2 or neg
+        b_loc, b_split = b.split("/")[-2:] # Meanwhile a and b is the filename
+        a_name = a_split.split("-")
+        b_name = b_split.split("-")
         if not a_name[:2] == b_name[:2]:
             if x[1] < 2:  # If the first 2 parts of the filename arent identical,
                 continue  # Require at least 2 collisions to be added
-        results.append(((a, filedict[a], a_loc), (b, filedict[b], b_loc), x[1]))
+        results.append(((a, filedict[a]), (b, filedict[b]), x[1]))
         overlap_file_counter[a] += 1
         overlap_file_counter[b] += 1
-        if not a_loc == b_loc:
-            print(a_loc, b_loc, a, b)
+        #if not a_loc == b_loc:
+            #print(a_loc, b_loc, a, b)
 
     # Files and sequences that cause most overlaps 
     top_files = sorted(overlap_file_counter.items(), key=itemgetter(1), reverse=True)
@@ -126,30 +133,89 @@ def find_collisions(seqdict, filedict):
     return results
 
 
-def create_blacklist(path=""):
+def create_blacklist(path="", make_histogram="avg"):
     """
     Main blacklist function. Creates the actual blacklist and dumps it.
 
     Args:
       path (str): Path to the pos/neg directories. Also dumps blacklist here
+      make_histogram (str): If not empty, a histogram will be drawn using the given type
     """
     if path:
         path += "/"
     seqdict, filedict = load(path)
     l = find_collisions(seqdict, filedict)
     blacklist = set()
-    d = {"pos":0, "pos2":0, "neg":0}
     for x in l:
-        if x[0][1] > x[1][1]:      # This picks which file has a higher "num(seq)*len(seq)"
-            blacklist.add(x[1][0]) # and adds the smaller file to the blacklist
-            d[x[1][2]] += 1
+        a_loc, a_name = x[0][0].split("/")
+        b_loc, b_name = x[1][0].split("/")
+        if x[0][1][0] > x[1][1][0]:  # This picks which file has a higher sum of nucleotides
+            blacklist.add(b_name)   # and adds the smaller file to the blacklist
         else:
-            blacklist.add(x[0][0])
-            d[x[0][2]] += 1
+            blacklist.add(a_name)
     blacklist.add("416-60776-0-1.sto") # Incompatible with RNAz
     b.dumpfile(list(blacklist), f"{path}blacklist.json")
     print(f"{len(blacklist)} blacklisted files")
-    print(f"{d['pos']} from pos, {d['pos2']} from pos2 and {d['neg']} from neg ")
+    if make_histogram:
+        make_histograms(filedict, blacklist, make_histogram)
+    return blacklist
+
+
+def make_histograms(filedict, blacklist, hist_type = "avg"):
+    """Calculates a histogram using the given filedict/blacklist.
+
+    Args:
+      filedict (dict): filedict created in the first step of blacklist creation
+      blacklist (set): The resulting blacklist of the create_blacklist() function
+      hist_type (str): The histogram type. Must be either "avg", "sum" or "num"
+    """
+    d = defaultdict(list)
+    for x, (sum_nuc, average_nuc, num_seq) in filedict.items():
+        x_loc, x_name = x.split("/")
+        if x_name in blacklist:
+            if hist_type == "sum":
+                d[f"{x_loc}_bl"].append(sum_nuc)
+            elif hist_type == "avg":
+                d[f"{x_loc}_bl"].append(average_nuc)
+            elif hist_type == "num":
+                d[f"{x_loc}_bl"].append(num_seq)
+            else:
+                raise ValueError("Unkown histogram type")
+        else:
+            if hist_type == "sum":
+                d[f"{x_loc}"].append(sum_nuc)
+            elif hist_type == "avg":
+                d[f"{x_loc}"].append(average_nuc)
+            elif hist_type == "num":
+                d[f"{x_loc}"].append(num_seq)
+    print(f"Blacklisted {len(d['pos_bl'])} from pos, {len(d['pos2_bl'])} from pos2 and {len(d['neg_bl'])} from neg")
+
+    plt.figure(figsize=(25.6, 9.6))
+    plt.subplot(1, 2, 1)
+    plot_hist(d, 100, hist_type, "pos", plt)
+    plt.subplot(1, 2, 2)
+    plot_hist(d, 100, hist_type, "neg", plt)
+    plt.show()
+
+
+def plot_hist(d, bins, hist_type, pn, plt):
+
+    if hist_type == "sum":
+        neg_range = (0, 7000)
+        plt.xlabel("Number of nucleotides")
+    elif hist_type == "avg":
+        neg_range = None
+        plt.xlabel("Average number of nucleotides")
+    elif hist_type == "num":
+        neg_range = (0, 100)
+        plt.xlabel("Number of sequences")
+    plt.ylabel("Number of files")
+    if pn == "pos":
+        plt.hist([d["pos"] + d["pos2"], d["pos_bl"] + d["pos2_bl"]], bins=bins, range=None, stacked=True, color=["blue", "red"])
+        plt.legend({"Positive files": "blue", "Positive blacklisted files": "darkblue"})
+    elif pn == "neg":
+        plt.hist([d["neg"], d["neg_bl"]], bins=bins, range=neg_range, stacked=True, color=["blue", "red"])
+        plt.legend({"Negative files": "blue", "Negative blacklisted files": "red"})
 
 
 def show(a, b=None, a_path="neg", b_path="neg", open_files=True):
@@ -183,3 +249,8 @@ def show(a, b=None, a_path="neg", b_path="neg", open_files=True):
         print(f"Opening {path}/{a} and {path}/{b}")
         subprocess.Popen(["notepad.exe", f"{a_path}/{a}"])
         subprocess.Popen(["notepad.exe", f"{b_path}/{b}"])
+
+from time import time
+a = time()
+create_blacklist()
+print(time() - a)
