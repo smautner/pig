@@ -5,6 +5,7 @@ import input.basics as b
 from collections import Counter, defaultdict
 from operator import itemgetter
 from itertools import combinations
+from matplotlib import pyplot as plt
 
 
 def compare(a, b):
@@ -189,14 +190,16 @@ def make_histograms(filedict, blacklist, hist_type = "avg"):
                 d[f"{x_loc}"].append(num_seq)
     print(f"Blacklisted {len(d['pos_bl'])} from pos, {len(d['pos2_bl'])} from pos2 and {len(d['neg_bl'])} from neg")
 
-    plot_hist(d, 100, hist_type, "pos")
-    plot_hist(d, 100, hist_type, "neg")
+    plt.figure(figsize=(25.6, 9.6))
+    plt.subplot(1, 2, 1)
+    plot_hist(d, 100, hist_type, "pos", plt)
+    plt.subplot(1, 2, 2)
+    plot_hist(d, 100, hist_type, "neg", plt)
+    plt.show()
 
 
-def plot_hist(d, bins, hist_type, pn):
-    from matplotlib import pyplot as plt
+def plot_hist(d, bins, hist_type, pn, plt):
 
-    plt.figure(figsize=(12.8, 9.6))
     if hist_type == "sum":
         neg_range = (0, 7000)
         plt.xlabel("Number of nucleotides")
@@ -213,7 +216,6 @@ def plot_hist(d, bins, hist_type, pn):
     elif pn == "neg":
         plt.hist([d["neg"], d["neg_bl"]], bins=bins, range=neg_range, stacked=True, color=["blue", "red"])
         plt.legend({"Negative files": "blue", "Negative blacklisted files": "red"})
-    plt.show()
 
 
 def show(a, b=None, a_path="neg", b_path="neg", open_files=True):
