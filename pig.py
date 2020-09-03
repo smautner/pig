@@ -65,13 +65,13 @@ def load_pn_files(use_rnaz, use_filters, numneg, randseed, debug):
  
     # If a file with the loaded files already exists, skip loadfiles.loaddata()
     if os.path.isfile(fn):
-        p, n = b.loadfile("fn") # pos, neg from loaded file
+        p, n = b.loadfile(fn) # pos, neg from loaded file
     else:
         if use_filters:
             p, n = loadfiles.loaddata("data", numneg, randseed, use_rnaz)
         else:
             p, n = loadfiles.loaddata("data", numneg, randseed, use_rnaz, 'both', blacklist_file="noblacklist")
-        b.dumpfile((p, n), "fn")
+        b.dumpfile((p, n), fn)
     return p, n
 
 
@@ -293,6 +293,7 @@ if __name__ == "__main__":
     numneg = args['numneg'] # Number of negative files beeing read by b.loaddata()
     n_jobs = 24 # Number of parallel jobs used by RandomizedSearchCV
     set_fl = args['featurelist']
+    print("FL:", set_fl)
 
     if args['blacklist']:
         blacklist.create_blacklist("data")
