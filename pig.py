@@ -293,7 +293,6 @@ if __name__ == "__main__":
     numneg = args['numneg'] # Number of negative files beeing read by b.loaddata()
     n_jobs = 24 # Number of parallel jobs used by RandomizedSearchCV
     set_fl = args['featurelist']
-    print("FL:", set_fl)
 
     if args['blacklist']:
         blacklist.create_blacklist("data")
