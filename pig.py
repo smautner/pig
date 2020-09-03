@@ -49,32 +49,37 @@ def kfold(X, y, n_splits=2, randseed=None, shuffle=True):
     return splits
 
 
-#############
-# Make Featurelists
-#############
-def load_pn_files(use_rnaz, use_filters, numneg, randseed, debug):
-    fn=f"pn_{use_rnaz}_{use_filters}_{numneg}_{randseed}_{debug}.json"
- 
-    # If a file with the loaded files already exists, skip loadfiles.loaddata()
-    if os.path.isfile(fn):
-        p, n = b.loadfile(fn) # pos, neg from loaded file
-    else:
-        if use_filters:
-            p, n = loadfiles.loaddata("data", numneg, randseed, use_rnaz)
-        else:
-            p, n = loadfiles.loaddata("data", numneg, randseed, use_rnaz, 'both', blacklist_file="noblacklist")
-        b.dumpfile((p, n), fn)
-    return p, n
-
-def makefltasks(p, n, selection_methods, n_splits, randseed, debug):
-    """Creates tasks the cluster uses to create featurelists."""
-
+def makefolds(p, n, n_splits, randseed):
     allfeatures = list(p[1].keys())
     allfeatures.remove("name")  # We dont need the filenames (for now)
     X, Y, df = b.makeXY(allfeatures, p, n)
     X = StandardScaler().fit_transform(X)
     folds = kfold(X, Y, n_splits=n_splits, randseed=randseed)
-    tasks = fs.maketasks(folds, df, selection_methods, debug)
+    return folds, df
+
+#############
+# Make Featurelists
+#############
+def load_pn_files(use_rnaz, use_filters, numneg, randseed, debug):
+    fn=f"tmp/pn_{use_rnaz}_{use_filters}_{numneg}_{randseed}_{debug}.json"
+ 
+    # If a file with the loaded files already exists, skip loadfiles.loaddata()
+    if os.path.isfile(fn):
+        p, n = b.loadfile("fn") # pos, neg from loaded file
+    else:
+        if use_filters:
+            p, n = loadfiles.loaddata("data", numneg, randseed, use_rnaz)
+        else:
+            p, n = loadfiles.loaddata("data", numneg, randseed, use_rnaz, 'both', blacklist_file="noblacklist")
+        b.dumpfile((p, n), "fn")
+    return p, n
+
+
+def makefltasks(p, n, selection_methods, n_splits, randseed, debug):
+    """Creates tasks the cluster uses to create featurelists."""
+
+    folds, df = makefolds(p, n, n_splits, randseed)
+    tasks = fs.maketasks(folds, df, selection_methods, randseed, debug)
     numtasks = len(tasks)
     print(f"Created {numtasks} FS tasks.")
     return numtasks
@@ -90,7 +95,13 @@ def calculate_featurelists(idd):
 def gather_featurelists(clfnames, debug, randseed):
     """Collect results to create the proper featurelists.
     Also creates tmp/rps_tasks for RPS.
-    Note: The debug variable needs to be the same value as makefltasks uses."""
+    Note: The debug variable needs to be the same value as makefltasks uses.
+
+    Args:
+      clfnames (list): What classifiers are beeing used
+      debug (bool): Debug mode
+      randseed (int): Used seed
+    """
     featurelists = defaultdict(list)
     for ftfile in os.listdir("tmp/fs_results"):
         foldnr, fl, mask, fname, FOLDXY = b.loadfile(f"tmp/fs_results/{ftfile}")
@@ -108,8 +119,8 @@ def gather_featurelists(clfnames, debug, randseed):
 
 
 def calculate_rps(idd, n_jobs, debug):
-    """Executes RPS for a given task. Executed by cluster."""
-
+    """Executes RPS for a given task. Executed by cluster.
+    """
     tasks = np.load("tmp/rps_tasks", allow_pickle=True)
     foldnr, scores, best_esti, ftlist, fname, y_labels = rps.random_param_search(tasks[idd], n_jobs, debug)
     best_esti = (type(best_esti).__name__, best_esti.get_params()) # Creates readable tuple that can be dumped.
@@ -133,22 +144,52 @@ def getresults():
 # Additional Options
 #############
 
-def makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg, randseed, debug):
+def skip_feature_selection(set_fl, p, n, clfnames, n_splits, randseed):
+    """Skips feature selection if set_fl is not empty.
+    To be more precise it skips "makefltasks()", "calculate_featurelists()" and
+    "gather_featurelists()" and uses its own method instead.
+    Args:
+      set_fl(list): A set featurelist that will be used for all folds
+      p and n: The loaded filedata created by b.loadfiles()
+      clfnames (list): The used classifiers for the random parameter search
+      n_splits (int): Number of folds created by kfold
+      randseed (int): Random seed used
+    """
+    folds, df = makefolds(p, n, n_splits, randseed)
+    print("Skipping Featureselection using set Featurelist")
+    foldnr = 0
+    featurelists = {}
+    mask = [True if f in set_fl else False for f in df.columns]
+    for X_train, X_test, y_train, y_test in folds:
+        FOLDXY = [X_train, X_test, y_train, y_test]
+        featurelists[foldnr] = [(set_fl, mask, "Set Featurelist", FOLDXY)]
+        foldnr += 1
+    tasks = rps.maketasks(featurelists, clfnames, randseed)
+    numtasks = len(tasks)
+    print(f"Created {numtasks} RPS tasks.")
+    return numtasks
+
+
+def makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg, randseed, debug, set_fl = []):
     from time import time
     starttime = time()
     # Load files
     print("Loading p and n files")
     p, n = load_pn_files(use_rnaz, use_filters, numneg, randseed, debug)
-    # FL tasks
-    print(f"{time() - starttime}: Making Featurelist tasks...")
-    fstasklen = makefltasks(p, n, selection_methods, n_splits, randseed, debug)
-    # Calc FL part -> Cluster
-    print(f"{time() - starttime}: Sending {fstasklen} FS tasks to cluster...")
-    b.shexec_and_wait(f"qsub -V -t 1-{fstasklen} runall_fs_sge.sh")
-    print(f"{time() - starttime}: ...Cluster finished")
-    # RPS tasks
-    print("Assembling FS lists and RPS tasks...")
-    rpstasklen = gather_featurelists(clfnames, debug, randseed)
+
+    if set_fl: # Skip Feature selection process
+        rpstasklen = skip_feature_selection(set_fl, p, n, clfnames, n_splits, randseed)
+    else:
+        # FL tasks
+        print(f"{time() - starttime}: Making Featurelist tasks...")
+        fstasklen = makefltasks(p, n, selection_methods, n_splits, randseed, debug)
+        # Calc FL part -> Cluster
+        print(f"{time() - starttime}: Sending {fstasklen} FS tasks to cluster...")
+        b.shexec_and_wait(f"qsub -V -t 1-{fstasklen} runall_fs_sge.sh")
+        print(f"{time() - starttime}: ...Cluster finished")
+        # RPS tasks
+        print("Assembling FS lists and RPS tasks...")
+        rpstasklen = gather_featurelists(clfnames, debug, randseed)
     if rpstasklen == 0:
         print("No RPS tasks were created. Possibly used wrong parameters.")
         return
@@ -160,7 +201,7 @@ def makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg
     getresults()
     print(f"{time() - starttime}: Done")
 
-def lazymake(use_rnaz, use_filters, selection_methods, n_splits, numneg, randseed, debug):
+def lazymake(use_rnaz, use_filters, selection_methods, n_splits, numneg, randseed, debug, set_fl=[]):
     """Temporary function because of lazyness.
     Executes parameter combinations and saves the results.
     """
@@ -179,7 +220,7 @@ def lazymake(use_rnaz, use_filters, selection_methods, n_splits, numneg, randsee
         cleanup(False)
         create_directories()
         print(f"----- {name} -----")
-        makeall(use_rnaz, use_filters, selection_methods, clfname, n_splits, numneg, randseed, debug)
+        makeall(use_rnaz, use_filters, selection_methods, clfname, n_splits, numneg, randseed, debug, set_fl)
         b.shexec(f"python pig.py --results fen > results/output_{name}.txt")
         ### The following part saves the data needed for drawing roc curves
         ### For each parameter combination.
@@ -230,9 +271,11 @@ if __name__ == "__main__":
     parser.add_argument('--rfecv', nargs='+', type=int, default=[], help='RFECV for Feature Selection. Warning: Insane runtime. Might never end')
     parser.add_argument('--svc1', nargs='+', type=float, default=[], help='SVC with L1 Regularization')
     parser.add_argument('--svc2', nargs='+', type=float, default=[], help='SVC with L2 Regularization')
+    parser.add_argument('--forest', nargs='+', type=int, default=[], help='RandomForestClassifier for Feature Selection')
+    parser.add_argument('--featurelist', nargs='+', type=str, default=[], help='A optional set featurelist. If this is not empty the feature selection methods will be ignored')
     parser.add_argument('--clf', nargs='+', type=str, choices=('xtratrees', 'gradientboosting', 'neuralnet'), default=['xtratrees', 'gradientboosting', 'neuralnet'], help='Needs to be any of: xtratrees, gradientboosting, neuralnet')
     parser.add_argument('-n', '--nsplits', type=int, default=5, help='Number of splits kfold creates')
-    parser.add_argument('--numneg', type=int, default=5, help='Number of negative (and max of positive) files beeing loaded')
+    parser.add_argument('--numneg', type=int, default=10000, help='Number of negative (and max of positive) files beeing loaded')
     parser.add_argument('-s', '--seed', type=int, default=42, help='Random Seed used for execution')
     parser.add_argument('--results', type=str, default="", help='If used ignore all other arguments and show selected results (options: fenr)')
 
@@ -243,12 +286,13 @@ if __name__ == "__main__":
     use_oversampling = args['oversample']
     selection_methods = {'Lasso': args['lasso'], 'VarThresh': args['varthresh'],
                          'SelKBest': args['kbest'], 'Relief': args['relief'],
-                         'RFECV': args['rfecv'], 'SVC1': args['svc1'], 'SVC2': args['svc2']}
+                         'RFECV': args['rfecv'], 'SVC1': args['svc1'], 'SVC2': args['svc2'], 'Forest': args['forest']}
     clfnames = args['clf']
     n_splits = args['nsplits']
     randseed = args['seed']
     numneg = args['numneg'] # Number of negative files beeing read by b.loaddata()
     n_jobs = 24 # Number of parallel jobs used by RandomizedSearchCV
+    set_fl = args['featurelist']
 
     if args['blacklist']:
         blacklist.create_blacklist("data")
@@ -276,8 +320,8 @@ if __name__ == "__main__":
         elif args['makeall']:
             print(selection_methods)
             print(f"Used Seed: {randseed}")
-            lazymake(use_rnaz, use_filters, selection_methods, n_splits, numneg, randseed, debug) ###
+            lazymake(use_rnaz, use_filters, selection_methods, n_splits, numneg, randseed, debug, set_fl) ###
         else:
-            makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg, randseed, debug)
+            makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg, randseed, debug, set_fl)
 
 
