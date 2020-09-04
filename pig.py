@@ -277,7 +277,7 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--nsplits', type=int, default=5, help='Number of splits kfold creates')
     parser.add_argument('--numneg', type=int, default=10000, help='Number of negative (and max of positive) files beeing loaded')
     parser.add_argument('-s', '--seed', type=int, default=42, help='Random Seed used for execution')
-    parser.add_argument('--results', type=str, default="", help='If used ignore all other arguments and show selected results (options: fenr)')
+    parser.add_argument('--results', type=str, default="h", help='If used ignore all other arguments and show selected results (options: hfenrp)')
 
     args = vars(parser.parse_args())
     debug = args['debug']

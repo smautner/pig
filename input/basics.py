@@ -8,9 +8,8 @@ import pandas as pd
 import copy
 from collections import Counter, defaultdict
 from pprint import pprint
-from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve
 import matplotlib.pyplot as plt
-from sklearn.metrics import precision_recall_curve
 
 def mpmap(func, iterable, chunksize=10, poolsize=2):
     import multiprocessing as mp
@@ -144,9 +143,9 @@ def showresults(args, resultfile):
         plt.ylabel('Precision')
         plt.show()
     if  "h" in args:
-        print("Usage: pig.py showresults {fen}\n", \
+        print("Usage: pig.py -r {fenrp}\n", \
               "f - featurelists with number of occurences\n", \
               "e - estimators\n", \
               "n - Shows ALL featurelists with the info used to create them\n", \
-              "r - Creates and plots the roc_curve", \
+              "r - Creates and plots the roc_curve\n", \
               "p - Creates and plots the precision_recall_curve")
