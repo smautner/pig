@@ -147,8 +147,8 @@ def create_blacklist(path="", make_histogram="avg"):
     l = find_collisions(seqdict, filedict)
     blacklist = set()
     for x in l:
-        a_loc, a_name = x[0][0].split("/")
-        b_loc, b_name = x[1][0].split("/")
+        a_loc, a_name = x[0][0].split("/")[-2:]
+        b_loc, b_name = x[1][0].split("/")[-2:]
         if x[0][1][0] > x[1][1][0]:  # This picks which file has a higher sum of nucleotides
             blacklist.add(b_name)   # and adds the smaller file to the blacklist
         else:
@@ -171,7 +171,7 @@ def make_histograms(filedict, blacklist, hist_type = "avg"):
     """
     d = defaultdict(list)
     for x, (sum_nuc, average_nuc, num_seq) in filedict.items():
-        x_loc, x_name = x.split("/")
+        x_loc, x_name = x.split("/")[-2:]
         if x_name in blacklist:
             if hist_type == "sum":
                 d[f"{x_loc}_bl"].append(sum_nuc)
@@ -199,23 +199,24 @@ def make_histograms(filedict, blacklist, hist_type = "avg"):
 
 
 def plot_hist(d, bins, hist_type, pn, plt):
+    fontsize=18 # Size of the text for the labels and legend.
 
     if hist_type == "sum":
         neg_range = (0, 7000)
-        plt.xlabel("Number of nucleotides")
+        plt.xlabel("Number of nucleotides", fontsize=fontsize)
     elif hist_type == "avg":
         neg_range = None
-        plt.xlabel("Average number of nucleotides")
+        plt.xlabel("Average number of nucleotides", fontsize=fontsize)
     elif hist_type == "num":
         neg_range = (0, 100)
-        plt.xlabel("Number of sequences")
-    plt.ylabel("Number of files")
+        plt.xlabel("Number of sequences", fontsize=fontsize)
+    plt.ylabel("Number of files", fontsize=fontsize)
     if pn == "pos":
         plt.hist([d["pos"] + d["pos2"], d["pos_bl"] + d["pos2_bl"]], bins=bins, range=None, stacked=True, color=["blue", "red"])
-        plt.legend({"Positive files": "blue", "Positive blacklisted files": "darkblue"})
+        plt.legend({"Positive files": "blue", "Positive blacklisted files": "red"}, prop={"size":fontsize})
     elif pn == "neg":
         plt.hist([d["neg"], d["neg_bl"]], bins=bins, range=neg_range, stacked=True, color=["blue", "red"])
-        plt.legend({"Negative files": "blue", "Negative blacklisted files": "red"})
+        plt.legend({"Negative files": "blue", "Negative blacklisted files": "red"}, prop={"size":fontsize})
 
 
 def show(a, b=None, a_path="neg", b_path="neg", open_files=True):
@@ -249,8 +250,3 @@ def show(a, b=None, a_path="neg", b_path="neg", open_files=True):
         print(f"Opening {path}/{a} and {path}/{b}")
         subprocess.Popen(["notepad.exe", f"{a_path}/{a}"])
         subprocess.Popen(["notepad.exe", f"{b_path}/{b}"])
-
-from time import time
-a = time()
-create_blacklist()
-print(time() - a)

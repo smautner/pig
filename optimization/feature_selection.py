@@ -3,25 +3,28 @@ from sklearn.feature_selection import (RFECV, VarianceThreshold,
 from sklearn.linear_model import Lasso
 from skrebate import ReliefF
 from sklearn.svm import SVC, LinearSVC
+from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 #####################
 # Feature selection methods.
 #####################
 
-def svcl1(X_data, y_data, df, C):
+def svcl1(X_data, y_data, df, args):
     """
     Linear Support Vector Classification with L1 Regularization.
     """
-    clf = LinearSVC(penalty="l1", dual=False, C=C)
+    randseed, C = args
+    clf = LinearSVC(penalty="l1", dual=False, random_state=randseed, C=C)
     clf.fit(X_data, y_data)
     print(np.count_nonzero(clf.coef_))
     return [b for a, b in zip(clf.coef_[0], df.columns) if a]
 
-def svcl2(X_data, y_data, df, C):
+def svcl2(X_data, y_data, df, args):
     """
     Linear Support Vector Classification with L2 Regularization.
     """
-    clf = LinearSVC(penalty="l2", C=C)
+    randseed, C = args
+    clf = LinearSVC(penalty="l2", random_state=randseed, C=C)
     clf.fit(X_data, y_data)
     sel = SelectFromModel(clf, prefit=True)
     support = sel.get_support(True)
@@ -66,16 +69,26 @@ def select_k_best(X_data, y_data, df, k=20):
 def rfecv(X_data, y_data, df, step=1, cv=3):
     rfecv_estimator = SVC(kernel="linear")
 
-    clf = RFECV(rfecv_estimator, step=step, cv=cv)
+    clf = RFECV(rfecv_estimator, step=step, min_features_to_select=20, cv=cv)
     clf.fit(X_data, y_data)
     return [b for a, b in zip(clf.get_support(), df.columns) if a]
+
+
+def random_forest(X_data, y_data, df, args):
+    randseed, max_features = args
+    clf = RandomForestClassifier(max_features=max_features, random_state=randseed, n_jobs=1)
+    clf.fit(X_data, y_data)
+    sel = SelectFromModel(clf, prefit=True)
+    support = sel.get_support(True)
+    print(len(support))
+    return [b for a, b in zip(clf.feature_importances_[support],  df.columns[support])]
 
 #######################
 # The actual feature selection code.
 #######################
 
 
-def maketasks(folds, df, selection_methods, debug=False):
+def maketasks(folds, df, selection_methods, randseed, debug):
     """Creates the feature selection tasks"""
 
     tasks = []
@@ -107,10 +120,13 @@ def maketasks(folds, df, selection_methods, debug=False):
                         tasks.append((foldnr, "RFECV", FOLDXY, df, stepsize))
                 if method == 'SVC1':
                     for C in parameters:
-                        tasks.append((foldnr, "SVC1", FOLDXY, df, C))
+                        tasks.append((foldnr, "SVC1", FOLDXY, df, (randseed, C)))
                 if method == 'SVC2':
                     for C in parameters:
-                        tasks.append((foldnr, "SVC2", FOLDXY, df, C))
+                        tasks.append((foldnr, "SVC2", FOLDXY, df, (randseed, C)))
+                if method == 'Forest':
+                    for max_features in parameters:
+                        tasks.append((foldnr, "Forest", FOLDXY, df, (randseed, max_features)))
         foldnr += 1
 
                     
@@ -144,6 +160,8 @@ def feature_selection(taskid):
         fl = svcl1(X_train, y_train, df, args)
     elif fstype == "SVC2":
         fl = svcl2(X_train, y_train, df, args)
+    elif fstype == "Forest":
+        fl = random_forest(X_train, y_train, df, args)
     else:
         raise ValueError(f"'{fstype}' is not a valid Feature selection method.")
     mask = [True if f in fl else False for f in df.columns]
