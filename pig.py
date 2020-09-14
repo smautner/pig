@@ -3,6 +3,7 @@ import sys
 import argparse
 import numpy as np
 import input.basics as b
+import input.showresults as res
 import input.loadfiles as loadfiles
 import optimization.feature_selection as fs
 import optimization.estimator_parameter as rps
@@ -133,12 +134,11 @@ def getresults():
     results = defaultdict(lambda: [[0]])
     for rfile in os.listdir("tmp/rps_results"):
         f = b.loadfile(f"tmp/rps_results/{rfile}")
-        if f[1][0] > results[f[0]][0][0]:
+        if f[1][0] > results[f[0]][0][0] or f[1][0] == -1:
             # For each fold the result with the best best_esti_score is saved
+            # If the best_esti_score is -1 it means a set classifier was used.
             results[f[0]] = f[1:]
-        for rfile in os.listdir("tmp/rps_results"):
-            f = b.loadfile(f"tmp/rps_results/{rfile}")
-        b.dumpfile(results, "results.json")
+        b.dumpfile(results, f"results/results.json")
 
 #############
 # Additional Options
@@ -208,11 +208,8 @@ def lazymake(use_rnaz, use_filters, selection_methods, n_splits, numneg, randsee
     from sklearn.metrics import roc_curve, roc_auc_score
     import matplotlib.pyplot as plt
 
-    if not os.path.exists("results"):
-        os.makedirs("results")
-    else:
-        for file in os.listdir("results"):
-            os.remove(f"results/{file}")
+    for file in os.listdir("results"):
+        os.remove(f"results/{file}")
     plt.figure(figsize=(12.8, 9.6))
     plt.plot([0, 1], [0, 1], 'k--')
     for clfname in [['gradientboosting'], ['os_gradientboosting'], ['neuralnet'], ['os_neuralnet']]:
@@ -225,14 +222,14 @@ def lazymake(use_rnaz, use_filters, selection_methods, n_splits, numneg, randsee
         ### The following part saves the data needed for drawing roc curves
         ### For each parameter combination.
         y_true, y_score = [], []
-        for sc, be, ft, fn, y_labels in b.loadfile("results.json").values():
+        for sc, be, ft, fn, y_labels in b.loadfile(f"results/results.json").values():
             y_true.extend(y_labels[0])
             y_score.extend(y_labels[1])
         fpr, tpr, thresholds = roc_curve(y_true, y_score)
         auc = roc_auc_score(y_true, y_score)
         plt.plot(fpr, tpr, label=f"{name} - {round(auc,4)}")
         b.dumpfile((y_true, y_score), f"results/y_data_{name}")
-        os.rename("results.json", f"results/results_{name}.json")
+        os.rename("results/results.json", f"results/results_{name}.json")
     plt.xlabel('False positive rate')
     plt.ylabel('True positive rate')
     plt.legend(loc='best')
@@ -247,7 +244,9 @@ def create_directories():
         os.makedirs("tmp/fs_results")
     if not os.path.exists("tmp/rps_results"):
         print("Creating tmp/rps_results directory")
-        os.makedirs("tmp/rps_results") 
+        os.makedirs("tmp/rps_results")
+    if not os.path.exists("results"):
+        os.makedirs("results")
 
 #############
 # Main Function
@@ -255,7 +254,7 @@ def create_directories():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--clean', type=int, default=0, help='0-no cleanup, 1-normal cleanup, 2-cleanup also removes pn files')
+    parser.add_argument('-c', '--clean', action='store_true', help='If used it will remove pn files before execution. So they need to be reloaded.')
     parser.add_argument('-b', '--blacklist', action='store_true', help='If selected the blacklist will be (re-)created first')
     parser.add_argument('--calcfl', type=int, help='Feature selection process for the cluster')
     parser.add_argument('--calcrps', type=int, help='Random Parameter Search process for the cluster')
@@ -273,7 +272,7 @@ if __name__ == "__main__":
     parser.add_argument('--svc2', nargs='+', type=float, default=[], help='SVC with L2 Regularization')
     parser.add_argument('--forest', nargs='+', type=int, default=[], help='RandomForestClassifier for Feature Selection')
     parser.add_argument('--featurelist', nargs='+', type=str, default=[], help='A optional set featurelist. If this is not empty the feature selection methods will be ignored')
-    parser.add_argument('--clf', nargs='+', type=str, choices=('xtratrees', 'gradientboosting', 'neuralnet'), default=['xtratrees', 'gradientboosting', 'neuralnet'], help='Needs to be any of: xtratrees, gradientboosting, neuralnet')
+    parser.add_argument('--clf', nargs='+', type=str, default=['xtratrees', 'gradientboosting', 'neuralnet'], help='Either needs to be the name of a classifier or an executeable string that returns a classifier')
     parser.add_argument('-n', '--nsplits', type=int, default=5, help='Number of splits kfold creates')
     parser.add_argument('--numneg', type=int, default=10000, help='Number of negative (and max of positive) files beeing loaded')
     parser.add_argument('-s', '--seed', type=int, default=42, help='Random Seed used for execution')
@@ -303,7 +302,7 @@ if __name__ == "__main__":
     create_directories() # Create all needed directories
 
     if args['results']: # Instead of executing other functions show previous results
-        b.showresults(args['results'], "results.json")
+        res.showresults(args['results'], "results/results.json")
     elif args['calcfl']:
         idd = args['calcfl'] - 1
         calculate_featurelists(idd)
@@ -311,11 +310,9 @@ if __name__ == "__main__":
         idd = args['calcrps'] - 1
         calculate_rps(idd, n_jobs, debug)
     else:
-        if args['clean']==1: # Removes previously created temporary files to prevent issues
-            cleanup(False)
-        elif args['clean']==2: # Also removes pn.json or pnd.json so they will need to be reloaded
-            cleanup(True)
-        if not any(selection_methods.values()):
+        cleanup(args['clean'])
+        if not (any(selection_methods.values()) or set_fl):
+            print("No features or feature selection methods were given.")
             pass # No Selection method was given so just return
         elif args['makeall']:
             print(selection_methods)

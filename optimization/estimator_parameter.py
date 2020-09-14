@@ -33,9 +33,6 @@ def maketasks(featurelists, clfnames, randseed):
       clfnames (list): A list of classifiernames. A list of options can be found in "randomsearch.py"
       randseed (int): The Seed used
     """
-    clf =   [rs.classifiers[clfname][0] for clfname in clfnames]
-    param = [rs.classifiers[clfname][1] for clfname in clfnames]
-
     tasks = []
     for i in range(0, len(featurelists)): # Each list is a fold
         for flist in featurelists[i]: # Each fold contains featurelists.
@@ -47,10 +44,19 @@ def maketasks(featurelists, clfnames, randseed):
             X_train = StandardScaler().fit_transform(X_train)
             FOLDXY[0] = np.array(X_train)[:,mask]
             FOLDXY[1] = np.array(X_test)[:,mask]
-            tasks.extend([[i, FOLDXY, list(cp), FEATURELIST, FUNCNAME, randseed] for cp in zip(clf, param)])
-    tasks = np.array(tasks) # task = [FoldNr., FOLDXY, classifier/param, Featurelist, Function_name, Seed]
+            tasks.extend([[i, FOLDXY, clfname, FEATURELIST, FUNCNAME, randseed] for clfname in clfnames])
+    tasks = np.array(tasks) # task = [FoldNr., FOLDXY, clfname, Featurelist, Functioname, Seed]
     tasks.dump("tmp/rps_tasks")
     return tasks
+
+
+def execute_classifier_string(clfname):
+    """
+    Note: For this to work clfname NEEDS to include a part with 'global clf' and 'clf = ClassifierName()'
+    """
+    exec(clfname, globals())
+    return clf
+
 
 def random_param_search(task, n_jobs, debug):
     """
@@ -61,17 +67,25 @@ def random_param_search(task, n_jobs, debug):
     """
     randseed = task[5]
     X_train, X_test, y_train, y_test = task[1] # FOLDXY
-    task[2][1]["random_state"] = [randseed]
-    best_esti_score, best_esti = score(X_train, y_train, task[2], n_jobs, debug, randseed)
-    clf = clone(best_esti)
+    clfname = task[2]
+    if len(clfname) < 20:
+        clf_param = rs.classifiers[clfname]
+        clf_param[1]["random_state"] = [randseed]
+        best_esti_score, best_esti = score(X_train, y_train, clf_param, n_jobs, debug, randseed)
+        clf = clone(best_esti)
+    else:
+        clf = execute_classifier_string(clfname)
+        best_esti_score = -1
+        best_esti = clf
     clf.fit(X_train, y_train)
     y_labels = (y_test, list(clf.predict_proba(X_test)[:,1]))
     y_test = np.array(y_test)
     y_pred = clf.predict(X_test)
     y_pred = np.array(y_pred)
     test_score = f1_score(y_test, y_pred)
-    tpr = sum(y_pred[y_test == 1]) / sum(y_test == 1)
-    tnr = sum(y_pred[y_test == 0] == 0)/sum(y_test == 0)
-    acc_score = (tpr, tnr)
+    tpr = sum(y_pred[y_test == 1]) / sum(y_test == 1) # Sensitivity
+    tnr = sum(y_pred[y_test == 0] == 0)/sum(y_test == 0) # Specificity
+    precision = tpr / (tpr + (1-tnr))
+    acc_score = (tpr, tnr, precision)
     scores = (best_esti_score, test_score, acc_score)
     return task[0], scores, best_esti, task[3], task[4], y_labels

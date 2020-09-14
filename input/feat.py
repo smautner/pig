@@ -155,7 +155,7 @@ def get_sloppy( ali):
                  
         return  {
             f"sloppy_gu":(sloppy/(sloppy+ok+sloppy_all)) if sloppy+ok+sloppy_all > 0 else 0, 
-            f"sloppy_all ":((sloppy_all+sloppy)/(sloppy+ok+sloppy_all) ) if sloppy+ok+sloppy_all > 0 else 0, 
+            f"sloppy_all":((sloppy_all+sloppy)/(sloppy+ok+sloppy_all) ) if sloppy+ok+sloppy_all > 0 else 0, 
         }
     except Exception as ex: 
         print ("getsloppy fehlt",ex,ali.ali, ali.structure)
