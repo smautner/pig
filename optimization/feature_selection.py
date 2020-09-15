@@ -78,7 +78,7 @@ def random_forest(X_data, y_data, df, args):
     randseed, max_features = args
     clf = RandomForestClassifier(max_features=max_features, random_state=randseed, n_jobs=1)
     clf.fit(X_data, y_data)
-    sel = SelectFromModel(clf, prefit=True)
+    sel = SelectFromModel(clf, max_features=max_features, prefit=True)
     support = sel.get_support(True)
     print(len(support))
     return [b for a, b in zip(clf.feature_importances_[support],  df.columns[support])]
