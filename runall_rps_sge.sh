@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
-#$ -l h_vmem=512M
-#$ -pe smp 24
+#$ -l h_vmem=4G
+#$ -pe smp 2
 #$ -R y
 # -o and -e need to different for each user.
 #$ -o /scratch/bi01/mautner/guest10/JOBZ/pig_o/$JOB_ID.o_$TASK_ID
