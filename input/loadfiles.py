@@ -300,7 +300,7 @@ def vary_alignment(fname, ali, stru, cov):
     return [(ali, st, text) for ali, st, text in zip(alis + alis,
                                                      structures + alternative_str,
                                                      [a + b for a in ['', 'rm_small_stems '] for b in
-                                                      ['', 'remove_1/3_seq ', 'remove_1_seq ', 'remove_2_seq ']])]
+                                                      ['', 'remove_1/3_seq', 'remove_1_seq', 'remove_2_seq']])]
 
 
 def ali_to_dict(name, alignments, yao_scores, rnaz):
@@ -323,7 +323,7 @@ def ali_to_dict(name, alignments, yao_scores, rnaz):
     ld2 = []
     for d, ali in zip(list_of_dict, alignments):
         # print (ali.name)
-        ld2.append({ali.name + k: v for k, v in d.items()})
+        ld2.append({k + " " + ali.name: v for k, v in d.items()})
         # ld2.append({  "diff %s %s" % (ali.name, k): v-d[k]   for k,v in master.items()})
 
     ######

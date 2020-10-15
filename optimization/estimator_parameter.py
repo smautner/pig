@@ -33,40 +33,42 @@ def maketasks(featurelists, clfnames, randseed):
       clfnames (list): A list of classifiernames. A list of options can be found in "randomsearch.py"
       randseed (int): The Seed used
     """
-    tasks = []
+    tasks = [] 
     for i in range(0, len(featurelists)): # Each list is a fold
+        # for ftlistnr in range(0, len(featurelists[i])):
         for flist in featurelists[i]: # Each fold contains featurelists.
-            FEATURELIST = flist[0]
+            ftlist = flist[0]
             mask = flist[1]
-            FUNCNAME = flist[2]
-            FOLDXY = flist[3] # Includes X and y train/test from the fold
-            X_train, X_test = FOLDXY[0], FOLDXY[1]
-            X_train = StandardScaler().fit_transform(X_train)
-            FOLDXY[0] = np.array(X_train)[:,mask]
-            FOLDXY[1] = np.array(X_test)[:,mask]
-            tasks.extend([[i, FOLDXY, clfname, FEATURELIST, FUNCNAME, randseed] for clfname in clfnames])
-    tasks = np.array(tasks) # task = [FoldNr., FOLDXY, clfname, Featurelist, Functioname, Seed]
-    tasks.dump("tmp/rps_tasks")
+            fname = flist[2]
+            #tasks.extend([[i, ftlistnr, clfname, randseed] for clfname in clfnames])
+            tasks.extend([[i, mask, clfname, ftlist, fname, randseed] for clfname in clfnames])
+    tasks = np.array(tasks) # task = [FoldNr., mask, clfname, Featurelist, Functioname, Seed]
     return tasks
 
 
 def execute_classifier_string(clfname):
     """
-    Note: For this to work clfname NEEDS to include a part with 'global clf' and 'clf = ClassifierName()'
+    Note: For this to work clfname NEEDS to include a part with 'clf = ClassifierName()'
     """
     exec(clfname, globals())
     return clf
 
 
-def random_param_search(task, n_jobs, debug):
+def random_param_search(task, foldxy, n_jobs, debug):
     """
     Args:
       task (list): A task made by maketasks().
+      foldxy (list): [X_train, X_test, y_train, y_test]
       n_jobs (int): Number of parallel jobs used by score().
       debug (bool): True if debug mode.
     """
+    foldnr = task[0]
+    mask = task[1]
+    X_train, X_test, y_train, y_test = foldxy
+    X_train = StandardScaler().fit_transform(X_train)
+    X_train = np.array(X_train)[:,mask]
+    X_test = np.array(X_test)[:,mask]
     randseed = task[5]
-    X_train, X_test, y_train, y_test = task[1] # FOLDXY
     clfname = task[2]
     if len(clfname) < 20:
         clf_param = rs.classifiers[clfname]
@@ -85,7 +87,14 @@ def random_param_search(task, n_jobs, debug):
     test_score = f1_score(y_test, y_pred)
     tpr = sum(y_pred[y_test == 1]) / sum(y_test == 1) # Sensitivity
     tnr = sum(y_pred[y_test == 0] == 0)/sum(y_test == 0) # Specificity
-    precision = tpr / (tpr + (1-tnr))
+    #precision = tpr / (tpr + (1-tnr))
+    precision = sum(y_pred[y_test == 1]) / sum(y_pred == 1)
+    if np.isnan(tpr):
+        tpr = 0
+    if np.isnan(tnr):
+        tnr = 0
+    if np.isnan(precision):
+        precision = 0
     acc_score = (tpr, tnr, precision)
     scores = (best_esti_score, test_score, acc_score)
-    return task[0], scores, best_esti, task[3], task[4], y_labels
+    return foldnr, scores, best_esti, task[3], task[4], y_labels
