@@ -4,6 +4,7 @@ from sklearn.metrics import f1_score
 from sklearn.model_selection import RandomizedSearchCV as RSCV
 from sklearn.preprocessing import StandardScaler
 import optimization.randomsearch as  rs
+import traceback as tb
 
 
 def score(X, y, clf_param, n_jobs, debug, randseed):
@@ -26,25 +27,6 @@ def score(X, y, clf_param, n_jobs, debug, randseed):
     best_esti = searcher.best_estimator_
     return best_esti_score, best_esti
 
-def maketasks(featurelists, clfnames, randseed):
-    """Creates tasks that can be used for random_param_search.
-    Args:
-      featurelists (dict): A dictionary of featurelists each entry is a fold of featurelists.
-      clfnames (list): A list of classifiernames. A list of options can be found in "randomsearch.py"
-      randseed (int): The Seed used
-    """
-    tasks = [] 
-    for i in range(0, len(featurelists)): # Each list is a fold
-        # for ftlistnr in range(0, len(featurelists[i])):
-        for flist in featurelists[i]: # Each fold contains featurelists.
-            ftlist = flist[0]
-            mask = flist[1]
-            fname = flist[2]
-            #tasks.extend([[i, ftlistnr, clfname, randseed] for clfname in clfnames])
-            tasks.extend([[i, mask, clfname, ftlist, fname, randseed] for clfname in clfnames])
-    tasks = np.array(tasks) # task = [FoldNr., mask, clfname, Featurelist, Functioname, Seed]
-    return tasks
-
 
 def execute_classifier_string(clfname):
     """
@@ -54,7 +36,7 @@ def execute_classifier_string(clfname):
     return clf
 
 
-def random_param_search(task, foldxy, n_jobs, debug):
+def random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug):
     """
     Args:
       task (list): A task made by maketasks().
@@ -62,14 +44,10 @@ def random_param_search(task, foldxy, n_jobs, debug):
       n_jobs (int): Number of parallel jobs used by score().
       debug (bool): True if debug mode.
     """
-    foldnr = task[0]
-    mask = task[1]
     X_train, X_test, y_train, y_test = foldxy
     X_train = StandardScaler().fit_transform(X_train)
     X_train = np.array(X_train)[:,mask]
     X_test = np.array(X_test)[:,mask]
-    randseed = task[5]
-    clfname = task[2]
     if len(clfname) < 20:
         clf_param = rs.classifiers[clfname]
         clf_param[1]["random_state"] = [randseed]
@@ -80,7 +58,19 @@ def random_param_search(task, foldxy, n_jobs, debug):
         best_esti_score = -1
         best_esti = clf
     clf.fit(X_train, y_train)
-    y_labels = (y_test, list(clf.predict_proba(X_test)[:,1]))
+    ######
+    try:
+        coefs = list(zip(df.columns[mask], clf.coef_[0]))
+    except:
+        print("Given classifier does not have 'coef_' function")
+        coefs = ""
+    ######
+    try:
+        y_labels = (y_test, list(clf.predict_proba(X_test)[:,1]))
+    except:
+        y_labels = ([1,1,1,1,1], [1,1,1,1,1])
+        tb.print_stack()
+        print("Classifier does not support predict_proba()")
     y_test = np.array(y_test)
     y_pred = clf.predict(X_test)
     y_pred = np.array(y_pred)
@@ -97,4 +87,5 @@ def random_param_search(task, foldxy, n_jobs, debug):
         precision = 0
     acc_score = (tpr, tnr, precision)
     scores = (best_esti_score, test_score, acc_score)
-    return foldnr, scores, best_esti, task[3], task[4], y_labels
+    #return foldnr, scores, best_esti, task[3], task[4], y_labels
+    return scores, best_esti, y_labels, coefs #####
