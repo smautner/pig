@@ -13,8 +13,9 @@ from collections import defaultdict
 
 # Location for temporary files. Remember to clean the old location before changing.
 tmpdirectory = "/scratch/bi01/mautner/guest10/tmp"
+#tmpdirectory = "tmp"
 
-def cleanup(pn=False):
+def cleanup(keep_pn=True, keep_featurelists=False):
     """Cleans up the tmp folder to prevent inconsistencies when toggling debug.
     Other users will need to change the path with /scratch/bi01/...
     """
@@ -25,14 +26,30 @@ def cleanup(pn=False):
                 os.remove(f"/scratch/bi01/mautner/guest10/JOBZ/{folder}/{file}")
             print(f"Cleaned up {folder}")
     if os.path.exists(f"{tmpdirectory}"):
-        if os.path.exists(f"{tmpdirectory}/fs_results"):
-            shutil.rmtree(f"{tmpdirectory}/fs_results")
-        if os.path.exists(f"{tmpdirectory}/rps_results"):
-            shutil.rmtree(f"{tmpdirectory}/rps_results")
+##        if keep_featurelists:
+##            print("Kept featurelists from previous run")
+##        else:
+##            if os.path.exists(f"{tmpdirectory}/fs_results"):
+##                shutil.rmtree(f"{tmpdirectory}/fs_results")
+        if os.path.exists(f"{tmpdirectory}/task_results"):
+            shutil.rmtree(f"{tmpdirectory}/task_results")
         for file in os.listdir(f"{tmpdirectory}"):
-            if not (file.startswith("pn_")) or pn:
-                os.remove(f"{tmpdirectory}/{file}")
-                print(f"Removed {tmpdirectory}/{file}")
+            if not (file.startswith("pn_")) or not keep_pn:
+                if not (keep_featurelists and (file.startswith("fs_") or file.startswith("folds") or file.startswith("dataframe"))):
+                    os.remove(f"{tmpdirectory}/{file}")
+                    print(f"Removed {tmpdirectory}/{file}")
+
+
+
+def create_directories():
+    if not os.path.exists(f"{tmpdirectory}"):
+        print(f"Creating {tmpdirectory} directory")
+        os.makedirs(f"{tmpdirectory}")
+    if not os.path.exists(f"{tmpdirectory}/task_results"):
+        print(f"Creating {tmpdirectory}/task_results directory")
+        os.makedirs(f"{tmpdirectory}/task_results")
+    if not os.path.exists("results"):
+        os.makedirs("results")
 
 #############
 # KFold Cross Validation.
@@ -73,12 +90,12 @@ def load_pn_files(use_rnaz, use_filters, numneg, randseed, debug):
     return p, n
 
 
-def makefolds(p, n, n_splits, randseed):
+def makefolds(p, n, n_folds, randseed):
     allfeatures = list(p[1].keys())
     allfeatures.remove("name")  # We dont need the filenames (for now)
     X, Y, df = b.makeXY(allfeatures, p, n)
     X = StandardScaler().fit_transform(X)
-    folds = kfold(X, Y, n_splits=n_splits, randseed=randseed)
+    folds = kfold(X, Y, n_splits=n_folds, randseed=randseed)
     return folds, df
 
 #############
@@ -86,71 +103,122 @@ def makefolds(p, n, n_splits, randseed):
 #############
 
 
-def makefltasks(p, n, selection_methods, n_splits, randseed, debug):
-    """Creates tasks the cluster uses to create featurelists."""
-
-    folds, df = makefolds(p, n, n_splits, randseed)
-    tasks = fs.maketasks(len(folds), selection_methods, randseed, debug)
-    numtasks = len(tasks)
-    np.array(folds, dtype=object).dump(f"{tmpdirectory}/folds.pkl")
-    df.to_pickle(f"{tmpdirectory}/dataframe.pkl")
-    np.array(tasks, dtype=object).dump(f"{tmpdirectory}/fs_tasks.pkl")
-    print(f"Created {numtasks} FS tasks.")
-    return numtasks, df
-
-
-def calculate_featurelists(idd):
-    """Executes FS for a given task. Executed by cluster."""
-    task = np.load(f"{tmpdirectory}/fs_tasks.pkl", allow_pickle=True)[idd]
-    foldxy = np.load(f"{tmpdirectory}/folds.pkl", allow_pickle=True)[task[0]] # task[0] = foldnr
-    df = pd.read_pickle(f"{tmpdirectory}/dataframe.pkl")
-    foldnr, fl, mask, fname = fs.feature_selection(idd, task, foldxy, df)
-    b.dumpfile((foldnr, fl, mask, fname), f"{tmpdirectory}/fs_results/{idd}.json")
-
-
-def gather_featurelists(clfnames, debug, randseed):
-    """Collect results to create the proper featurelists.
-    Also creates tmp/rps_tasks for RPS.
-    Note: The debug variable needs to be the same value as makefltasks uses.
-
-    Args:
-      clfnames (list): What classifiers are beeing used
-      debug (bool): Debug mode
-      randseed (int): Used seed
-    """
-    featurelists = defaultdict(list)
-    for ftfile in os.listdir(f"{tmpdirectory}/fs_results"):
-        foldnr, fl, mask, fname = b.loadfile(f"{tmpdirectory}/fs_results/{ftfile}")
-        # Append the Featurelists to a dict with their fold number as key
-        featurelists[foldnr].append((fl, mask, fname))
-    tasks = rps.maketasks(featurelists, clfnames, randseed)
-    numtasks = len(tasks)
-    tasks.dump(f"{tmpdirectory}/rps_tasks.pkl")
-    print(f"Created {numtasks} RPS tasks.")
-    return numtasks
-
-
 #############
 # Random Parameter Search
 #############
 
-
-def calculate_rps(idd, n_jobs, debug):
-    """Executes RPS for a given task. Executed by cluster.
+def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug):
     """
-    task = np.load(f"{tmpdirectory}/rps_tasks.pkl", allow_pickle=True)[idd]
-    foldxy = np.load(f"{tmpdirectory}/folds.pkl", allow_pickle=True)[task[0]] # task[0] = foldnr
-    foldnr, scores, best_esti, ftlist, fname, y_labels = rps.random_param_search(task, foldxy, n_jobs, debug)
-    best_esti = (type(best_esti).__name__, best_esti.get_params()) # Creates readable tuple that can be dumped.
-    b.dumpfile([foldnr, scores, best_esti, ftlist, fname, y_labels], f"{tmpdirectory}/rps_results/{idd}.json")
+    Creates and dumps tasks, dataframe and the folds created by kfold
+    that are then read and executed by the cluster.
+
+    Args:
+      p (list): A list containing all the feature values
+                for all the positive samples used.
+      n (list): A list containing all the feature values
+                for all the negative samples used.
+      fs_selection_methods (dict): The dictionary of the Feature selection
+                                   methods and their arguments.
+      clfnames (list(string)): A list containing all the classifiernames used
+                               for random parameter search or specific classifiers
+                               to fit to.
+      n_folds (int): Number of folds stratified K-Fold creates
+      randseed (int): Randomseed used by the whole program
+      debug (bool): Debug Mode (Might not actually do anything atm.)
+
+    Returns:
+      len(tasks): The total number of tasks.
+    
+    """
+    tasks = []
+    folds, df = makefolds(p, n, n_folds, randseed) #numfolds = n_splits
+    for foldnr in range(n_folds):
+        for clfname in clfnames:
+            for fstype, parameters in fs_selection_methods.items():
+                for args in parameters:
+                    if fstype == "Random":
+                        num_features, num_random_tasks = args
+                        for seed in range(num_random_tasks): # Keep in mind this seed IS NOT randseed
+                            tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed))
+                    elif fstype == "Forest" or fstype == "SVC1" or fstype == "SVC2":
+                        tasks.append((foldnr, fstype, (randseed, args), clfname, randseed))
+                    else:
+                        tasks.append((foldnr, fstype, args, clfname, randseed))
+    b.dumpfile(tasks, f"{tmpdirectory}/tasks.json")
+    np.array(folds, dtype=object).dump(f"{tmpdirectory}/folds.pkl")
+    df.to_pickle(f"{tmpdirectory}/dataframe.pkl")
+    return len(tasks)
+
+
+def make_set_fl_tasks(p, n, set_fl, clfnames, n_folds, randseed):
+    """
+    Similar to maketasks. Used if a set featurelist is used
+    and the feature selection process is skipped.
+
+    Args:
+      p (list): A list containing all the feature values
+                for all the positive samples used.
+      n (list): A list containing all the feature values
+                for all the negative samples used.
+      set_fl (list): The feature list used.
+      clfnames (list(string)): A list containing all the classifiernames used
+                               for random parameter search or specific classifiers
+                               to fit to.
+      n_folds (int): Number of folds stratified K-Fold creates
+      randseed (int): Randomseed used by the whole program
+      debug (bool): Debug Mode (Might not actually do anything atm.)
+
+    Returns:
+      len(tasks): The total number of tasks.
+    """
+    set_fl_tasks = []
+    folds, df = makefolds(p, n, n_folds, randseed)
+    for foldnr in range(n_folds):
+        for clfname in clfnames:
+            set_fl_tasks.append((foldnr, clfname, randseed))
+    b.dumpfile(set_fl, f"{tmpdirectory}/set_fl.json")
+    b.dumpfile(set_fl_tasks, f"{tmpdirectory}/tasks.json")
+    np.array(folds, dtype=object).dump(f"{tmpdirectory}/folds.pkl")
+    df.to_pickle(f"{tmpdirectory}/dataframe.pkl")
+    return len(set_fl_tasks)
+
+
+def calculate(idd, n_jobs, debug):
+    """Executes FS and RPS for a given task. Executed by cluster.
+
+    Args:
+      idd (int): Jobid. Used to find the right task
+      n_jobs (int): Number of parallel jobs made by the
+                    random parameter search. Does nothing otherwise.
+    """
+    # task = Foldnr, mask, clfname, ftlist, fname, randseed
+    task = b.loadfile(f"{tmpdirectory}/tasks.json")[idd] # = (foldnr, fstype, args, clfname, randseed) or (foldnr, clfname, randseed)
+    foldxy = np.load(f"{tmpdirectory}/folds.pkl", allow_pickle=True)[task[0]]
+    df = pd.read_pickle(f"{tmpdirectory}/dataframe.pkl")
+    if len(task) == 5: # Normal procedure with Feature Selection first.
+        foldnr, fstype, args, clfname, randseed = task
+        ftlist, mask, fname = fs.feature_selection(foldxy, fstype, args, df) # FS - Done.
+    elif len(task) == 3: # A set featurelist was used.
+        foldnr, clfname, randseed = task
+        ftlist = b.loadfile(f"{tmpdirectory}/set_fl.json")
+        mask = [True if f in ftlist else False for f in df.columns]
+        fname = "Set Featurelist"
+    else:
+        raise ValueError("Incorrect number of arguments in the taskfile: {len(task)} should be 5 or 3")
+    scores, best_esti, y_labels, coefs = rps.random_param_search(mask, clfname, foldxy, n_jobs, df, randseed, debug)######
+    best_esti_params = best_esti.get_params()
+    best_esti = (type(best_esti).__name__, best_esti_params) # Creates readable tuple that can be dumped.
+    b.dumpfile([foldnr, scores, best_esti, ftlist, fname, y_labels], f"{tmpdirectory}/task_results/{idd}.json")
+    #b.dumpfile(coefs, f"results/coef_{idd}.json")########### Only use this with single
+
 
 def getresults():
     """Analyzes the result files in rps_results and
     returns only the ones with the best best_esti_score in each fold.
     """
     results = defaultdict(lambda: [[0]])
-    for rfile in os.listdir(f"{tmpdirectory}/rps_results"):
-        f = b.loadfile(f"{tmpdirectory}/rps_results/{rfile}")
+    for rfile in os.listdir(f"{tmpdirectory}/task_results"):
+        f = b.loadfile(f"{tmpdirectory}/task_results/{rfile}")
         if f[1][0] > results[f[0]][0][0] or f[1][0] == -1: # Remove this == -1 part
             # For each fold the result with the best best_esti_score is saved
             # If the best_esti_score is -1 it means a set classifier was used.
@@ -162,97 +230,47 @@ def getresults():
 # Additional Options
 #############
 
-def skip_feature_selection(set_fl, p, n, clfnames, n_splits, randseed):
-    """Skips feature selection if set_fl is not empty.
-    To be more precise it skips "makefltasks()", "calculate_featurelists()" and
-    "gather_featurelists()" and uses its own method instead.
-    Args:
-      set_fl(list): A set featurelist that will be used for all folds
-      p and n: The loaded filedata created by b.loadfiles()
-      clfnames (list): The used classifiers for the random parameter search
-      n_splits (int): Number of folds created by kfold
-      randseed (int): Random seed used
+
+
+def makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numneg, randseed, debug, keep_featurelists, set_fl = []):
     """
-    folds, df = makefolds(p, n, n_splits, randseed)
-    np.array(folds, dtype=object).dump(f"{tmpdirectory}/folds.pkl")
-    df.to_pickle(f"{tmpdirectory}/dataframe.pkl") # ?
-    print("Skipping Featureselection using set Featurelist")
-    featurelists = {}
-    mask = [True if f in set_fl else False for f in df.columns]
-    for foldnr in range(0, len(folds)):
-        featurelists[foldnr] = [(set_fl, mask, "Set Featurelist")]
-    tasks = rps.maketasks(featurelists, clfnames, randseed)
-    numtasks = len(tasks)
-    print(f"Created {numtasks} RPS tasks.")
-    return numtasks, df
-
-
-def makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg, randseed, debug, set_fl = []):
+    Note: keep_featurelists is no longer working after code has been restructured - TODO.
+    """
     from time import time
     starttime = time()
+    if keep_featurelists and set_fl:
+        raise ValueError("Using --keepfl and --featurelist at once will lead to errors and is not allowed")
     # Load files
     print("Loading p and n files")
     p, n = load_pn_files(use_rnaz, use_filters, numneg, randseed, debug)
 
     if set_fl: # Skip Feature selection process
-        rpstasklen, df = skip_feature_selection(set_fl, p, n, clfnames, n_splits, randseed)
+        tasklen = make_set_fl_tasks(p, n, set_fl, clfnames, n_folds, randseed)
+        print("Skip feature selection using set featurelist")
     else:
-        # FL tasks
-        print(f"{time() - starttime}: Making Featurelist tasks...")
-        fstasklen, df = makefltasks(p, n, selection_methods, n_splits, randseed, debug)
-        # Calc FL part -> Cluster
-        print(f"{time() - starttime}: Sending {fstasklen} FS tasks to cluster...")
-        i = 0
-        starttask = 1
-        endtask = 75000
-        while fstasklen > endtask: # This is neccessary because the cluster doesnt accept more than 75000 tasks at once.
-            b.shexec_and_wait(f"qsub -V -t {starttask}-{endtask} runall_fs_sge.sh")
-            print(f"Finished tasks {starttask}-{endtask}")
-            i += 1
-            starttask += 75000
-            endtask += 75000
-        b.shexec_and_wait(f"qsub -V -t {starttask}-{fstasklen} runall_fs_sge.sh")
-        print(f"{time() - starttime}: ...Cluster finished")
-        # RPS tasks
-        print("Assembling FS lists and RPS tasks...")
-        rpstasklen = gather_featurelists(clfnames, debug, randseed)
-    if rpstasklen == 0:
-        print("No RPS tasks were created. Possibly used wrong parameters.")
+        tasklen = maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug)
+    if tasklen == 0:
+        print("No tasks were created. Possibly used wrong parameters.")
         return
-    # Calc RPS part -> Cluster
-    print(f"{time() - starttime}: Sending {rpstasklen} RPS tasks to cluster...")
+    # Calculation part -> Cluster
+    print(f"{time() - starttime}: Sending {tasklen} tasks to cluster...")
     i = 0
     starttask = 1
     endtask = 75000
-    while rpstasklen > endtask:
-        b.shexec_and_wait(f"qsub -V -t {starttask}-{endtask} runall_rps_sge.sh")
+    while tasklen > endtask:
+        b.shexec_and_wait(f"qsub -V -t {starttask}-{endtask} runall_tasks_sge.sh")
         print(f"Finished tasks {starttask}-{endtask}")
         i += 1
         starttask += 75000
         endtask += 75000
-    b.shexec_and_wait(f"qsub -V -t {starttask}-{rpstasklen} runall_rps_sge.sh")
+    b.shexec_and_wait(f"qsub -V -t {starttask}-{tasklen} runall_tasks_sge.sh")
     # Results
     print(f"{time() - starttime}: Gathering results...")
     getresults()
     # Write results in a readable file and save ROC and precision recall graphs
     b.shexec(f"python pig.py --results fel > results/output_results.txt")
     res.showresults("rp", "results/results.json", showplots=False)
-    df.to_pickle("results/dataframe.pkl")
     print(f"{time() - starttime}: Done")
-
-
-def create_directories():
-    if not os.path.exists(f"{tmpdirectory}"):
-        print(f"Creating {tmpdirectory} directory")
-        os.makedirs(f"{tmpdirectory}")
-    if not os.path.exists(f"{tmpdirectory}/fs_results"):
-        print(f"Creating {tmpdirectory}/fs_results directory")
-        os.makedirs(f"{tmpdirectory}/fs_results")
-    if not os.path.exists(f"{tmpdirectory}/rps_results"):
-        print(f"Creating {tmpdirectory}/rps_results directory")
-        os.makedirs(f"{tmpdirectory}/rps_results")
-    if not os.path.exists("results"):
-        os.makedirs("results")
 
 #############
 # Main Function
@@ -260,10 +278,9 @@ def create_directories():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--clean', action='store_true', help='If used it will remove pn files before execution. So they need to be reloaded.')
+    parser.add_argument('-c', '--clean', action='store_false', help='If used it will remove pn files before execution. So they need to be reloaded.')
     parser.add_argument('-b', '--blacklist', action='store_true', help='If selected the blacklist will be (re-)created first')
-    parser.add_argument('--calcfl', type=int, help='Feature selection process for the cluster')
-    parser.add_argument('--calcrps', type=int, help='Random Parameter Search process for the cluster')
+    parser.add_argument('--calc', type=int, help='Task execution. Used for the cluster')
     parser.add_argument('-d', '--debug', action='store_true', help='Use if debug. Overwrites FS arguments')
     parser.add_argument('-r', '--rnaz', action='store_true', help='If used RNAz scores will be added as a feature')
     parser.add_argument('-f', '--filters', action='store_true', help='If used, blacklist will be used in loadfiles')
@@ -276,29 +293,37 @@ if __name__ == "__main__":
     parser.add_argument('--svc1', nargs='+', type=float, default=[], help='SVC with L1 Regularization')
     parser.add_argument('--svc2', nargs='+', type=float, default=[], help='SVC with L2 Regularization')
     parser.add_argument('--forest', nargs='+', type=int, default=[], help='RandomForestClassifier for Feature Selection')
-    parser.add_argument('--random', nargs='+', type=int, default=[], help='Randomly select 40 features. Given number decides number of tasks.')
-    parser.add_argument('--featurelist', nargs='+', type=str, default=[], help='A optional set featurelist. If this is not empty the feature selection methods will be ignored')
+    parser.add_argument('--random', nargs=2, type=int, default=[], help='Must be exactly 2 numbers X, Y. X is number of features per random and Y the number of different random selections.')
+    parser.add_argument('--featurelist', nargs=1, type=str, default="", help='A optional set featurelist. If this is not empty the feature selection methods will be ignored')
     parser.add_argument('--clf', nargs='+', type=str, default=['xtratrees', 'gradientboosting', 'neuralnet'], help='Either needs to be the name of a classifier or an executeable string that returns a classifier (in which case the inner cross validation is disabled).')
-    parser.add_argument('-n', '--nsplits', type=int, default=5, help='Number of splits kfold creates')
+    parser.add_argument('-n', '--nfolds', type=int, default=5, help='Number of folds kfold creates')
     parser.add_argument('--numneg', type=int, default=10000, help='Number of negative (and max of positive) files beeing loaded')
     parser.add_argument('-s', '--seed', type=int, default=42, help='Random Seed used for execution')
     parser.add_argument('--results', type=str, default="", help='If used ignore all other arguments and show selected results (options: hfelrp)')
+    parser.add_argument('--keepfl', action='store_true', help='HANDLE WITH CARE: If used, the existing featurelist solution from previous runs will not be deleted and instead be used for this run to speed up the process. Cant be used together with --featurelists')
 
     args = vars(parser.parse_args())
     debug = args['debug']
     use_rnaz = args['rnaz']
     use_filters = args['filters']
     use_oversampling = args['oversample']
-    selection_methods = {'Lasso': args['lasso'], 'VarThresh': args['varthresh'],
+    if args['random']:
+        randargs = [(args['random'][0], args['random'][1])]
+    else:
+        randargs = []
+    fs_selection_methods = {'Lasso': args['lasso'], 'VarThresh': args['varthresh'],
                          'SelKBest': args['kbest'], 'Relief': args['relief'],
                          'RFECV': args['rfecv'], 'SVC1': args['svc1'],
-                         'SVC2': args['svc2'], 'Forest': args['forest'], 'Random': args['random']}
+                         'SVC2': args['svc2'], 'Forest': args['forest'], 'Random': randargs}
     clfnames = args['clf']
-    n_splits = args['nsplits']
+    n_folds = args['nfolds']
     randseed = args['seed']
     numneg = args['numneg'] # Number of negative files beeing read by b.loaddata()
     n_jobs = 24 # Number of parallel jobs used by RandomizedSearchCV
-    set_fl = args['featurelist']
+    if args['featurelist']:
+        set_fl = args['featurelist'][0].strip("'[]").split("', '")
+    else:
+        set_fl = []
 
     if args['blacklist']:
         blacklist.create_blacklist("data")
@@ -308,19 +333,16 @@ if __name__ == "__main__":
 
     if args['results']: # Instead of executing other functions show previous results
         res.showresults(args['results'], "results/results.json", showplots=True)
-    elif args['calcfl']:
-        idd = args['calcfl'] - 1
-        calculate_featurelists(idd)
-    elif args['calcrps']:
-        idd = args['calcrps'] - 1
-        calculate_rps(idd, n_jobs, debug)
-    elif len(selection_methods['Random']) > 1:
+    elif args['calc']:
+        idd = args['calc'] - 1
+        calculate(idd, n_jobs, debug)
+    elif len(fs_selection_methods['Random']) > 1:
              raise ValueError("Using Random with more than one argument would lead to false results")
     else:
-        cleanup(args['clean'])
+        cleanup(args['clean'], args['keepfl']) # Remove data from previous runs
         create_directories() # Create all needed directories
-        if not (any(selection_methods.values()) or set_fl):
+        if not (any(fs_selection_methods.values()) or set_fl or args['keepfl']):
             print("No features or feature selection methods were given.")
             pass # No Selection method was given so just return
         else:
-            makeall(use_rnaz, use_filters, selection_methods, clfnames, n_splits, numneg, randseed, debug, set_fl)
+            makeall(use_rnaz, use_filters, fs_selection_methods, clfnames, n_folds, numneg, randseed, debug, args['keepfl'], set_fl)

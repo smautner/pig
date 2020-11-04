@@ -81,70 +81,25 @@ def random_forest(X_data, y_data, df, args):
     return [b for a, b in zip(clf.feature_importances_[support],  df.columns[support])]
 
 
-def random(X_data, y_data, df, seed):
+def random(X_data, y_data, df, args):
     """
     Args:
-      seed: Randomseed used for the selection.
+      args: (num_features, seed)
     Make sure 1, 20001 40001 etc have same seed.
     """
-    numfeatures = 40
+    num_features, seed = args
 
     np.random.seed(seed)
-    return np.random.choice(df.columns, numfeatures).tolist()
+    return np.random.choice(df.columns, num_features, replace=False).tolist()
 
 #######################
 # The actual feature selection code.
 #######################
 
 
-def maketasks(lenfolds, selection_methods, randseed, debug):
-    """Creates the feature selection tasks"""
-
-    tasks = []
-    for foldnr in range(0, lenfolds):
-        # Each task: (i, type, (args))
-        if debug:
-            tasks.extend([(foldnr, "Lasso", .05),
-                          (foldnr, "Relief", 40),
-                          (foldnr, "VarThresh", 1)])
-
-        else:
-            for method, parameters in selection_methods.items():
-                if method == 'Lasso':
-                    for alpha in parameters: # [.05, 0.1]
-                        tasks.append((foldnr, "Lasso", alpha))
-                elif method == 'VarThresh':
-                    for threshold in parameters: # [.99, .995, 1, 1.005, 1.01]
-                        tasks.append((foldnr, "VarThresh", threshold))
-                elif method == 'SelKBest':
-                    for k in parameters: # [20]
-                        tasks.append((foldnr, "SelKBest", k))
-                elif method == 'Relief':
-                    for features in parameters: # [40, 60, 80]
-                        tasks.append((foldnr, "Relief", features))          
-                elif method == 'RFECV':
-                    for stepsize in parameters: # [1, 2, 3]
-                        tasks.append((foldnr, "RFECV", stepsize))
-                elif method == 'SVC1':
-                    for C in parameters:
-                        tasks.append((foldnr, "SVC1", (randseed, C)))
-                elif method == 'SVC2':
-                    for C in parameters:
-                        tasks.append((foldnr, "SVC2", (randseed, C)))
-                elif method == 'Forest':
-                    for max_features in parameters:
-                        tasks.append((foldnr, "Forest", (randseed, max_features)))
-                elif method == 'Random':
-                    for num_random_tasks in parameters:
-                        for seed in range(0, num_random_tasks):
-                            tasks.append((foldnr, "Random", seed))
-    return tasks
-
-
-def feature_selection(taskid, task, foldxy, df):
+def feature_selection(foldxy, fstype, args, df):
     """Executes the feature selection using the given task.
     Args:
-      taskid: An ID for a made task from maketasks()
       task: A FS task made by maketasks() above
       foldxy: [X_train, X_test, y_train, y_test]
       df: The used dataframe
@@ -152,7 +107,6 @@ def feature_selection(taskid, task, foldxy, df):
     Returns:
       featurelist(List)
       """
-    foldnr, fstype, args = task
     X_train, X_test, y_train, y_test = foldxy
     if fstype == "Lasso":
         fl = lasso(X_train, y_train, df, args)
@@ -175,4 +129,4 @@ def feature_selection(taskid, task, foldxy, df):
     else:
         raise ValueError(f"'{fstype}' is not a valid Feature selection method.")
     mask = [True if f in fl else False for f in df.columns]
-    return foldnr, fl, mask, f"{fstype}: {args}"
+    return fl, mask, f"{fstype}: {args}"

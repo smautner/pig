@@ -1,12 +1,14 @@
 import os
 import sys
 from shutil import move
+import argparse
 import numpy as np
 import input.basics as b
 import input.showresults as res
 from sklearn.metrics import precision_recall_curve, roc_curve, roc_auc_score
 import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
+from operator import itemgetter
 from pprint import pprint
 
 directory = "results/runs/10-fold-10000"
@@ -107,34 +109,27 @@ def plotall_roc(old_plots_dir, new_plots_dir, exclude_string=None):
     plt.savefig(f"{new_plots_dir}/all_roc")
     plt.show()
 
-def print_best_features():
-    directory = "results/runs/testing/svc_gradientboosting_only"
-    resultslist = []
-    c = Counter()
-    for filename in os.listdir(directory):
-        if filename.endswith(".json"):
-            for sc, be, ftlist, fn, y_labels in b.loadfile(f"{directory}/{filename}").values():
-                c.update(ftlist)
-    pprint(c.most_common())
-    print([item[0] for item in c.most_common()])
 
 def check_featurelists(numrandomtasks = 10000):
     tmpdirectory = "/scratch/bi01/mautner/guest10/tmp"
+    #tmpdirectory = "tmp"
     numfolds = 7
     d = defaultdict(list)
+    c = 0
     for ftfile in os.listdir(f"{tmpdirectory}/fs_results"):
         foldnr, fl, mask, fname = b.loadfile(f"{tmpdirectory}/fs_results/{ftfile}")
         taskid = int(ftfile.split(".")[0])
         d[taskid % numrandomtasks] += [fl]
     for i in range(0, len(d)):
         if all(elem == d[i][0] for elem in d[i]):
-            print("YAY")
+            c+=1
         else:
             print("NU")
             for x in d[i]:
                 print(x)
+    print(c)
 
-def getresults2(numrandomtasks = 10000):
+def getresults2(numrandomtasks=10000, n_best=10):
     """
     taskid % 10000 => 1-7 => F1 von 7 zusammen
     list F1 scores => 10000 elemente
@@ -144,56 +139,54 @@ def getresults2(numrandomtasks = 10000):
     """
     results = []
     score_d = defaultdict(list)
+    avg_score_d = defaultdict(list)
     featurelist_d = defaultdict(list)
     tmpdirectory = "/scratch/bi01/mautner/guest10/tmp"
-    i = 0#####
-    j = 0######
-    for rfile in os.listdir(f"{tmpdirectory}/rps_results"):
+    #tmpdirectory = "tmp"
+    i = 0
+    j = 0
+    for rfile in os.listdir(f"{tmpdirectory}/task_results"):
         taskid = int(rfile.split(".")[0])
-        f = b.loadfile(f"{tmpdirectory}/rps_results/{rfile}")
+        f = b.loadfile(f"{tmpdirectory}/task_results/{rfile}")
         scores = f[1]
-        fl = f[3]
+        fl = f[3] # Featurelist
         tpr, precision = scores[2][0], scores[2][2]
         if np.isnan(precision):
-            i += 1########
+            i += 1
         score_d[taskid % numrandomtasks].append((tpr, precision))
         # 10.000 Dictionary Entries mit 7 score tuples
         featurelist_d[taskid % numrandomtasks] = fl 
         # 10.000 verschiedene Featurelists
-    
 
     print(f"SCORE_D: {len(score_d)}")
     print(f"FEATURELIST_D: {len(featurelist_d)}")
     print(f"RIPCOUNTER: {i}")
-    
-
 
     # Calculate average F1-Scores of each entry
-    avg_tpr, avg_precision = 0, 0
     best_f1_score = 0
     best_key = 0
     f1_list = [] # Used for Histogram
     for key in score_d:
+        sum_tpr, sum_precision = 0, 0
         for tpr, precision in score_d[key]:
-            avg_tpr += tpr
-            avg_precision += precision
-        avg_tpr, avg_precision = avg_tpr/len(score_d[key]), avg_precision/len(score_d[key])
+            sum_tpr += tpr
+            sum_precision += precision
+        avg_tpr, avg_precision = sum_tpr/len(score_d[key]), sum_precision/len(score_d[key])
         f1 = 2*((avg_precision*avg_tpr)/(avg_precision+avg_tpr))
         if np.isnan(f1):
             j += 1
         f1_list.append(f1)
-        if f1 > best_f1_score: # return best of 10000 average F1-Scores
-            best_f1_score = f1
-            best_key = key
+        avg_score_d[key] = f1
     print(f"F1_LIST: {len(f1_list)}")
-    print(f"RIPCOUNTER 2: {j}")
+    print(f"RIPCOUNTER 2: {j}")#####
 
-    best_featurelist = featurelist_d[best_key]
-    #results[best_file[0]] = best_file[1:]
-    #b.dumpfile(results, f"results/results.json")
-    print(best_featurelist)
-    b.dumpfile(best_featurelist, f"results/best_featurelist.json")
+    # Get the best n_best featurelists
+    best_featurelists = {}
+    for key in dict(sorted(avg_score_d.items(), key = itemgetter(1), reverse = True)[:n_best]).keys():
+        best_featurelists[key] = (avg_score_d[key], featurelist_d[key])
+    b.dumpfile(best_featurelists, f"results/best_featurelists.json")
 
+    # Draw the histogram
     fontsize=18 # Size of the text for the labels and legend.
     plt.figure(figsize=(12.8, 9.6))
     plt.xlabel("F1-Score", fontsize=fontsize)
@@ -203,10 +196,12 @@ def getresults2(numrandomtasks = 10000):
 
 
 if __name__ == "__main__":
-    #draw_roc(directory, filetype)
-    #draw_precision_recall(directory, filetype)
-    #res.showresults("e", "results/results.json")
-    getresults2(10000)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--numrandom', nargs=1, type=int)
+    args = vars(parser.parse_args())
+    numrandomtasks = args['numrandom'][0]
+    #check_featurelists(numrandomtasks)
+    getresults2(numrandomtasks, n_best = 10)
 
 
     old_plots_dir = "results/runs/old_plots"

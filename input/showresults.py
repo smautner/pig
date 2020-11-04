@@ -51,10 +51,13 @@ def showresults(args, resultfile="results/results.json", showplots=True):
                 avg_tnr += tnr
                 avg_precision += precision
             i = len(estimators[key]["accuracy_score"])
-            avg_tpr, avg_tnr, avg_precison = avg_tpr/i, avg_tnr/i, avg_precision/i
+            avg_tpr, avg_tnr, avg_precision = avg_tpr/i, avg_tnr/i, avg_precision/i
             print(f"Average TPR: {avg_tpr}")
             print(f"Average TNR: {avg_tnr}")
-            print(f"Average Precision: {avg_precison}")
+            print(f"Average Precision: {avg_precision}")
+            #print(0.05*0.7, avg_precision * avg_tpr, avg_precision, avg_tpr)
+            #print(f"{(avg_precision*avg_tpr)}")#
+            #print(f"{(avg_precision+avg_tpr)}")#
             print(f"Average F1: {2*((avg_precision*avg_tpr)/(avg_precision+avg_tpr))}")
             print("\n")
     if "l" in args:
