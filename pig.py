@@ -140,6 +140,8 @@ def maketasks(p, n, fs_selection_methods, clfnames, n_folds, randseed, debug):
                         num_features, num_random_tasks = args
                         for seed in range(num_random_tasks): # Keep in mind this seed IS NOT randseed
                             tasks.append((foldnr, fstype, (num_features, seed), clfname, randseed))
+                    elif fstype == "Forest" or fstype == "SVC1" or fstype == "SVC2":
+                        tasks.append((foldnr, fstype, (randseed, args), clfname, randseed))
                     else:
                         tasks.append((foldnr, fstype, args, clfname, randseed))
     b.dumpfile(tasks, f"{tmpdirectory}/tasks.json")
