@@ -1,15 +1,11 @@
 import os
-import sys
-from shutil import move
 import argparse
 import numpy as np
 import input.basics as b
-import input.showresults as res
 from sklearn.metrics import precision_recall_curve, roc_curve, roc_auc_score
 import matplotlib.pyplot as plt
-from collections import Counter, defaultdict
+from collections import defaultdict
 from operator import itemgetter
-from pprint import pprint
 
 
 def getresults2(numrandomtasks=10000, n_best=10, tmpdirectory="tmp"):
@@ -36,7 +32,6 @@ def getresults2(numrandomtasks=10000, n_best=10, tmpdirectory="tmp"):
       n_best(int): Number of best featurelists that should be saved seperately
       tmpdirectory(String): Location of the "tmp" directory.
     """
-    results = []
     score_d = defaultdict(list)
     avg_score_d = defaultdict(list)
     featurelist_d = defaultdict(list)
@@ -53,7 +48,7 @@ def getresults2(numrandomtasks=10000, n_best=10, tmpdirectory="tmp"):
             i += 1
         score_d[taskid % numrandomtasks].append((tpr, precision))
         # 10.000 Dictionary Entries mit 7 score tuples
-        featurelist_d[taskid % numrandomtasks] = fl 
+        featurelist_d[taskid % numrandomtasks] = fl
         # 10.000 different Featurelists
 
     # Calculate average F1-Scores of each entry
@@ -169,12 +164,18 @@ def plotall_precision_recall(new_plots_dir, exclude_string=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--histo', action='store_true', help='Draws F1-histogram after executing pig.py with the --random method.')
-    parser.add_argument('--numrandom', nargs=1, type=int, default=10000, help='Used for --histo. Needs to be the same number as the 2. argument of --random in pig.py')
-    parser.add_argument('--numbest', nargs=1, type=int, default=10, help='Used for --histo. Sets the amount of best featurelists stored.')
-    parser.add_argument('--tmp', nargs=1, type=str, default="tmp", help='Used for --histo. Location of the tmp directory from pig.py')
+    parser.add_argument('--histo', action='store_true', help='Draws F1-histogram after executing pig.py with the '
+                                                             '--random method.')
+    parser.add_argument('--numrandom', nargs=1, type=int, default=10000, help='Used for --histo. Needs to be the same '
+                                                                              'number as the 2. argument of --random '
+                                                                              'in pig.py')
+    parser.add_argument('--numbest', nargs=1, type=int, default=10, help='Used for --histo. Sets the amount of best '
+                                                                         'featurelists stored.')
+    parser.add_argument('--tmp', nargs=1, type=str, default="tmp", help='Used for --histo. Location of the tmp '
+                                                                        'directory from pig.py')
     args = vars(parser.parse_args())
 
+    tmpdirectory = "/scratch/bi01/mautner/guest10/tmp" ##########
 
     if args['histo']:
         numrandomtasks = args['numrandom'][0]
