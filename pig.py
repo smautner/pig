@@ -295,7 +295,7 @@ if __name__ == "__main__":
     parser.add_argument('--forest', nargs='+', type=int, default=[], help='RandomForestClassifier for Feature Selection')
     parser.add_argument('--random', nargs=2, type=int, default=[], help='Must be exactly 2 numbers X, Y. X is number of features per random and Y the number of different random selections.')
     parser.add_argument('--featurelist', nargs=1, type=str, default="", help='A optional set featurelist. If this is not empty the feature selection methods will be ignored')
-    parser.add_argument('--clf', nargs='+', type=str, default=['xtratrees', 'gradientboosting', 'neuralnet'], help='Either needs to be the name of a classifier or an executeable string that returns a classifier (in which case the inner cross validation is disabled).')
+    parser.add_argument('--clf', nargs='+', type=str, default=['gradientboosting'], help='Either needs to be the name of a classifier (xtratrees, gradientboosting, neuralnet) or an executeable string that returns a classifier (in which case the inner cross validation is disabled).')
     parser.add_argument('-n', '--nfolds', type=int, default=5, help='Number of folds kfold creates')
     parser.add_argument('--numneg', type=int, default=10000, help='Number of negative (and max of positive) files beeing loaded')
     parser.add_argument('-s', '--seed', type=int, default=42, help='Random Seed used for execution')

@@ -11,138 +11,36 @@ from collections import Counter, defaultdict
 from operator import itemgetter
 from pprint import pprint
 
-directory = "results/runs/10-fold-10000"
-filetype = "results.json"
-seed = "42"
-label = ""
-figsize = (12.8, 9.6)
-plt.rcParams.update({'font.size': 22})
 
-def draw_precision_recall(directory, filetype):
-    plt.figure(figsize=figsize)
-    for methodname in os.listdir(directory):
-        if not methodname == seed:
-            continue
-        for filename in os.listdir(f"{directory}/{methodname}"):
-            if filename.startswith(filetype):
-                y_true, y_score = [], []
-                for sc, be, ft, fn, y_labels in b.loadfile(f"{directory}/{methodname}/{filename}").values():
-                    y_true.extend(y_labels[0])
-                    y_score.extend(y_labels[1])
-                precision, recall, thresholds = precision_recall_curve(y_true, y_score)
-                plt.plot(recall, precision, label=label)
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.legend(loc='best')
-    plt.savefig("results/precision_recall")
-    plt.show()
-
-def draw_roc(directory, filetype):
-    plt.figure(figsize=figsize)
-    for methodname in os.listdir(directory):
-        for filename in os.listdir(f"{directory}/{methodname}"):
-            if filename.startswith(filetype):
-                y_true, y_score = [], []
-                for sc, be, ft, fn, y_labels in b.loadfile(f"{directory}/{methodname}/{filename}").values():
-                    y_true.extend(y_labels[0])
-                    y_score.extend(y_labels[1])
-                fpr, tpr, thresholds = roc_curve(y_true, y_score)
-                auc = roc_auc_score(y_true, y_score)
-                plt.plot(fpr, tpr, label=f"{methodname} - {round(auc, 4)}")
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.xlabel('False positive rate')
-    plt.ylabel('True positive rate')
-    plt.legend(loc='best')
-    plt.savefig("results/roc")
-    plt.show()
-
-def plotall_precision_recall(new_plots_dir, exclude_string=None):
-    plt.figure(figsize=figsize)
-    for dirname in os.listdir(new_plots_dir):
-        if not os.path.isdir(f"{new_plots_dir}/{dirname}"):
-            continue
-        elif not exclude_string == None and exclude_string in dirname:
-            continue
-        for filename in os.listdir(f"{new_plots_dir}/{dirname}"):
-            if filename.startswith("results.json"):
-                y_true, y_score = [], []
-                for sc, be, ft, fn, y_labels in b.loadfile(f"{new_plots_dir}/{dirname}/{filename}").values():
-                    y_true.extend(y_labels[0])
-                    y_score.extend(y_labels[1])
-                precision, recall, thresholds = precision_recall_curve(y_true, y_score)
-                plt.plot(recall, precision, label=f"{dirname}")
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.legend(loc='best')
-    plt.savefig(f"{new_plots_dir}/all_precision_recall")
-    plt.show()
-
-def plotall_roc(old_plots_dir, new_plots_dir, exclude_string=None):
-    plt.figure(figsize=figsize)
-    plt.plot([0, 1], [0, 1], 'k--')
-    for dirname in os.listdir(new_plots_dir):
-        if not os.path.isdir(f"{new_plots_dir}/{dirname}"):
-            continue
-        elif not exclude_string == None and exclude_string in dirname:
-            continue
-        for filename in os.listdir(f"{new_plots_dir}/{dirname}"):
-            if filename.startswith("results.json"):
-                y_true, y_score = [], []
-                for sc, be, ft, fn, y_labels in b.loadfile(f"{new_plots_dir}/{dirname}/{filename}").values():
-                    y_true.extend(y_labels[0])
-                    y_score.extend(y_labels[1])
-                fpr, tpr, thresholds = roc_curve(y_true, y_score)
-                auc = roc_auc_score(y_true, y_score)
-                plt.plot(fpr, tpr, label=f"{dirname} - {round(auc,4)}")
-    for filename in os.listdir(old_plots_dir):
-        if filename.startswith("roc-all"):
-            with open(f"{old_plots_dir}/{filename}") as file:
-                x, y = [], []
-                for line in file:
-                    sp = line.split()[:2]
-                    x.append(float(sp[0]))
-                    y.append(float(sp[1]))
-                plt.plot(y, x, label=f"{filename}")
-    plt.xlabel('False positive rate')
-    plt.ylabel('True positive rate')
-    plt.legend(loc='best')
-    plt.savefig(f"{new_plots_dir}/all_roc")
-    plt.show()
-
-
-def check_featurelists(numrandomtasks = 10000):
-    tmpdirectory = "/scratch/bi01/mautner/guest10/tmp"
-    #tmpdirectory = "tmp"
-    numfolds = 7
-    d = defaultdict(list)
-    c = 0
-    for ftfile in os.listdir(f"{tmpdirectory}/fs_results"):
-        foldnr, fl, mask, fname = b.loadfile(f"{tmpdirectory}/fs_results/{ftfile}")
-        taskid = int(ftfile.split(".")[0])
-        d[taskid % numrandomtasks] += [fl]
-    for i in range(0, len(d)):
-        if all(elem == d[i][0] for elem in d[i]):
-            c+=1
-        else:
-            print("NU")
-            for x in d[i]:
-                print(x)
-    print(c)
-
-def getresults2(numrandomtasks=10000, n_best=10):
+def getresults2(numrandomtasks=10000, n_best=10, tmpdirectory="tmp"):
     """
-    taskid % 10000 => 1-7 => F1 von 7 zusammen
-    list F1 scores => 10000 elemente
-    list features = 10000 featurelisten
-    Beste Featureliste zurück geben
-    Histogram über alle 10000 F1 scores
+    Calculates the average F1 scores random featurelist over every fold.
+    Collects these into a histogram and dumps them into the results directory.
+    Also takes the n_best Featurelists with the best average F1-Scores and dumps them too.
+
+    Example:
+      - Executed pig.py --random 40 10000 -n 7
+      => Results in 70000 files with 40 features each.
+      File 0-9999 beeing 10000 different featurelists for the 1. fold.
+      Files 10000-19999 beeing the same 10000 featurelists for the 2. fold.
+      ...
+      - This code will take taskid % numrandomtasks and calculate the
+        average F1 score for each of these featurelists over every fold.
+      => Takes 7 files each and calculates their average F1 score
+      => Results in 10000 scores in total.
+
+    Args:
+      numrandomtasks(int): Needs to be the same number as the 2. argument of
+                           --random in pig.py, so the number of
+                           random featurelists per fold.
+      n_best(int): Number of best featurelists that should be saved seperately
+      tmpdirectory(String): Location of the "tmp" directory.
     """
     results = []
     score_d = defaultdict(list)
     avg_score_d = defaultdict(list)
     featurelist_d = defaultdict(list)
-    tmpdirectory = "/scratch/bi01/mautner/guest10/tmp"
-    #tmpdirectory = "tmp"
+
     i = 0
     j = 0
     for rfile in os.listdir(f"{tmpdirectory}/task_results"):
@@ -156,11 +54,7 @@ def getresults2(numrandomtasks=10000, n_best=10):
         score_d[taskid % numrandomtasks].append((tpr, precision))
         # 10.000 Dictionary Entries mit 7 score tuples
         featurelist_d[taskid % numrandomtasks] = fl 
-        # 10.000 verschiedene Featurelists
-
-    print(f"SCORE_D: {len(score_d)}")
-    print(f"FEATURELIST_D: {len(featurelist_d)}")
-    print(f"RIPCOUNTER: {i}")
+        # 10.000 different Featurelists
 
     # Calculate average F1-Scores of each entry
     best_f1_score = 0
@@ -177,8 +71,6 @@ def getresults2(numrandomtasks=10000, n_best=10):
             j += 1
         f1_list.append(f1)
         avg_score_d[key] = f1
-    print(f"F1_LIST: {len(f1_list)}")
-    print(f"RIPCOUNTER 2: {j}")#####
 
     # Get the best n_best featurelists
     best_featurelists = {}
@@ -195,39 +87,109 @@ def getresults2(numrandomtasks=10000, n_best=10):
     plt.savefig("results/f1_histogram.png")
 
 
+def plotall_roc(new_plots_dir, old_plots_dir, exclude_string=None):
+    """Experimental function that allows to easily draw ROC figures from different runs into a single file.
+    Optionally can also draw plots from specific older files.
+    Note that these older files need to have a very specific file format.
+    (This function was only added for convenience use to compare results of pig.py with different programs)
+
+    Args:
+      new_plots_dir(string): Directory of runs to plot. This directory should
+                             contain subdirectories with their runnames as
+                             directorynames and those need to contain a "results.json" file.
+                             Example: new_plots_dir/gradientboosting42/results.json
+      old_plots_dir(string): Directory containing old roc files. Those files should start with "roc-all."
+      exclude_string(string): If existing it will ignore subdirectories that contain this string in their name.
+                              Example: If you have gradientboosting and neuralnet runs set it to "neural"
+                                       to only plot gradientboosting runs.
+
+    Returns:
+      Nothing but saves the resulting ROC figure into the new_plots_dir.
+    """
+    fontsize=18 # Size of the text for the labels and legend.
+    plt.figure(figsize=(12.8, 9.6))
+    plt.plot([0, 1], [0, 1], 'k--')
+    for dirname in os.listdir(new_plots_dir):
+        if not os.path.isdir(f"{new_plots_dir}/{dirname}"):
+            continue
+        elif not exclude_string == None and exclude_string in dirname:
+            continue
+        for filename in os.listdir(f"{new_plots_dir}/{dirname}"):
+            if filename.startswith("results.json"):
+                y_true, y_score = [], []
+                for sc, be, ft, fn, y_labels in b.loadfile(f"{new_plots_dir}/{dirname}/{filename}").values():
+                    y_true.extend(y_labels[0])
+                    y_score.extend(y_labels[1])
+                fpr, tpr, thresholds = roc_curve(y_true, y_score)
+                auc = roc_auc_score(y_true, y_score)
+                plt.plot(fpr, tpr, label=f"{dirname} - {round(auc,4)}")
+    if old_plots_dir:
+        for filename in os.listdir(old_plots_dir):
+            if filename.startswith("roc-all"):
+                with open(f"{old_plots_dir}/{filename}") as file:
+                    x, y = [], []
+                    for line in file:
+                        sp = line.split()[:2]
+                        x.append(float(sp[0]))
+                        y.append(float(sp[1]))
+                    plt.plot(y, x, label=f"{filename}")
+    plt.xlabel('False positive rate', fontsize=fontsize)
+    plt.ylabel('True positive rate', fontsize=fontsize)
+    plt.legend(loc='best')
+    plt.savefig(f"{new_plots_dir}/all_roc")
+    plt.show()
+
+
+def plotall_precision_recall(new_plots_dir, exclude_string=None):
+    """Similar to plotall_roc() but for precision-recall curves.
+    Does not include the option to include files from different programs.
+    The rest of the comments are the same.
+    """
+    fontsize=18 # Size of the text for the labels and legend.
+    plt.figure(figsize=(12.8, 9.6))
+    for dirname in os.listdir(new_plots_dir):
+        if not os.path.isdir(f"{new_plots_dir}/{dirname}"):
+            continue
+        elif not exclude_string == None and exclude_string in dirname:
+            continue
+        for filename in os.listdir(f"{new_plots_dir}/{dirname}"):
+            if filename.startswith("results.json"):
+                y_true, y_score = [], []
+                for sc, be, ft, fn, y_labels in b.loadfile(f"{new_plots_dir}/{dirname}/{filename}").values():
+                    y_true.extend(y_labels[0])
+                    y_score.extend(y_labels[1])
+                precision, recall, thresholds = precision_recall_curve(y_true, y_score)
+                plt.plot(recall, precision, label=f"{dirname}")
+    plt.xlabel('Recall', fontsize=fontsize)
+    plt.ylabel('Precision', fontsize=fontsize)
+    plt.legend(loc='best')
+    plt.savefig(f"{new_plots_dir}/all_precision_recall")
+    plt.show()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--numrandom', nargs=1, type=int)
+    parser.add_argument('--histo', action='store_true', help='Draws F1-histogram after executing pig.py with the --random method.')
+    parser.add_argument('--numrandom', nargs=1, type=int, default=10000, help='Used for --histo. Needs to be the same number as the 2. argument of --random in pig.py')
+    parser.add_argument('--numbest', nargs=1, type=int, default=10, help='Used for --histo. Sets the amount of best featurelists stored.')
+    parser.add_argument('--tmp', nargs=1, type=str, default="tmp", help='Used for --histo. Location of the tmp directory from pig.py')
     args = vars(parser.parse_args())
-    numrandomtasks = args['numrandom'][0]
-    #check_featurelists(numrandomtasks)
-    getresults2(numrandomtasks, n_best = 10)
 
 
-    old_plots_dir = "results/runs/old_plots"
-    new_plots_dir = "results/runs/new"
-    if False: # Draw ROC and Precision/Recall for each results file
-        runs = new_plots_dir
-        for runname in os.listdir(runs):
-            if not os.path.isdir(f"{runs}/{runname}"):
-                continue
-            path = f"{runs}/{runname}"
-            print(f"----- {runname} -----")
-            #res.showresults("e", f"{path}/results.json")
-            orig_stdout = sys.stdout # Write Output in a file instead of printing it
-            f = open(f"{path}/output_results.txt", "w")
-            sys.stdout = f
-            res.showresults("fel", f"{path}/results.json")
-            sys.stdout = orig_stdout
-            res.showresults("rp", f"{path}/results.json", showplots=False)
-            move("results/results_roc.png", f"{path}/results_roc.png")
-            move("results/results_precision_recall.png", f"{path}/results_precision_recall.png")
-        #print_best_features()
+    if args['histo']:
+        numrandomtasks = args['numrandom'][0]
+        n_best = args['numbest'][0]
+        tmpdirectory = args['tmp'][0]
+        getresults2(numrandomtasks, n_best, tmpdirectory)
 
-    elif False: # Draw all ROC curves in a single file
-        plotall_roc(old_plots_dir, new_plots_dir, exclude_string="neural")
 
-    elif False: # Draw all Precision-Recall curves in a single file
+    if False: # Draw all ROC curves in a single file
+        old_plots_dir = "results/runs/old_plots"
+        new_plots_dir = "results/runs/new"
+        plotall_roc(new_plots_dir, old_plots_dir, exclude_string="neural")
+
+    if False: # Draw all Precision-Recall curves in a single file
+        new_plots_dir = "results/runs/new"
         plotall_precision_recall(new_plots_dir, exclude_string="neural")
 
 
