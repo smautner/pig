@@ -87,6 +87,32 @@ def filtersmall(files):
      toosmall = ut.xmap(issmall,files)
      return [f for f,bad in zip(files,toosmall) if not bad]
 
+bad = '''/home/stefan/WEINBERG//neg/550-1278861-0-0.sto
+/home/stefan/WEINBERG//neg/550-1454352-0-0.sto
+/home/stefan/WEINBERG//neg/550-1382269-0-0.sto
+/home/stefan/WEINBERG//neg/769-1136-0-0.sto
+/home/stefan/WEINBERG//neg/769-1136-0-0.sto
+/home/stefan/WEINBERG//neg/550-1261710-0-0.sto
+/home/stefan/WEINBERG//neg/550-1261710-0-0.sto
+/home/stefan/WEINBERG//neg/550-211660-0-0.sto
+/home/stefan/WEINBERG//neg/592-880-0-0.sto
+/home/stefan/WEINBERG//neg/592-880-0-0.sto
+/home/stefan/WEINBERG//neg/592-880-0-0.sto
+/home/stefan/WEINBERG//neg/592-880-0-0.sto
+/home/stefan/WEINBERG//neg/592-880-0-0.sto
+/home/stefan/WEINBERG//neg/550-2011241-0-0.sto
+/home/stefan/WEINBERG//neg/550-2011241-0-0.sto
+/home/stefan/WEINBERG//neg/550-2025985-0-0.sto
+/home/stefan/WEINBERG//neg/550-2025985-0-0.sto
+/home/stefan/WEINBERG//neg/550-2025985-0-0.sto
+/home/stefan/WEINBERG//neg/550-2025985-0-0.sto
+/home/stefan/WEINBERG//neg/550-1260425-0-0.sto
+/home/stefan/WEINBERG//neg/550-1927583-0-0.sto
+/home/stefan/WEINBERG//neg/550-1927583-0-0.sto
+/home/stefan/WEINBERG//neg/550-2308630-0-0.sto
+/home/stefan/WEINBERG//neg/550-2308630-0-0.sto
+/home/stefan/WEINBERG//neg/550-2308630-0-0.sto
+/home/stefan/WEINBERG//neg/550-1708760-0-0.sto'''.split('\n')
 
 
 def getfiles(path = '',removesmall=True, limit = 0):
@@ -99,6 +125,7 @@ def getfiles(path = '',removesmall=True, limit = 0):
             currentfiles = filtersmall(currentfiles)
         if limit:
             currentfiles = currentfiles[:limit]
+        currentfiles = [c for c in currentfiles if c not in bad]
         files.append(currentfiles)
     return files
 

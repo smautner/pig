@@ -24,8 +24,10 @@ def nearneigh(vecz, k = 100):
         distances = np.array([_overlap(vecz[x], vecz[y]) for y in Range(vecz)])
         if k < 1:
             return distances, 0
-        indices_k = np.argpartition(distances, k )[:k]
+
+        indices_k = np.argsort(distances)[:k]
         dist_k = [distances[ar] for ar in indices_k]
+
         return dist_k,indices_k
 
     d,i  = Transpose ( ut.xmap(doarow, Range(vecz)))
@@ -50,6 +52,7 @@ def plot_NN(dists, classes=0):
     else:
         for e in np.unique(classes):
             so.hist(NN[classes == e],bins= 40)
+    print(f"closest {min(NN)}")
 
 def _sortbythresh(distances, indices):
     dst = [(d,s,t) for s,(d,t) in enumerate(zip(distances[:,1],indices[:,1]))] #distance source target
@@ -140,6 +143,7 @@ def _fancyalignment(seq1,seq2,str1,str2):
     print()
 
 def _countfmt(item):
+    # count '-' and gives the number a pading so the string has length 4
     cnt = str(len([a for a in item if a !='-']))
     return cnt+' '*(4-len(cnt))
 
@@ -153,12 +157,15 @@ def test_fancy_alignment():
 ###############
 
 
-def filter_thresh(distances, indices, thresh = .07):
+def filter_thresh(distances, indices, thresh = .7):
     rmlist = set()
     for d, i in zip(distances, indices):
         for zz, (other,dist) in enumerate(zip(i[1:],d[1:])):
+            if dist > thresh:
+                break
             if dist < thresh and (other not in rmlist):
                 rmlist.add(i[0])
+                break
     return rmlist
 
 
