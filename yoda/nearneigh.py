@@ -19,13 +19,18 @@ def _overlap(a,b):
 
 
 
-def nearneigh(vecz, k = 100):
+def neighbors(vecz, k = 100):
     def doarow(x):
         distances = np.array([_overlap(vecz[x], vecz[y]) for y in Range(vecz)])
+
         if k < 1:
             return distances, 0
 
         indices_k = np.argsort(distances)[:k]
+        # fix order such that first id is the instance itself
+        # note distances dont matter because if we are not first the distance is zero
+        if indices_k[0] != x:
+            indices_k[0], indices_k[1]= indices_k[1], indices_k[0]
         dist_k = [distances[ar] for ar in indices_k]
 
         return dist_k,indices_k
@@ -157,16 +162,17 @@ def test_fancy_alignment():
 ###############
 
 
-def filter_thresh(distances, indices, thresh = .7):
+def filter_thresh(distances, indices, thresh = .7, checkmax = 400):
     rmlist = set()
     for d, i in zip(distances, indices):
-        for zz, (other,dist) in enumerate(zip(i[1:],d[1:])):
+        for zz, (other,dist) in enumerate(Zip(i[1:],d[1:])[:checkmax]):
             if dist > thresh:
                 break
             if dist < thresh and (other not in rmlist):
                 rmlist.add(i[0])
                 break
     return rmlist
+
 
 
 def filter_dump(rmlist, files, out = 'okfiles.json'):

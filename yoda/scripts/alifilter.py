@@ -7,36 +7,54 @@ import yoda.vectorizer as vv
 import yoda.nearneigh as nn
 import numpy as np
 import ubergauss.tools as ut
+import time
 
 '''
-what needs to happen?
-use vectorizer to load the data use nearneigh to sort stuff out
+INIT and vectorize
 '''
-
+start = time.time()
 limit = 0
-X,y,files = vv.getXYFiles(path = '/home/stefan/WEINBERG/',limit = limit, discrete = True);# ut.dumpfile((X,y,files), f'{limit}delme.dmp')
+X,y,files = vv.getXYFiles(path = '/home/stefan/WEINBERG/',limit = limit, discrete = True); ut.dumpfile((X,y,files), f'{limit}delme.dmp')
 # (X,y,files)  = ut.loadfile(f'{limit}delme.dmp')
-print(f"vectorized")
+print(f"vectorized   used so far:{(time.time()-start)/60}")
 
 
-dist, inst = nn.nearneigh(X,k = 400);#  ut.dumpfile((dist, inst), f'{limit}nndelme.dmp')
+'''
+get kneighbors
+'''
+dist, inst = nn.neighbors(X,k = 400);  ut.dumpfile((dist, inst), f'{limit}nndelme.dmp')
 # (dist, inst) = ut.loadfile(f'{limit}nndelme.dmp')
-print(f"got neighs")
-
+print(f"we have neighbors now   used so far:{(time.time()-start)/60}")
 nn.plot_NN(dist)
+
+
+
+'''
+inspect neighbors? all ok?
+'''
 #nn.plotbythresh(dist,inst,files, thresh = .7, max = 2)
 print('is k large enough?', sum(dist[:,-1] < .7 ))  # zero is good
-# rmlist = nn.filter_thresh(dist,inst,thresh = .7)
-rmlist = nn.filter_thresh(dist,inst,thresh = .7)
 
 
-# confirm that we removed all the trash
-dist, inst = nn.nearneigh([x for k,x in enumerate(X) if k not in rmlist],k = 2)
-nn.plot_NN(dist)
+
+'''
+filter
+'''
+rmlist = nn.filter_thresh(dist,inst,thresh = .7, checkmax = 400)
 
 
+'''
+checking the filter:
+'''
+dist2, inst2 = nn.neighbors([x for k,x in enumerate(X) if k not in rmlist],k = 2)
+nn.plot_NN(dist2)
+
+
+'''
+dump
+'''
 nn.filter_dump(rmlist,files,out='okfiles.json')
-print(f"dumped list")
+print(f"dumped list {(time.time() - start)/60}")
 
 
 
