@@ -1,0 +1,31 @@
+# STOCKHOLM 1.0
+#=GF AC RF00711
+#=GF OBJECTID RF00711.0
+
+AAKN02031494.1/12165-12258                 UUGGAUGUGA.CAGAUAGGCAGUGCAUUGCUAGCUGGCUGUU..AAGAUU
+AC091977.3/122948-122862                   UGGGAUGUGU.CAGGUAGGCAGUGUAUUGCUAG.CGGCUGU.....UAAU
+AAFC03029384.1/3106-3197                   UUGAAUGUGU.CAGGUAGGCAGUGCAUCUCUAGCUGGCUGU....UAAAA
+AAWR02016364.1/4252-4337                   UUGGAUGUGU.CAGGUAGGCAGUGCAUUGCUAGCUGGCUAU.....UUCA
+AAGV020398386.1/850-759                    CUGGGUGUGU.CAGGUAGGCAGUGCUUUGCUAGCUGGCUGU....UAUAA
+AAPN01209390.1/379-468                     AAGAAUGUGC.CGGUUUGGCAGUGCUUUGCUAGCUGGCUGUU...CAAUA
+#=GC SS_cons                               ...<<<<<<<.<<<<..<<<<<<<<<<.......<<<<<<<.........
+#=GC RF                                    uuGcgugugg.CaggUaGGCAGuGuAuUGUUAGCugGcuGu.....aUau
+
+AAKN02031494.1/12165-12258                 UUUCAUUUUA..............GCAGUUGCU..AGUUGCA.CUCCUC.
+AC091977.3/122948-122862                   GA...UUUUA..............ACAGUUGCU..AGUUGCA.CUCCUC.
+AAFC03029384.1/3106-3197                   UUUCUUUUUA..............ACAGUUGCU..AGUUGCA.CUCCCC.
+AAWR02016364.1/4252-4337                   UUUUAA..CA..............GUUGCUGGU.....UGCG.CUCCCC.
+AAGV020398386.1/850-759                    UUUUAUUUUA..............ACAGUUGCU..AGUUGCA.CUCCCC.
+AAPN01209390.1/379-468                     AAUGAUUCCA..............GCAGCUGGU.....UGCA.C.GCCCC
+#=GC SS_cons                               ........................>>>>>>>....>..>>>>.>>>>>..
+#=GC RF                                    uuuaaugucA..............aCagCcacu..a..UaCa.CUGCCau
+
+AAKN02031494.1/12165-12258                 UCUGUU.GCAAUCAGA
+AC091977.3/122948-122862                   UCUGUU.GCAUUCAGA
+AAFC03029384.1/3106-3197                   UCUGUU.GCAUUCAUA
+AAWR02016364.1/4252-4337                   UCUGUU.GCAUUCGAA
+AAGV020398386.1/850-759                    UCUGUU.GCAUUCAAA
+AAPN01209390.1/379-468                     ACUGUC.ACAAUCCAA
+#=GC SS_cons                               >>>>>>.>>>>>....
+#=GC RF                                    ccuGcc.acacguaaA
+//

@@ -1,0 +1,40 @@
+# STOCKHOLM 1.0
+#=GF AC RF00396
+#=GF OBJECTID RF00396.0
+
+AAGU03003788.1/610-743                   AGCCUUU..GUGUUGCCCGUUCACUUUCGGAAACUAGUGAAUGUGGUGU.
+AAIY01236626.1/2232-2365                 GGCCUUU..GUGUUGCCCAUUCACUUUCGGAAACUUGUGAAUGUGGUGU.
+AJ609455.1/1-133                         AGCCUUU..GUGUUGCCCAUUCACUUU.GGAAACUAGUGAAUGUGGUGU.
+AACN010045790.1/472-346                  UGCCUUU..GUGUUGCCCAUUCUUUUUUGGAAACUUGCGAAUGUGGUGU.
+AANN01152062.1/693-825                   AGCCUUU..GUGUUGCCCAUUCACUUU.GGAAACUAGUGGAUGUGGUGU.
+AAWR02002782.1/37431-37299               AGCCUUU..GUGUUGCCCAUUCACUUU.UGAAACUAGUGAAUGUGGUGU.
+#=GC SS_cons                             .<<<<<<...<<.<<<<<<<<<<<<..........>>>>>>>>.>>>>..
+#=GC RF                                  aGCCuuu..GUGUUgCCCauuCACuUUuggaaACUaGUGaauGUGGuGU.
+
+AAGU03003788.1/610-743                   CAA..AAAAGGCGUAAAUUAAAC..C.CUUU...GCAGCCAU..UUUCUG
+AAIY01236626.1/2232-2365                 CAA..AAAAGGCAUAAAUCAAAU..U.CUUU..UGCAGCCAU..U.ACUG
+AJ609455.1/1-133                         CAA..AAAAGGCGUAAAUUAAAC..G.CUUU...GCAGCCUU..UUCCUG
+AACN010045790.1/472-346                  CAA..AAAAAGCAGAAUCUAAAC..A.CUUU...GCAGCCUU..UUCCUG
+AANN01152062.1/693-825                   CAA..AAAAGGCUCAAAUCGAAC..A.CUUA...UCAGGCUU..UUCCUG
+AAWR02002782.1/37431-37299               CAA..AAAAGGCGCAAACUAAAC..A.CUUG...GCAGCUUU..UUCCUG
+#=GC SS_cons                             >>....>>>>>>.............<.<<<<...<<<<<......<<<<<
+#=GC RF                                  CAA..AaaaGGCAuAaAuuAAau..c.Cuuu...GCaGccuU..uuccug
+
+AAGU03003788.1/610-743                   CCC.UUGAAUUUGA.......UUUC.UUUGGUGUAGGA.......GCUGC
+AAIY01236626.1/2232-2365                 CCC.UUGAAUUUGG.......UUUC.UUUGGCGUAGGC.......GUUGC
+AJ609455.1/1-133                         CCC.UUAAAUUUGA.......UACC.UUUGGUGUAGGA.......GCUGC
+AACN010045790.1/472-346                  UCC.UUGAA..............UU.UUUGGUGUAGGA.......GCUGU
+AANN01152062.1/693-825                   CCU.UUGAUUUUGA.......UGUC.UUAGGCAUAGGA.......ACUGC
+AAWR02002782.1/37431-37299               CCC.UUGAAUUUGA.......UAUC.UUUGGUGUAGAA.......GCUGC
+#=GC SS_cons                             <<<...<<...............>>....>>.>>>>>>.......>>>>>
+#=GC RF                                  ccc.uugaaUuuga.......Uauc.UUuggugcagga.......gCuGC
+
+AAGU03003788.1/610-743                   GU...AAGUUACAGUU
+AAIY01236626.1/2232-2365                 AU...AAGGAACAGUU
+AJ609455.1/1-133                         AU...AAGUAACAGUU
+AACN010045790.1/472-346                  AU...AAGUAACAGUU
+AANN01152062.1/693-825                   AU...AAGUAACAGCA
+AAWR02002782.1/37431-37299               AU...AAGUAACAGUU
+#=GC SS_cons                             >....>>>>.......
+#=GC RF                                  au...aaGgAACAguu
+//

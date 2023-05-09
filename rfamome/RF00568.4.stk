@@ -1,0 +1,36 @@
+# STOCKHOLM 1.0
+#=GF AC RF00568
+#=GF OBJECTID RF00568.4
+
+AAGU03060179.1/762-883                   GUGCCCUU..UU.AAGGUUG.CUGC....AG.UGCUUUA.AGAGGCUAAC
+AAGW02023741.1/4342-4222                 GUGCCCUU..UU.ACAGCUA.ACAC....AG.UGCUUUAA.GAGGCUAAC
+AC104066.3/51055-51176                   GUGCCCUU..UU.AAGGUUG.ACCC....AG.UGCUUUAA.GAGGCUAAC
+AAFC03059112.1/4655-4776                 GUGCCCUU..UU.AAGGUUG.ACAC....AG.UGCCUUAA.GAGGCUAAC
+AAWR02005238.1/34286-34165               GUGCCCUU..UU.AAGGUUG.ACGC....AG.UGCCUUAA.GAGGCUAAC
+#=GC SS_cons                             .<<<<<<<..<<....<<<<..<.<................>..>.>>>>
+#=GC RF                                  gugCCCuu..cu.AAgguug.AccC....AG.UGcuuUAA.GAggCcaac
+
+AAGU03060179.1/762-883                   AC........AGAAGGGUA.....AAGU.AAGACUCUAUAAAA..CCCAG
+AAGW02023741.1/4342-4222                 AC........AGAAGGGGA.....AACU.AAGUCUCCACAAAA..CCCAG
+AC104066.3/51055-51176                   AC........AGAAGGGUA.....AAGU.AAGUCUCCAUAAAA..CCCAG
+AAFC03059112.1/4655-4776                 AC........AGGAGGGUA.....AAGA.AAGUCUCCAUAAAA..CCCAG
+AAWR02005238.1/34286-34165               AC........AGAAGGGCA.....AAGU.AAGUCUCCAUAAAA..CCCUG
+#=GC SS_cons                             ..........>>>>>>>>>............<.<<<<<........<<<<
+#=GC RF                                  Ac........agaaGGGca.....aAgu.AAguCuCCaUaAAA..CCCag
+
+AAGU03060179.1/762-883                   AGA.........AGAGA.CU.GG.....AGAA.CUCC.UCUUUGG.....
+AAGW02023741.1/4342-4222                 AGA.........AGAGA.GU.GU.....G.AC.CUCU.UCUUUGG.....
+AC104066.3/51055-51176                   AGA.........AGAGA.CU.GG.....AAAG.CUCC.UCUUUGG.....
+AAFC03059112.1/4655-4776                 AGA.........AGAGA.UU.UU.....AGAA.CUCC.UCUCUGG.....
+AAWR02005238.1/34286-34165               AGA.........GGAGA.UU.GU.....CAGA.CUCC.UCUUUGG.....
+#=GC SS_cons                             <<<..........<<<..<<..........>>.>>>..>>>>>>>.....
+#=GC RF                                  aGa.........AGaGA.cu.gu.....aAag.CuCc.uCucuGG.....
+
+AAGU03060179.1/762-883                   .....AUCCUGUC....UGGAGU.CACAGCU
+AAGW02023741.1/4342-4222                 .....AUCCUGUC....UGGAGU.CACAGCU
+AC104066.3/51055-51176                   .....AUCCUGUC....UGGAGU.CACAACU
+AAFC03059112.1/4655-4776                 .....AUCCUGUC....UGGAGU.CACAACU
+AAWR02005238.1/34286-34165               .....AUCCUGUC....UGGAGU.CACAGCU
+#=GC SS_cons                             .................>>>>>..>......
+#=GC RF                                  .....AUCcUGUC....uGGaGu.cACAgcu
+//

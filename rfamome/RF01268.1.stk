@@ -1,0 +1,92 @@
+# STOCKHOLM 1.0
+#=GF AC RF01268
+#=GF OBJECTID RF01268.1
+
+AAIY01801369.1/760-356                   CCUCCUUAGCGGGAGAGUGGCGUGGGGUCUGGUU.UG.GGUCU.......
+AANU01202714.1/13473-13896               GUUUUAGGGAGGGUGAGUGGCCUGGAGCAUGGGU.GU.CGUGUGCGGAGC
+BK005568.1/1-420                         GUUUUAGGGAGGGAGAGCGGCCUGGGUCCUGGGU.GU.UGUGUGCGGAGC
+ABDC01616183.1/786-373                   ACACCCGGCAGGGAGAGUGGCCUGGGGCGAGG.U.GG.UGUGCGUGGUGC
+AAGV020430906.1/177-557                  CUUUAGGGGAGGGAGCGCGGCCUGGGGUUCGGCU.GU..GUCUGUGGGGC
+#=GC SS_cons                             ..................................................
+#=GC RF                                  ccuuaaGgGaGGGAGaGcGGCaUGGGguuaGGgu.Gu.uGUGuGugGugc
+
+AAIY01801369.1/760-356                   ....UGUGUCUCGUG..GAAGG.CGUGUG......UGGCCCG..CG..UG
+AANU01202714.1/13473-13896               UG.UGGUGUCGCGUG..GGAGG.CGCGUGC....UGGCUGAG..UG..UG
+BK005568.1/1-420                         UG.UGGCGUCGCGUG..UGAGG.CGCGUGC....AGGGUGAG..UG..UG
+ABDC01616183.1/786-373                   CA.CGGUGU..CGUG..GAAGG.CACGCGU....AGGCCGAG..UG..UG
+AAGV020430906.1/177-557                  ....GGUGUCGCGUG..GAAGG.UGCAUGU.....GAGCC.G..AG..UG
+#=GC SS_cons                             ....<<<<<<<<<<<........>>>>>>.....................
+#=GC RF                                  uG.uGGuGccaCGuG..gAAGG.CaCGugu....agggcGAG..uG..uG
+
+AAIY01801369.1/760-356                   UG..UG..CGUGUGUCU.............GUGUG...UGAGUGG.....
+AANU01202714.1/13473-13896               AG..UG..GACGCGUGA.............GUGUG...UGAGUGU.....
+BK005568.1/1-420                         AG..UG..GACGCGUGA.............GUGUG...UGAGUGU.....
+ABDC01616183.1/786-373                   AG..UG..GGUGCGCAA.............GUGGG...UGCGCGA.....
+AAGV020430906.1/177-557                  CG..UG..AGCG...GA..............CGCG...UGUGUAU.....
+#=GC SS_cons                             .....<...<<<<.................>>>>....>..<<<......
+#=GC RF                                  aG..Ug..ggcgcGuGa.............gcgcG...uGAGcgu.....
+
+AAIY01801369.1/760-356                   GCGCGUGUGGGGAGUGCCAGACG..AGUGUAUGAGCCCGCCCCUGCGCCC
+AANU01202714.1/13473-13896               GCGCGCUUGGAGCGUGUUAGGCG..AGUGCGUGCGCCCACCCCUGCGCCC
+BK005568.1/1-420                         GCGCGCUUGGAGCGUGUUAGGCG..AGUGCGUGCGCCCACCCCUGCGCCC
+ABDC01616183.1/786-373                   AUGCGC..GGGGCGUGCGAGGUG..AGUGUGUGCGCCCGCCCCUGCGCCC
+AAGV020430906.1/177-557                  GUGUGCUUGGGGCGUGCAAGGCG..AGUGCGUGCGCCUCCUCCUGCGCCC
+#=GC SS_cons                             .<<<<<.<<............>>...>>>>>..>>>........>>>>>.
+#=GC RF                                  GCgcgCgcgGgGcGUGcaAGgcg..AGcgcGUGcgCCCgCcCCUgCaCCC
+
+AAIY01801369.1/760-356                   CUCU.CCCCACCUACACCUUGAUCUUAUUUGAUCGGGUCC.GACCCCAGC
+AANU01202714.1/13473-13896               CUCC.UCCCGCUUACACUUUGAUCUUAUUUGAUCGGGUCGUGACCCUAGU
+BK005568.1/1-420                         CUCC.UCCCGCUUACACUUUGAUCUUAUUUGAUCGGAUCGUGACCCCAGC
+ABDC01616183.1/786-373                   CUCC.CCCUGCCUACAACUUGAUCUUAUUUGAUCGGGUAGUGGCCCCAGC
+AAGV020430906.1/177-557                  CUCCCUCCCGCCUACACCUUGAUCUUAUUUGAUCCGGUCGUGAUCCCAGC
+#=GC SS_cons                             ...........................<<<..<<<<.<<<.<..<<<.<<
+#=GC RF                                  CUCC.cccCGCCUACACcUUGAUCUUAuUuGAUCGGGuCGuGACcCCAGC
+
+AAIY01801369.1/760-356                   CCCGCCGGGCCAACCCGAAAUGAAAUGAUCCCCUCCUGCGAAGCCC....
+AANU01202714.1/13473-13896               CCCGCCGGUCCGACCCGAAAUGAAAAGCUCUCCUCCUGCGAAGCCC....
+BK005568.1/1-420                         CCCGCCGGGCCGACCCGAAAUGAAAAGCUCUCCUCCUGCGAAGCCC....
+ABDC01616183.1/786-373                   CU.GCCCGGCAGACCCGAGAUGAAAAGCUCUCCUCCUGCGAAGCCCC...
+AAGV020430906.1/177-557                  CCCGCCGGGCCGACCCGAAAUGAAAAGCUGUCCUCCUGCGAAGCCC....
+#=GC SS_cons                             ...>>.>>>>>>>.>>>>.....>>>........................
+#=GC RF                                  CCCGCCGGgCCGaCCCGAAAUGAaAaGCUccCCUCCUGCGAAGCCC....
+
+AAIY01801369.1/760-356                   .U...C.......C...GCGGCGCU.GUGCAGCGAGGCC.UGUUGGGCGG
+AANU01202714.1/13473-13896               .CCCAC...U...C...GAGGCGCCUGUGCAGAGAGGCC.CCUUAGGCGG
+BK005568.1/1-420                         .C...C...U...C...GGGGCGCU.GUGCAGCGAGGCC.CCUUAGGCGG
+ABDC01616183.1/786-373                   UC...U...U...C...GGAGCACU.GUGCAGCUAGGCC.CCUUGGAGGG
+AAGV020430906.1/177-557                  .C...U...UC.CC...GGGGCGCU.GUGCAGCGAGGCC.UUUUGGGCGG
+#=GC SS_cons                             .<...<...<...<...<<<<.<<<...<<.<<<.<<<<.<<......>>
+#=GC RF                                  .C...C...u...C...gGGGCgCu.GUGCAGCGAgGCC.CcuUGGGcgG
+
+AAIY01801369.1/760-356                   CGGCAACGCUGUGGU....CCCCGAGGUCCCGGAGCUGGUCCGAC.....
+AANU01202714.1/13473-13896               CGGCAACGCUGCGGU....CCCCGAGGUCCUGGAGCUGGCCCUGCG....
+BK005568.1/1-420                         CGGCCACGCUGUGGU....CCCCGAGGUCCCGGAGCUGGCCCUGCG....
+ABDC01616183.1/786-373                   CGGCAACGCCCGGGC....CUCUGAGGUCCUGGAGCUGUCC.UGCG....
+AAGV020430906.1/177-557                  UGGC.AAGCCGCGGU....CCCCGAGGCCCUGGACUCGGUCGGACG....
+#=GC SS_cons                             .>>>>.>>>.>>>>>....>>>>>>>>.......<<<<<<<<........
+#=GC RF                                  cGGCcaCGCcGCgGc....CCCcGaGGucCcGGAGCCgGcCCuacG....
+
+AAIY01801369.1/760-356                   .......GGGCC.CGGCGCUCAGAAGUGAUGAAUUGAUCAGAUAGACG..
+AANU01202714.1/13473-13896               .......GGGCC.CGGCGCUCAGAAGUGAUGAAUUGAUCAGAUAGACG..
+BK005568.1/1-420                         .......GGGCC.CGGCGCUCAGAAGUGAUGAAUUGAUCAGAUAGACG..
+ABDC01616183.1/786-373                   ........GGCC.CAGCGCUCAGAAGUGAUGAAUUGAUCAGAUAGAUG..
+AAGV020430906.1/177-557                  .......GGACC.CGGCGCUCAGAAGUGAUGAAUUGAUCAGAUAGACG..
+#=GC SS_cons                             .......>>>.>.>>>>...<<<<......<<<<<<..............
+#=GC RF                                  .......GGgCC.cGGCGCUCAGAAGUGAUGAauuGAUCAGAUAGACG..
+
+AAIY01801369.1/760-356                   ......AGACC..G..GGCUUGUCCUG...................UGUC
+AANU01202714.1/13473-13896               ......AGGCC..G..GGCUUGUCCCG...................GGCC
+BK005568.1/1-420                         ......AGGCC..G..GGCUUGUCCCC...................GGCC
+ABDC01616183.1/786-373                   ......AGGCU..G..GGCUUAUCCCG...................GGCC
+AAGV020430906.1/177-557                  ......A..............GGC..........................
+#=GC SS_cons                             .......<<<<.....<<......>>....................>>>>
+#=GC RF                                  ......AGGCc..G..GGcUUGUCCCg...................gGCC
+
+AAIY01801369.1/760-356                   GCUG.AUUA..UCGAGGCGAUUCUGAUCUGA
+AANU01202714.1/13473-13896               AGUG.AUUA..UCGAGGCGAUUCUGAUCUGG
+BK005568.1/1-420                         ACUG.AUUA..UCGAGGCGAUUCUGAUCUGG
+ABDC01616183.1/786-373                   ACUG.AUUA..UCGAGGCGAUUCUGAUUUGA
+AAGV020430906.1/177-557                  .................CGGGCUUGUCCUGA
+#=GC SS_cons                             .................>>>>>>...>>>>.
+#=GC RF                                  acUG.AUUA..UCGAGGCgauUCUGAUCUGA
+//

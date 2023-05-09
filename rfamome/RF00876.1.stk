@@ -1,0 +1,28 @@
+# STOCKHOLM 1.0
+#=GF AC RF00876
+#=GF OBJECTID RF00876.1
+
+AC015909.14/132622-132530              AGGUAGGGUA..AU..CUGUCUUUAAGUAGGGAGAAAUUGCUCU..AAA.
+ABDC01385734.1/1611-1522               AUGUAGGGUA..AU..CUGUCUUUAAGUAGGGAUAAAUUACUCU..AAA.
+BT021041.1/859-946                     AUGUAGGGCA..AU..CUGUCUUUAAGUAGGGAUAAAUUACUCU..AAA.
+BC102379.1/902-989                     AUGUAGGGCA..AU..CUGUCUUUAAGUAGGGAUAAAUUACUCU..AAA.
+AAPN01333701.1/324-413                 AUGUAGGGCAGUCU..CUGUCUUUAAGUAGGGGUAAAUUACUCU...AA.
+#=GC SS_cons                           ...<<<<<<<.......<<.<<<.....<<<<<.<<<<<<.<<<....<.
+#=GC RF                                AuGcagGgcg..Au..cuGUCuuuAAGuaGGGauaaacuacuCu..Aaa.
+
+AC015909.14/132622-132530              .AA....AAAAA....A..AAAGAAUCCUAGAUAGU.UUUCCCUUC.AAG
+ABDC01385734.1/1611-1522               .AA....GAAAA....UGAA.....UCCUAGAUAGU.UUUCCCUUC.AAG
+BT021041.1/859-946                     .AG....AAAUG....A..A.....UCCUAGAUAGU.UUUCCCUUC.AAG
+BC102379.1/902-989                     .A....GAAAUG....A..A.....UCCUAGAUAGU.UUUCCCUUC.AAG
+AAPN01333701.1/324-413                 .AG....AAAUG....G..A.....UCCUAGAUAGU.UUUCCCUUCAAAG
+#=GC SS_cons                           .........................>...>>>>>>>.>>>>>>>...>>>
+#=GC RF                                .Aa....AAAaa....u..A.....uucUaGauagu.uuuCCCuUc.aaG
+
+AC015909.14/132622-132530              UCAAGCAUCUUGU
+ABDC01385734.1/1611-1522               UCAAGUGUCUUGU
+BT021041.1/859-946                     UCAAGCGUCUUGU
+BC102379.1/902-989                     UCAAGCGUCUUGU
+AAPN01333701.1/324-413                 UCAAGCGUCUUGU
+#=GC SS_cons                           .>>..>>>>>>>.
+#=GC RF                                uCaAgcguCuugu
+//
