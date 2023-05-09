@@ -30,7 +30,8 @@ def neighbors(vecz, k = 100):
         # fix order such that first id is the instance itself
         # note distances dont matter because if we are not first the distance is zero
         if indices_k[0] != x:
-            indices_k[0], indices_k[1]= indices_k[1], indices_k[0]
+            other = np.where(indices_k == x)[0][0]
+            indices_k[0], indices_k[other]= indices_k[other], indices_k[0]
         dist_k = [distances[ar] for ar in indices_k]
 
         return dist_k,indices_k
