@@ -3,7 +3,7 @@
 read the alignments and dedensify so that near duplicates disappear :)
 '''
 
-import yoda.vectorizer as vv
+import yoda.filein as vv
 import yoda.nearneigh as nn
 import numpy as np
 import ubergauss.tools as ut

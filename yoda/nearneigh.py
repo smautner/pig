@@ -3,8 +3,9 @@ import eden.display as ed
 import numpy as np
 import structout as so
 from ubergauss import tools as ut
-import yoda.vectorizer as vv
-import yoda.needle as needle
+
+import yoda.pairwise_alignments
+import yoda.filein as vv
 
 '''
 use the vectors to make a nearest neighbor model...
@@ -109,7 +110,7 @@ def _rsearch(seq):
 
 def _fancyalignment(seq1,seq2,str1,str2):
 
-    al1, al2 = needle.needle(seq1, seq2)
+    al1, al2 = yoda.pairwise_alignments.needle(seq1, seq2)
 
     def adjuststruct(al1,str1):
         # 1. insert dashes into the str

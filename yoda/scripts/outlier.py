@@ -1,6 +1,6 @@
 
 
-import yoda.vectorizer as vv
+import yoda.filein as vv
 import yoda.nearneigh as nn
 import numpy as np
 import ubergauss.tools as ut
@@ -19,6 +19,14 @@ from pyod import models as od
 
 
 def calc():
+    '''
+    loads 70k data, vectorizes(eden) it and runs an outlier detection algorithm
+
+    -- outlier detection sucks though
+
+    Returns: true, score, classifiername
+
+    '''
     start = time.time()
     limit = 0
     # X,y,files = vv.getXYFiles(path = '/home/stefan/WEINBERG/',limit = limit, discrete = True); ut.dumpfile((X,y,files), f'{limit}delme.dmp')

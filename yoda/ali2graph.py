@@ -8,27 +8,31 @@ open_brace_string={")":"(",
                 "]":"[",
                 ">":"<","}":"{"}
 
-def nested_frag_encoder(fname, alignment, annot):
+
+
+def nested_frag_encoder(ali):
     '''
     - adds entropy info to into vectorlabels
-    - builds backbone along the main structure, if there are side-structures (indicated by dots in ss_cons) they get connected via darkedges
+    - builds backbone along the main structure,
+            if there are side-structures (indicated by dots in ss_cons)
+            they get connected via darkedges
     -> hence the name nested fragment encoder
     '''
     graph = nx.Graph()
     lifo = defaultdict(list)
 
-
-    for i, ssc in enumerate(annot[0]):
+    stru = ali.gc['SS_cons']
+    for i, ssc in enumerate(stru):
         # FIND NODE LABEL
         # most common:
-        ct = Counter( alignment[:,i].tolist())
+        ct = Counter( ali.alignment[:,i].tolist())
         for k,v in ct.most_common():
             if k in "ACGU":
                 nodelabel = k
                 break
         # ADD NODE,
         # with a vector annotation,,, am i using that?
-        myv  = [ ord(rr[i]) for rr in annot ]
+        myv = [ord(ali.gc[k][i]) for k in ali.gc.keys()]
         graph.add_node(i, label=k, vec=myv)
         # handle hydrogen bonds
         if ssc in ['(','[','<']:
@@ -39,8 +43,8 @@ def nested_frag_encoder(fname, alignment, annot):
 
     # ADD BACKBONE
     lastgoodnode =  0
-    for i in range(len(annot[0])-1):
-        a,b = annot[0][i]=='.', annot[0][i+1]=='.'
+    for i in range(len(stru)-1):
+        a,b = stru[i]=='.', stru[i+1]=='.'
         if a == b: # if a and b are the same we can just insert a normal edge
             graph.add_edge(i,i+1, label='-', type='backbone', len=1)
         elif a and not b: #  .-
@@ -50,25 +54,25 @@ def nested_frag_encoder(fname, alignment, annot):
         elif b and not a: #  -.
             lastgoodnode = i
             graph.add_edge(i,i+1, label='zz', nesting=True) #nesting are dark edges in eden
-
     return graph
 
 
 
 
-def most_common_nucs(alignment):
+def _most_common_nucs(ali):
+    ''' goes through the alignments columnwise and finds the most common ACGU'''
     def getch(x):
-        col = alignment[:,x].tolist()
+        col = ali.alignment[:,x].tolist()
         counts = Counter( col )
         for k,v in counts.most_common():
             if k in "ACGU":
                 return k
-    return Map(getch, Range(alignment.shape[1]))
+    return Map(getch, Range(ali.alignment.shape[1]))
 
 
 
 
-def mainchainentropy(fname, alignment, annot):
+def mainchainentropy(ali, structure  = 'SS_cons'):
     '''
         cleaning up the graph generation a bit,
         will keep a main alignment and just encode that together with the entropy...
@@ -77,21 +81,22 @@ def mainchainentropy(fname, alignment, annot):
     '''
     graph = nx.Graph()
     lifo = defaultdict(list)
-    nucs = most_common_nucs(alignment)
-    simple_sscons = annot[0].replace(',',':')
+    nucs = _most_common_nucs(ali)
+    simple_sscons = ali.gc[structure]
+    simple_sscons = simple_sscons.replace(',',':')
     simple_sscons = simple_sscons.replace('-',':')
     simple_sscons = simple_sscons.replace('_',':')
+    ali.gc[structure] = simple_sscons
 
-
-    annot[0] = simple_sscons # this might be weird in the future hmmmm
     sequence = ''
     conSS = ''
+
     for i, (struct,nuc) in enumerate(zip(simple_sscons,nucs)):
         if struct != '.' and nuc != None: # ATTENTION! some structures have a :  but there is not even one nucleotide listed
             try:
                 conSS += struct
                 sequence+=nuc
-                myv  = [ ord(rr[i]) for rr in annot ]
+                myv  = [ ord(ali.gc[k][i]) for k in ali.gc.keys() ]
                 graph.add_node(i, label=nuc, vec=myv)
                 # handle hydrogen bonds
                 if struct in ['(','[','<']:
@@ -100,7 +105,7 @@ def mainchainentropy(fname, alignment, annot):
                     j = lifo['x'].pop()
                     graph.add_edge(i, j, label='=', type='basepair', len=1)
             except:
-                print("ERROR IN FILE", fname)
+                print("ERROR IN FILE", ali.fname)
 
     # ADD BACKBONE
     nodes = list(graph)
