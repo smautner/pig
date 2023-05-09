@@ -1,0 +1,44 @@
+# STOCKHOLM 1.0
+#=GF AC RF00568
+#=GF OBJECTID RF00568.7
+
+AAGW02023741.1/4342-4222                 GUGCCCUU..UU.ACAGCUA.ACAC....AG.UGCUUUAA.GAGGCUAAC
+AC132607.4/131317-131438                 GUGCCCUU..UU.AAGGUUG.ACAC....UG.UACUUUAA.GAGGCUAAC
+AAHX01044405.1/16728-16849               GUGCCCUU..UU.AAGGUUG.GUAC....UG.UACCUUAA.GAGGCUAAC
+AC104066.3/85942-86065                   GUGCCCCU..UUUAAGGUUG.ACAC....AG.UGCAUUAA.G........
+AAEX03009059.1/223-344                   GUGCGCUC..CC.AAGGCUG.CCGC....AG.UGCCCUGG.GAGGCCAAC
+AANG01294629.1/560-441                   GUGCCCUU..UU.AAGGUUG.ACGC....AG.UGCCUUAA.GAGGCUAAC
+AANN01548915.1/871-998                   GUGCCCUU..CUUAGGGUUG.AUGCUUUAAG.UGCUUUAA.GACGUUAAC
+#=GC SS_cons                             .<<<<<<<..<<....<<<<..<.<................>..>.>>>>
+#=GC RF                                  gugCCCuu..cu.AAgguug.AccC....AG.UGcuuUAA.GAggCcaac
+
+AAGW02023741.1/4342-4222                 AC........AGAAGGGGA.....AACU.AAGUCUCCACAAAA..CCCAG
+AC132607.4/131317-131438                 AC........AGAAGGGUA.....AAGG.AACUCUCCAUCAAA..CCCAG
+AAHX01044405.1/16728-16849               AC........AGAAGGGUA.....AAGG.AACUCUCCAUAAAA..CCCAG
+AC104066.3/85942-86065                   .C........AGAAGGGUU.....AAGU.AAGUCUCCAUAAAA..CCCAG
+AAEX03009059.1/223-344                   AC........AGAAGGGGA.....CAGC.AAGGCUCCAUGAAA..CCCAG
+AANG01294629.1/560-441                   AC........AGAAGGGUA.....AAGU.AAGUCUCCAUAAAA..CCCAG
+AANN01548915.1/871-998                   AU........AGAAGGGUA.....AAGUUAAGUCUUCAUGAAA..CCCAG
+#=GC SS_cons                             ..........>>>>>>>>>............<.<<<<<........<<<<
+#=GC RF                                  Ac........agaaGGGca.....aAgu.AAguCuCCaUaAAA..CCCag
+
+AAGW02023741.1/4342-4222                 AGA.........AGAGA.GU.GU.....G.AC.CUCU.UCUUUGG.....
+AC132607.4/131317-131438                 AGA.........AGAGG.CU.CC.....ACAC.CUCC.UCUCUGG.....
+AAHX01044405.1/16728-16849               AGA.........AGAGG.CU.CC.....ACUC.CUCC.UCUUUGG.....
+AC104066.3/85942-86065                   AGA.........AGAGA.AU.GU.....AAAG.CUCC.UCUUUGGAGGAG
+AAEX03009059.1/223-344                   GGA.........CGAGC.CC.GC.....AGAG.CUCC.UCUUUGG.....
+AANG01294629.1/560-441                   GGA.........UGAGA.CU........AAAA.CUCC.UCUCUGG.....
+AANN01548915.1/871-998                   AGA.........AGAGA.UU.GU.....AAAA.CUCC.UCUUUGG.....
+#=GC SS_cons                             <<<..........<<<..<<..........>>.>>>..>>>>>>>.....
+#=GC RF                                  aGa.........AGaGA.cu.gu.....aAag.CuCc.uCucuGG.....
+
+AAGW02023741.1/4342-4222                 .....AUCCUGUC....UGGAGU.CACAGCU
+AC132607.4/131317-131438                 .....AUCCUGUC....UGGAGU.CACAGCU
+AAHX01044405.1/16728-16849               .....AUCCUGUC....UGGAGU.CACAGUU
+AC104066.3/85942-86065                   CUAGACUCCUGUC....UGGAGU.CACAGCU
+AAEX03009059.1/223-344                   .....AUCCUGUC....UGGAGU.CACAGCC
+AANG01294629.1/560-441                   .....AUCCUGUC....UGGAGU.CACAGCG
+AANN01548915.1/871-998                   .....AUCCUGUC....UGGAGU.CACAGUA
+#=GC SS_cons                             .................>>>>>..>......
+#=GC RF                                  .....AUCcUGUC....uGGaGu.cACAgcu
+//

@@ -1,0 +1,82 @@
+# STOCKHOLM 1.0
+#=GF AC RF01291
+#=GF OBJECTID RF01291.0
+
+AAGU03044252.1/6143-6284               UUGCCCGAUGAUUAUA...AA.AAGACGCGUUAUUAAGAGGACUU..AAG
+AAIY01344330.1/434-574                 CUGCCCGAUGAUUAUA...AA.AAGAUGCG...UUAAGAGGACUU..AUG
+AAKN02045488.1/10982-10840             CUGCCCGAUGAUUAUA...AA.AAGACGCGUUAUUAAGAGGACUU..AUG
+AANU01215512.1/34559-34417             UUGCCCGAUGAUUAUA...AA.AAGACGCGUUAUUAAGAGGACUU.AAUG
+AY349597.1/1-142                       UUGCCCGAUGAUUAUA...AA.AAGACGCGUUAUUAAGAGGACUU.UAUG
+AAFC03029483.1/5215-5064               UUGCCCGAUGAUUAUAAAAAA.AAGACGCAUUAUUAAGAGGACUU.AAUG
+AANN01327606.1/2604-2456               UUGCCCGAUGAUUAUA...AA.AAGACGCGCA...AAGAGGACAU.AACG
+AAWR02018352.1/52642-52501             UUGCCCGAUGAUUAUA...AA.AAGACGCGUUAUUAAGAGGACUU.AAUG
+AAGV020383719.1/3429-3289              UUGCCCAAUGAUUAUA...AA.AAGACGCGUUAUUAAGAGGACUU..AUG
+AAFR03017658.1/25792-25647             UUGCCCAAUGAUUAUA...GA.AAGACGCGUUAUUAUGAGGACUU.UAUG
+#=GC SS_cons                           <<<<<<................................<<<<<<<.....
+#=GC RF                                uuGCCCGAUGAUUAUA...AA.AAGACGCGUUAUUAAGAGgaCuu.AAUG
+
+AAGU03044252.1/6143-6284               CUG...................................GAGUUCU.UUA.
+AAIY01344330.1/434-574                 CUG...................................GAGUUCU.UUA.
+AAKN02045488.1/10982-10840             CUG...................................GAGUUCUUUUU.
+AANU01215512.1/34559-34417             CUG...................................GAGUUCU.UUA.
+AY349597.1/1-142                       CUG...................................GAGUUCU.UGA.
+AAFC03029483.1/5215-5064               CUG...................................GAAUUCU.UUAU
+AANN01327606.1/2604-2456               CUG...................................GAGUUCU.UUA.
+AAWR02018352.1/52642-52501             CUG...................................GAGUCUU.CAC.
+AAGV020383719.1/3429-3289              CUG...................................GAGUUCU.UUA.
+AAFR03017658.1/25792-25647             CUG...................................GAAUUCU.UUA.
+#=GC SS_cons                           ......................................>>>>>>>.....
+#=GC RF                                CUG...................................gaGuuCU.UuA.
+
+AAGU03044252.1/6143-6284               ......C....CUCAUUU..CUCUC.........................
+AAIY01344330.1/434-574                 ..AAACC....UCU.CUU..CUCUC.........................
+AAKN02045488.1/10982-10840             ......C....UUU.UCU..CUCUU.........................
+AANU01215512.1/34559-34417             ......C....AUU.UUU..CUCUC.........................
+AY349597.1/1-142                       ......C....GUU.UUU..CUCUC.........................
+AAFC03029483.1/5215-5064               CUUUACC....UUC.UUU..CUCUC.........................
+AANN01327606.1/2604-2456               ......C....CUU.CUU..UUCUC.........................
+AAWR02018352.1/52642-52501             ......C....UUC.CUC..UUCUC.........................
+AAGV020383719.1/3429-3289              ......C....CUC.UUU..CUUUC.........................
+AAFR03017658.1/25792-25647             ......CCCUUUUU.UUU..CCCCC.........................
+#=GC SS_cons                           ..................................................
+#=GC RF                                ......c....uuU.UuU..cUcuC.........................
+
+AAGU03044252.1/6143-6284               .........................U.UU.U.CUGCACUU.C.UUU.UUC
+AAIY01344330.1/434-574                 .........................U.UU.U.CUGU.UUA.C.UAU.UUC
+AAKN02045488.1/10982-10840             .........................U.UUUU.CUGUACUA.C.UUU.UUC
+AANU01215512.1/34559-34417             .........................U.UU.U.CUGUACUU.AAUUU.UUC
+AY349597.1/1-142                       .........................U.UU.U.CUAUACUU.C.UUU.UUC
+AAFC03029483.1/5215-5064               .........................U.UU.U.CUGUACUA.C.UUU.UUC
+AANN01327606.1/2604-2456               ..............AUUUCUUCCUUU.UU.U.CUACACUU.C.UGU.UUC
+AAWR02018352.1/52642-52501             .........................U.UU.U.CUCUACUU.C.UUU.UUC
+AAGV020383719.1/3429-3289              .........................U.UU.C.UUUCUGUA.C.UUU.UUC
+AAFR03017658.1/25792-25647             .........................U.AU.G.CUUUACUU.U.UCUCCUC
+#=GC SS_cons                           ..................................................
+#=GC RF                                .........................U.UU.u.cUaUAcUu.c.uuU.UUc
+
+AAGU03044252.1/6143-6284               UUUCUUUGGAUGUCCAGCGUCCUAUGAGCGAAGAUUAUGAGAUAUGAGGG
+AAIY01344330.1/434-574                 UUUCUUUAGAUGUCCAGUGUCCUAUGAGCGAUGAUUAUGAGAUAUGAGGG
+AAKN02045488.1/10982-10840             UUUCUUUGGAUGUCCAGCGUCCUAUGAGCGAAGAUUAUGAGAUAUGAGGG
+AANU01215512.1/34559-34417             UUUCUUUGAAUGUCCAGCAUCCUGUGAGUGAAGAUUAUGAGAUAUGAGGG
+AY349597.1/1-142                       UUUCUUUGAAUGUCCAGCGUCCUGUGAGCGAAGAUUAUGAGAUAUGAGGG
+AAFC03029483.1/5215-5064               UUUCUUUGAAUGUCCAGCGUCCUAUGAGCGAAGAUUAUGAGAUAUGAGGG
+AANN01327606.1/2604-2456               UUUCUUUGAA.GUCCAGUGUCCUAUGAGCGAAGAUUAUGAGAUAUGAGGG
+AAWR02018352.1/52642-52501             UUUCUUUGGAUAUCCAGCGUCCUAUGAGCGAAGAUUAUGAGAUAUGAGGG
+AAGV020383719.1/3429-3289              UUUCUUUGGAUGUCCAGCGUCCUAUGAGCGAAGAUUAUGAGAUAUGAGGG
+AAFR03017658.1/25792-25647             UUUCUAUGGAUGUCCAGCGUCCUGUGAGC.AAGAUUAUGAGAUAUGAGGG
+#=GC SS_cons                           ...............................................>>>
+#=GC RF                                UUUCUUUGgAUGUCCAGcGUCCUaUGAGCGAAGAUUAUGAGAUAUGAGGG
+
+AAGU03044252.1/6143-6284               CAA
+AAIY01344330.1/434-574                 CAA
+AAKN02045488.1/10982-10840             CAA
+AANU01215512.1/34559-34417             CAA
+AY349597.1/1-142                       CAA
+AAFC03029483.1/5215-5064               CAA
+AANN01327606.1/2604-2456               CAA
+AAWR02018352.1/52642-52501             CAA
+AAGV020383719.1/3429-3289              CAG
+AAFR03017658.1/25792-25647             CAA
+#=GC SS_cons                           >>>
+#=GC RF                                Caa
+//

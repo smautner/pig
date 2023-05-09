@@ -1,0 +1,52 @@
+# STOCKHOLM 1.0
+#=GF AC RF00006
+#=GF OBJECTID RF00006.3
+
+AAGU03004543.1/85259-85169               GGGUCAGC.UUUAGCUCUAGCGGUUACUUCGAUCAAAGUCAGAACAACUC
+AAKN02022956.1/147590-147489             GGGUCGGC.UUUAGCUCAAGCGGUUACUUCCUCACGCUGGACUUAUCAUC
+AANU01297565.1/11257-11357               GGGUCGGA.GUUAGCUCAAGCGGUUACCUCCUCAUGCCGCACUUUCUAAC
+AC005219.1/49914-50014                   GGGUCGGA.GUUAGCUCAAGCGGUUACCUCCUCAUGCCGGACUUUCUAUC
+AADA01053495.1/13035-13135               GGGUCGGA.GUUAGCUCAAGCGGUUACCUCCUCAUGCCGGACUUUCUAUC
+AAEX03007799.1/48369-48272               GGGUCAGC.UUUAGCUCGAGCGGUUACUUCGCGACUUGUCUUCGGACUAA
+AANG01340911.1/391-293                   GGGUCGGC.UUUAGCUCAAGCGGUUACUUCGCAUGUGGUUACUAAACCUU
+AAFC03124581.1/19885-19976               .GGUCAGA.UUCAGCGCAAGCAGUUACUCCGAUCCAUUGGACUUCAGAUA
+AAWR02002461.1/13655-13752               GGGUCGGC.UGUAGCUCAAGCGGUUACUUCGCAACUUCAGAAUGCUUCUG
+#=GC SS_cons                             .<<<<<<......<<<<..<<<<....<<<<<..................
+#=GC RF                                  GgGCcGGC.UUUAGCuC.AGCGGUUACuUCgacaaauaaaaauuuauuuu
+
+AAGU03004543.1/85259-85169               UGUC..............................................
+AAKN02022956.1/147590-147489             UGUCUACAUCCUGC....................................
+AANU01297565.1/11257-11357               UGUCCAUCUCUGUG....................................
+AC005219.1/49914-50014                   UGUCCAUCUCUGUG....................................
+AADA01053495.1/13035-13135               UGUCCAUCUCUGUG....................................
+AAEX03007799.1/48369-48272               CAACCCCCUUG.......................................
+AANG01340911.1/391-293                   CCAACCCUCUCG......................................
+AAFC03124581.1/19885-19976               CCUAUA............................................
+AAWR02002461.1/13655-13752               GACAACCCCUU.......................................
+#=GC SS_cons                             ..................................................
+#=GC RF                                  uauauacuuuucuu....................................
+
+AAGU03004543.1/85259-85169               ........GUGGAGUUCGAGAC.................CCGCGGGCGCU
+AAKN02022956.1/147590-147489             .......GCUGGGGUUCGAGAC.................CCGCGGGUGCU
+AANU01297565.1/11257-11357               ........CUGGGGUUCGAGAC.................CCGCGGGUGCU
+AC005219.1/49914-50014                   ........CUGGGGUUCGAGAC.................CCGCGGGUGCU
+AADA01053495.1/13035-13135               ........CUGGGGUUCGAGAC.................CCGCGGGUGCU
+AAEX03007799.1/48369-48272               ........CGGGGGUUCGAGAC.................CCGCGGGCGCU
+AANG01340911.1/391-293                   ........UUAGGGUUCGAGAC.................CCGCGGGUGCU
+AAFC03124581.1/19885-19976               ........UUGAGGUUUGAGAC.................CUGAGGGUGCU
+AAWR02002461.1/13655-13752               ........CCAGGGUUCGAGAC.................CCGCGGGCGCC
+#=GC SS_cons                             ...............>>>>>...................>>>>>>>>...
+#=GC RF                                  ........ugggGGUucGAgAC.................CCGCGgGCGCU
+
+AAGU03004543.1/85259-85169               CUCUGACCCUUUU
+AAKN02022956.1/147590-147489             UUCUGACCCUUUU
+AANU01297565.1/11257-11357               UACUGACCCUUUU
+AC005219.1/49914-50014                   UACUGACCCUUUU
+AADA01053495.1/13035-13135               UACUGACCCUUUU
+AAEX03007799.1/48369-48272               CCCUGACCCUUUU
+AANG01340911.1/391-293                   UUCUGACCCUUUU
+AAFC03124581.1/19885-19976               UUCUGAUCCUUUU
+AAWR02002461.1/13655-13752               CUCUGACCCUUUU
+#=GC SS_cons                             ..>>>>>>.....
+#=GC RF                                  gUCCgGCccUUUU
+//

@@ -1,0 +1,34 @@
+# STOCKHOLM 1.0
+#=GF AC RF00019
+#=GF OBJECTID RF00019.4
+
+AAIY01183764.1/1055-959                    GGCUGGUCCGAUGGUAGUGG..G...UUAUCAGAAC..............
+AAYZ01133134.1/5808-5901                   GGCUGGUCCGAUGGUAGUGG..G...UUA.....................
+AANU01114497.1/4433-4527                   GGCUGGUCCGAUGGUAGUGG..G...UUAUCAGAAC..............
+BL000002.1/147953394-147953488             GGCUGGUCCGAUGGUAGUGG..G...UUAUCAGAAC..............
+AC205306.6/147779-147685                   GGCUGGUCCGAUGGUAGUGG..G...UUAUCAGAAC..............
+AAFC03099237.1/8865-8959                   GGCUGGUCCGAUGGUAGUGG..G...UUA.....................
+ABVD01627856.1/93-188                      GGCUGGUCCGAUGGUAGUGG..G...UUA.....................
+#=GC SS_cons                               <<<<<<<<.<<..<<<<<<<..<...........................
+#=GC RF                                    gGCugGUCCgAagguAGUGG..G...UUA.....................
+
+AAIY01183764.1/1055-959                    ..UUAUUAACAUU..................AGUGUCACUAAAGUUGGUA
+AAYZ01133134.1/5808-5901                   ..UCAGAACUUAUUA............ACAUUAGCUCACUAAAGUUGGUA
+AANU01114497.1/4433-4527                   ..UUAUUAACAUU..................AGUGUCACUAAAGUUGGUA
+BL000002.1/147953394-147953488             ..UUAUUAACAUU..................AGUGUCACUAAAGUUGGUA
+AC205306.6/147779-147685                   ..UUAUUAACAUU..................AGUGUCACUAAAGUUGGUA
+AAFC03099237.1/8865-8959                   ..CCAGAACUUAUUAA...........CGUUAGUGUCACUAAAGUUGGUA
+ABVD01627856.1/93-188                      ..UCAGAACUUAUUAA...........CAUUAGUGUCACUAAAGUUGGUA
+#=GC SS_cons                               ...<<<.<<...................................>>.>>>
+#=GC RF                                    ..uaguuAAuuau..............AgauAguuaaacuuauuUUaacu
+
+AAIY01183764.1/1055-959                    UACAAAC.CC.C.CCCACUGCUGAAUUUGACUGGC......UUUU
+AAYZ01133134.1/5808-5901                   UACAACC.C....CCCACUGCUAAAUUUGACUGGC......UUUU
+AANU01114497.1/4433-4527                   UACAACC.C....CCCACUGCUAAAUUUGACUGGC......UUUU
+BL000002.1/147953394-147953488             UACAACC.C....CCCACUGCUAAAUUUGACUGGC......UUUU
+AC205306.6/147779-147685                   UACAACC.C....CCCACUGCUAGAUUUGACUGGC......UUUU
+AAFC03099237.1/8865-8959                   UACAACC.C....CCCACUGCUAAAUUUGACUGGC......UUUU
+ABVD01627856.1/93-188                      UACAACC.CC...CCCACUGCUGAAUUUGACUGGC......UUUU
+#=GC SS_cons                               .............>>>>>>...>>..>>>>>>>>>>.........
+#=GC RF                                    uuuuCuC.Ccuu.CCCACUgCUacACUuGACuaGCc.....UUuu
+//

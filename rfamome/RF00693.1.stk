@@ -1,0 +1,22 @@
+# STOCKHOLM 1.0
+#=GF AC RF00693
+#=GF OBJECTID RF00693.1
+
+AAGU03000998.1/82402-82333                 GAUUUAGUGGA.AAC.ACUUCCGC.ACA.......AACUA.G...AUU..
+AAYZ01657527.1/870-937                     AAUCUAGUGGA.AAC.AUUUC..C.ACA.......GACUC.A...AUU..
+AADD01093451.1/1636-1571                   AAUCUUAUGGA.AAC.AUUUCUGC.ACA.............C...AAU..
+AAEX03015921.1/21466-21402                 AAUAUAAUGGA.AAC.AUUUCUGC.ACA.............A...ACU..
+AANN01661338.1/2315-2243                   AAUCGAGUGGG.AAC.ACUUCUGC.ACAGCU....AGAUA.G...AUU..
+AAWR02029570.1/15403-15467                 AGUCUAACGGA.AAC.ACUUCUGC.ACA.............A...ACU..
+#=GC SS_cons                               ........<<<...<.<<<<<<<<.<<<......................
+#=GC RF                                    AAUcUAguGaA.AAC.AuuuCcgC.ACA.......aAcUA.G...Auu..
+
+AAGU03000998.1/82402-82333                 .AUGGAUAC...CAGUGUGU...GGAAAUGCUU.CUGCAACAUU
+AAYZ01657527.1/870-937                     .AUGGGUGG...CAGUGUGC...AGAAGUGCUU.CUGCUACAUU
+AADD01093451.1/1636-1571                   .AAAGAAAC...UAGUGUAC...AGAAAUGUUUACUUGUCUAUG
+AAEX03015921.1/21466-21402                 .AAGGAAAU...UAAUGUAU...GGAAUUAUUU.CUGCUAUAUU
+AANN01661338.1/2315-2243                   .AUAAGUGC...GGGUGCGC...AGAAGUGCUU.CUGCUGCAUU
+AAWR02029570.1/15403-15467                 .GAAGACAC...CAGUGUGU...GGAAAGGUUU.CUGCUACAUG
+#=GC SS_cons                               ...............>>>>>...>>>>>>>.>>.>.........
+#=GC RF                                    .AuaGAAAC...cAGUGUGc...gGaaaUGCUu.CUGcUAcAUu
+//

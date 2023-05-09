@@ -1,0 +1,37 @@
+# STOCKHOLM 1.0
+#=GF AC RF00005
+#=GF OBJECTID RF00005.8
+
+AB042524.1/5257-5192                   GGUCUUAA.G.GUGAUA..........UUCAUG.U.CGAAU.UGCAAAUU
+AB042809.1/5159-5089                   UAGAUUGA.A.GCCAGUA...AU....AGGGUA.U.UUAGC.UGUUAACU
+L07095.1/5327-5261                     GGUAAAAU.G.GCUGAG..........UAAGCA.U.UAGAC.UGUAAAUC
+X14848.1/5139-5066                     UAGAUUGA.A.GCCAGUA...AGU...AGGGUA.U.UUAGC.UGUUAACU
+V00676.1/23-88                         GGUAAAAU.G.GCUGAG..........UAAGCA.U.UAGAC.UGUAAAUC
+AF347015.1/5827-5762                   AGCUCCGA.G.GUGAUU..........UUCAUA.U.UGAAU.UGCAAAUU
+AF493541.1/2418-2346                   UAGAUUGA.A.GCCAGUU...AGCU..AGGGUG.U.UUAGC.UGUUAACU
+AF493542.1/2517-2451                   AGCCCUGU.G.GUGAAUU.........UACACG.U.UGAAU.UGCAAAUU
+AF490529.1/3010-2943                   GGUAAAAU.G.GCUGAGC.........AAAGCA.U.UAGAC.UGUAAAUC
+#=GC SS_cons                           <<<<<<<....<<<<.............>>>>..<.<<<<........>>
+
+AB042524.1/5257-5192                   CG.AAG........................G...UGUA.GAG.AAA.U..
+AB042809.1/5159-5089                   AA.AUU........................UU..CGUA.GGU.UUA.AU.
+L07095.1/5327-5261                     UA.AAC........................A...CAGA.GGU.UUA.AA.
+X14848.1/5139-5066                     AA.AUU........................UU..CGUA.GGAAUUU.GA.
+V00676.1/23-88                         UA.AAG........................A...CAGG.GGU.UGA.GC.
+AF347015.1/5827-5762                   CG.AAG........................A...AGCA.GCU.UCA.AA.
+AF493541.1/2418-2346                   AA.AGU........................UU..CGUG.GGG.GUG.GA.
+AF493542.1/2517-2451                   CA.GAG........................A...AGCA.GCU.UCA.AU.
+AF490529.1/3010-2943                   UA.AAG........................A...UAGA.GGU.UUG.AC.
+#=GC SS_cons                           >>.>...............................<<<.<<.........
+
+AB042524.1/5257-5192                   .CUCUA.C.UAAGACU.U
+AB042809.1/5159-5089                   .UCCUG.C.CAAUCUA.G
+L07095.1/5327-5261                     .UCCUC.U.UUUUACC.A
+X14848.1/5139-5066                     UUCCUU.C.CAAUCUA.G
+V00676.1/23-88                         ..CCCC.U.UUUUACC.A
+AF347015.1/5827-5762                   ..CCUG.C.CGGGGCU.U
+AF493541.1/2418-2346                   .GCCCA.C.CAGUCUA.G
+AF493542.1/2517-2451                   ..UCUG.C.CGGGGCU.U
+AF490529.1/3010-2943                   .UCCUC.U.UUUUACC.A
+#=GC SS_cons                           ..>>>>.>.>>>>>>>..
+//

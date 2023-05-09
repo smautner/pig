@@ -1,0 +1,28 @@
+# STOCKHOLM 1.0
+#=GF AC RF00841
+#=GF OBJECTID RF00841.0
+
+CAAA01218287.1/25473-25560               UGUUAAAUCAGGAAUUGUAAACAAUUCCUAGGCAAUGUGUAUAAUGUUGG
+AANU01174943.1/9038-9125                 UGUUAAAUUAGGAAUUGUAAACAAUUCCUAGGCAAUAUGUAUAAUGUUCA
+Z84470.1/130382-130295                   UGUUAAAUCAGGAAUUUUAAACAAUUCCUAGACAAUAUGUAUAAUGUUCA
+ABDC01432121.1/672-585                   UGUUAAAUCAGGAAUUGUAAACAAUUCCUAGGCAAUGUGUAUAAUGUUUG
+AANG01128599.1/11891-11804               UGUUAAAUCAGACUUUGCAAACAAUUCCUAGGCAAAACUUAAAAGGCCUG
+#=GC SS_cons                             ........<<<<.<<<<<.<<<<<<<.<<<<<.<<<...<<.........
+#=GC RF                                  UGuuAaAUcAGGaAuuguAAAcaAuuCcuaGGCAAugUuuauAAUGacua
+
+CAAA01218287.1/25473-25560               UAAGU.....CAUUC.CUA.GA..........AAUUGUUCACAAUG.CCU
+AANU01174943.1/9038-9125                 UAAGA.....CAUUC.CUA.GA..........AAUUGUUCAUAAUG.CCU
+Z84470.1/130382-130295                   UAAGU.....CAUUC.CUA.GA..........AAUUGUUCAUAAUG.CCU
+ABDC01432121.1/672-585                   UAAGU.....CAUUC.CUA.GA..........AAUUGUUCACAAUG.CCU
+AANG01128599.1/11891-11804               AAAGC.....AUUUU.UUA.GA..........AGCUAUUUACAAGG.CCU
+#=GC SS_cons                             >>.........>>>>.>>>.>...........>>>>>>>.>>>>>..>>>
+#=GC RF                                  uaAGu.....caUUC.Cua.gA..........aaUugUUuacaaUa.CCU
+
+CAAA01218287.1/25473-25560               GUAACA
+AANU01174943.1/9038-9125                 GUAACA
+Z84470.1/130382-130295                   GUAACA
+ABDC01432121.1/672-585                   GUAACA
+AANG01128599.1/11891-11804               GAAUUA
+#=GC SS_cons                             >.....
+#=GC RF                                  gaauaA
+//

@@ -1,0 +1,56 @@
+# STOCKHOLM 1.0
+#=GF AC RF00006
+#=GF OBJECTID RF00006.0
+
+AAGW02013702.1/28641-28535               GGGCUGGC.UAUAGCUC.AGCGGUUCCUUCGAACUACCAGCUACAUUUAA
+AAHX01094554.1/16303-16446               GGGCCAGC.UUUAGCUC.AGCGGUUACUUCGACGUGCUCCAGUUUGAGCA
+AANU01185798.1/9761-9673                 GGGCUGGC.UUUAGCUC.AGCGGUUACUUCGCAGUUCAGCAAACCACCUC
+AF045144.1/1-88                          .GGCUGGC.UUUAGCUC.AGCGGUUACUUCGAGUACAUUGUAACCACCUC
+AADA01117796.1/4260-4348                 GGGCUGGC.UUUAGCUC.AGCGGUUACUUCGAGUACAUUGUAACCACCUC
+ABDC01204167.1/4653-4552                 GGGCUGGC.CUUAGCUC.AGCGGUUCCUUCGAUCGCAUGUCAACAACUUC
+AANG01341798.1/2156-2244                 .GAUUGGC.CGUAGCUG.AGUGGUUUCUUCAAGUAAAGCAUCUCCUAGCU
+AAFC03082657.1/5139-5043                 GGGCUGGC.CGUAGCUC.AGCGGUUCCUUCGACUACACAGUGUUUAAAUU
+AANN01510211.1/1211-1299                 GGGCUGGC.UUUAGCUC.AGCGGUUACUUCGUGCUUAACAAUCACACUUA
+AAWR02002381.1/633-543                   UUCCCGGA.UGUAGCUC.AGCGGUUCUUUCGACUAAGGCAUCAGCUUCUA
+#=GC SS_cons                             .<<<<<<......<<<<..<<<<....<<<<<..................
+#=GC RF                                  GgGCcGGC.UUUAGCuC.AGCGGUUACuUCgacaaauaaaaauuuauuuu
+
+AAGW02013702.1/28641-28535               GCUACUAAGUCAGCACG.................................
+AAHX01094554.1/16303-16446               GGCUAUGUAACGUGGUCGGUUCGAGCAACACAACCAGCCGCUUGCCUAUC
+AANU01185798.1/9761-9673                 UCU...............................................
+AF045144.1/1-88                          UCU...............................................
+AADA01117796.1/4260-4348                 UCU...............................................
+ABDC01204167.1/4653-4552                 UCUGUGUAGUCA......................................
+AANG01341798.1/2156-2244                 ACUC..............................................
+AAFC03082657.1/5139-5043                 ACUCUCUCUGA.......................................
+AANN01510211.1/1211-1299                 CGA...............................................
+AAWR02002381.1/633-543                   ACCACGCG..........................................
+#=GC SS_cons                             ..................................................
+#=GC RF                                  uauauacuuuucuu....................................
+
+AAGW02013702.1/28641-28535               ....UCAGUGUUGGUUCGAGUC.................CCGCGGGCGCU
+AAHX01094554.1/16303-16446               UGGUGAGUGGUUGGUUCGAGAC.................CCGCGGGCGCU
+AANU01185798.1/9761-9673                 ........GGGUUGUUCGAGAC.................CCGCGGGCACU
+AF045144.1/1-88                          ........GGGUGGUUCGAGAC.................CCGCGGGUGCU
+AADA01117796.1/4260-4348                 ........GGGUGGUUCGAGAC.................CCGCGGGUGCU
+ABDC01204167.1/4653-4552                 ........GAGCGGUUCGAUACCC.............ACCCGCGGGCGCU
+AANG01341798.1/2156-2244                 ........AAGUGGUUCAGGAC.................CUGCUGGUACU
+AAFC03082657.1/5139-5043                 ........GGGUGGUUCGAGAC.................CCGCGGGCGCU
+AANN01510211.1/1211-1299                 ........GUGAGGUUCGAUAC.................CCGCGGGCGCU
+AAWR02002381.1/633-543                   ........AGGUGGUUCGAGAC.................CCGGGGGCGUU
+#=GC SS_cons                             ...............>>>>>...................>>>>>>>>...
+#=GC RF                                  ........ugggGGUucGAgAC.................CCGCGgGCGCU
+
+AAGW02013702.1/28641-28535               CCCCAGCCUUUUU
+AAHX01094554.1/16303-16446               CUCUGGCCCUUUU
+AANU01185798.1/9761-9673                 CUCCAGCCCUUUU
+AF045144.1/1-88                          UUCCAGCUCUUUU
+AADA01117796.1/4260-4348                 UUCCAGCUCUUUU
+ABDC01204167.1/4653-4552                 CUCCAGCCCUUUU
+AANG01341798.1/2156-2244                 UUCUAGCCCUUUU
+AAFC03082657.1/5139-5043                 CUCCAGUCCUUUU
+AANN01510211.1/1211-1299                 CUCCAGCUCUUUU
+AAWR02002381.1/633-543                   CUCCAG...UUUU
+#=GC SS_cons                             ..>>>>>>.....
+#=GC RF                                  gUCCgGCccUUUU
+//

@@ -1,0 +1,34 @@
+# STOCKHOLM 1.0
+#=GF AC RF00655
+#=GF OBJECTID RF00655.1
+
+AAGU03072740.1/37386-37478               GGUCCCUGCCCUCUAGAAGCUCACAGUCUAGUUG.......CGUU.....
+AAGW02008334.1/35341-35433               GGCCCCUGCCCUCUAGAAGCUCACAGUCUAG.UU.......GUGU.....
+AAYZ01598458.1/215-123                   GGCCUCUGCCCUCUAGAAGCUCACAGUCUAG.UUGUGUUCUCGUG.....
+ABBA01017397.1/191881-191789             GGUCCCUGCCCUCUAGAAGCUCACAGUCUAG.UU.......GUGU.....
+AANG01070166.1/4108-4200                 GGUCCCUGCCCUCUAGAAGCUCACAGUCUAG.UU.......GCGU.....
+AANN01537336.1/417-509                   GGUCCCUGCCCUCUAGAAGCUCACAGUCUAGUUG.......CGUUCAAGG
+AAGV020456123.1/438-346                  GGCCCCUGCCCUCUAGAAGCUCCCAGUCUAG.UU......GAGAU.....
+#=GC SS_cons                             ....<<<<<<<<<.<<<<<<<..<<<<<<<<.<<................
+#=GC RF                                  ggUccCUGCCCuCaAGgAGCuCACAgUCUAG.ug.......aGuu.....
+
+AAGU03072740.1/37386-37478               UAUGUGC.......AA.......GUCUU.U.......UACCCC......C
+AAGW02008334.1/35341-35433               U.....CGCGUGCACG.......UCAUU.C.......ACCCCC......A
+AAYZ01598458.1/215-123                   C.....A.......AG.......UCAUU.C.......AGCCCC......A
+ABBA01017397.1/191881-191789             U.....C.......AUGUGCAAGUCAUU.U.......ACCCCC......A
+AANG01070166.1/4108-4200                 U.....C.......AU.......GUGCA.AGCCGUUCACCCCC......A
+AANN01537336.1/417-509                   U.....C.......AA.......AUCAU.U.......CACCCC......C
+AAGV020456123.1/438-346                  C.....C.......UG.......UGCAG.G.......UCUCUCACCCCCA
+#=GC SS_cons                             .................................................>
+#=GC RF                                  u.....c.......aa.......uucua.a.......aacccC......c
+
+AAGU03072740.1/37386-37478               AGCUAGAUUGUAAGCUCCUUGAGGGCAGUCACC
+AAGW02008334.1/35341-35433               G.CUAGAUUGUAAGCUCCUUGAGGGCAGUUACC
+AAYZ01598458.1/215-123                   G.CUAGAUUGUAAGCUCCUUGAGGGCAGCUGCC
+ABBA01017397.1/191881-191789             G.CUAGAUUGUAAGCUCCUUGAGGGCAGUUACC
+AANG01070166.1/4108-4200                 G.CUAGAUUGUAAGCUCCUUGAGGGCAGUUACC
+AANN01537336.1/417-509                   AGCUAGAUUGUAAGCUCCUUGAGGGCAGUCACC
+AAGV020456123.1/438-346                  G.CUAGAUUGUAAGCUCCUUGAGGGCAGUCACC
+#=GC SS_cons                             >.>>>>>>>>..>>>>>>>.>>>>>>>>>....
+#=GC RF                                  a.CUAGAcUGUAaGCUcCUuGaGGGCAGggAcc
+//

@@ -1,0 +1,20 @@
+# STOCKHOLM 1.0
+#=GF AC RF00031
+#=GF OBJECTID RF00031.0
+
+AF021345.1/10097-10160                G.UUACAUU..AAUGAGAACAGAAACA.UAAA..CUAUGA.CCUAG.G..
+M63574.1/1465-1528                    G.UUACAUU..GAUGAGAACAGAAACA.UAAA..CUAUGA.CCUAG.G..
+AL833145.1/1479-1545                  U.UUGCUUU..AAUGAGAAUAGAAACG.UAAA..CUAUGA.CCUAG.G..
+D88033.3/5711-5774                    C.UUGCGUU..AAUGAGAACAGAAACG.UAAA..CUAUAA.CCUAG.G..
+AB032826.1/1401-1464                  ACUUGCGUU..AAUGAGAACAGAAACG.UAAA..CUAUAA.CCUAG.G..
+#=GC SS_cons                          <.<<<<...........<<<<<<<<<<.......<<<......>>>....
+#=GC RF                               g.ucucauu..uAUGAuGgccucuccc.uAAA.ucccuuu...ggg..c.
+
+AF021345.1/10097-10160                .......GGUUUC.U.G.UUGGAU..AGCUU.......GUAAU
+M63574.1/1465-1528                    .......GGUUUC.U.G.UUGGAU..AGCUC.......GUAAU
+AL833145.1/1479-1545                  .......GGUUUC.U.G.UUGGAU.AAUUAG.....CAGUUUA
+D88033.3/5711-5774                    .......GGUUUC.U.G.UUGGAU..GGUUG.......GCAAC
+AB032826.1/1401-1464                  .......GGUUUC.U.G.UUGGAU..GGUUG.......GCAA.
+#=GC SS_cons                          .......>>>>>>.>.>.>>..................>>>>>
+#=GC RF                               .......gggaga.g.g.cCuGAU..gcuug.......gagac
+//

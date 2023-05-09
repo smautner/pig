@@ -1,0 +1,40 @@
+# STOCKHOLM 1.0
+#=GF AC RF00006
+#=GF OBJECTID RF00006.2
+
+AANU01185798.1/9761-9673                 GGGCUGGC.UUUAGCUC.AGCGGUUACUUCGCAGUUCAGCAAACCACCUC
+AF045145.1/1-88                          .GGCUGGC.UUUAGCUC.AGCGGUUACUUCGCGUGUCAUCAAACCACCUC
+AADA01028285.1/4499-4587                 GGGCUGGC.UUUAGCUC.AGCGGUUACUUCGCGUGUCAUCAAACCACCUC
+AAFC03082657.1/5139-5043                 GGGCUGGC.CGUAGCUC.AGCGGUUCCUUCGACUACACAGUGUUUAAAUU
+AANN01510211.1/1211-1299                 GGGCUGGC.UUUAGCUC.AGCGGUUACUUCGUGCUUAACAAUCACACUUA
+AAWR02002381.1/633-543                   UUCCCGGA.UGUAGCUC.AGCGGUUCUUUCGACUAAGGCAUCAGCUUCUA
+#=GC SS_cons                             .<<<<<<......<<<<..<<<<....<<<<<..................
+#=GC RF                                  GgGCcGGC.UUUAGCuC.AGCGGUUACuUCgacaaauaaaaauuuauuuu
+
+AANU01185798.1/9761-9673                 UCU...............................................
+AF045145.1/1-88                          UCU...............................................
+AADA01028285.1/4499-4587                 UCU...............................................
+AAFC03082657.1/5139-5043                 ACUCUCUCUGA.......................................
+AANN01510211.1/1211-1299                 CGA...............................................
+AAWR02002381.1/633-543                   ACCACGCG..........................................
+#=GC SS_cons                             ..................................................
+#=GC RF                                  uauauacuuuucuu....................................
+
+AANU01185798.1/9761-9673                 ........GGGUUGUUCGAGAC.................CCGCGGGCACU
+AF045145.1/1-88                          ........GGGUUGUUCGAGAC.................CCGCGGGCGCU
+AADA01028285.1/4499-4587                 ........GGGUGGUUCGAGAC.................CCGUGGGCGCU
+AAFC03082657.1/5139-5043                 ........GGGUGGUUCGAGAC.................CCGCGGGCGCU
+AANN01510211.1/1211-1299                 ........GUGAGGUUCGAUAC.................CCGCGGGCGCU
+AAWR02002381.1/633-543                   ........AGGUGGUUCGAGAC.................CCGGGGGCGUU
+#=GC SS_cons                             ...............>>>>>...................>>>>>>>>...
+#=GC RF                                  ........ugggGGUucGAgAC.................CCGCGgGCGCU
+
+AANU01185798.1/9761-9673                 CUCCAGCCCUUUU
+AF045145.1/1-88                          CUCCAGCCCUCUU
+AADA01028285.1/4499-4587                 CUCCAUCUCUCUU
+AAFC03082657.1/5139-5043                 CUCCAGUCCUUUU
+AANN01510211.1/1211-1299                 CUCCAGCUCUUUU
+AAWR02002381.1/633-543                   CUCCAG...UUUU
+#=GC SS_cons                             ..>>>>>>.....
+#=GC RF                                  gUCCgGCccUUUU
+//
