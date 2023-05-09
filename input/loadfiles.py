@@ -1,7 +1,7 @@
 import random
 from collections import defaultdict
 import os
-import input.feat as feat
+import pig.input.feat as feat
 import numpy as np
 
 
@@ -284,7 +284,7 @@ def vary_alignment(fname, ali, stru, cov):
     alignments.append(ali[[a for a in range(ali.shape[0]) if a not in weird[-1:]]])
     alignments.append(ali[[a for a in range(ali.shape[0]) if a not in weird[-2:]]])
 
-    # for each make a new stru-line 
+    # for each make a new stru-line
     structures = [stru]
     alis = [ali]
     basepairs = bidir(stru)
@@ -308,8 +308,8 @@ def ali_to_dict(name, alignments, yao_scores, rnaz):
 
     # block =  [feat.conservation(ali),
     #                    feat.cov_sloppycov_disturbance_instem(ali),
-    #                    feat.stemconservation(ali), 
-    #                    feat.percstem(ali), 
+    #                    feat.stemconservation(ali),
+    #                    feat.percstem(ali),
     #                    feat.stemlength(ali), feat.blocktype(ali)]
 
     # print (block)
@@ -327,7 +327,7 @@ def ali_to_dict(name, alignments, yao_scores, rnaz):
         # ld2.append({  "diff %s %s" % (ali.name, k): v-d[k]   for k,v in master.items()})
 
     ######
-    # add the differences to the original for every variation 
+    # add the differences to the original for every variation
     ######
     r = {a: b for c in ld2 for a, b in c.items()}
 
@@ -335,17 +335,33 @@ def ali_to_dict(name, alignments, yao_scores, rnaz):
     # add a file name
     ####
     r['name'] = name
-    r['yao_score'] = yao_scores[name]
+    basename = name[name.rfind("/")+1:]
+    if yao_scores:
+        r['yao_score'] = yao_scores[basename]
     if rnaz:  # Only add RNAz as a feature if "use_rnaz in loaddata() is True
-        r['rnaz_score'] = rnaz[name]
+        r['rnaz_score'] = rnaz[basename]
     return r
 
 
 def check_seq_count(prealignment):
     return prealignment[1].shape[0] > 2
 
+def fname_to_dict(f, yao_scores, rnaz, check_prealignment=check_seq_count):
+    parsed = readfile(f)
+    if check_prealignment and not check_prealignment(parsed):
+        return {}
+    alignments = vary_alignment(*parsed)
+    # alignments = [ali for ali in alignments if len(ali[0]) > 0]
+    # print ('lena',len(alignments)) # 8
+    alignments2 = [Alignment(f, *a) for a in alignments]
+    # print ('lenb',len(alignments2)) # 8 ok
+    z = ali_to_dict(f, alignments2, yao_scores, rnaz)
+    # print ('lenc',len(z)) # 64 to few
+    return z
+
 
 def fnames_to_dict(fnames, yao_scores, rnaz, check_prealignment=check_seq_count):
+    r = []
     for f in fnames:
         parsed = readfile(f)
         if check_prealignment and not check_prealignment(parsed):
@@ -357,12 +373,16 @@ def fnames_to_dict(fnames, yao_scores, rnaz, check_prealignment=check_seq_count)
         # print ('lenb',len(alignments2)) # 8 ok
         z = ali_to_dict(f, alignments2, yao_scores, rnaz)
         # print ('lenc',len(z)) # 64 to few
-        yield z
+        r.append(z)
+    return r
 
 
 def loaddata(path, numneg=10000,
              randseed=None, use_rnaz=True,
-             pos='both', check_prealignment=check_seq_count, blacklist_file="data/blacklist.json"):
+             pos='both', check_prealignment=check_seq_count,
+             blacklist_file="data/blacklist.json"):
+
+    # this is what students used in 2020...
     import json
 
     random.seed(randseed)
@@ -407,5 +427,50 @@ def loaddata(path, numneg=10000,
 
     pos = list(fnames_to_dict(pos, yao, rnaz, check_prealignment))
     neg = list(fnames_to_dict(neg, yao, rnaz, check_prealignment))
+
+    return pos, neg
+
+
+def clean(d):
+    return {  k[k.rfind("/")+1:]:float(v) for k,v in d.items()}
+
+from ubergauss import tools as ut
+import glob
+def loaddata_2023(path,
+             rnaz='',
+             yao='',
+             check_prealignment=check_seq_count,
+             filterlist="data/blacklist.json"):
+
+    # ok so we rewrite this somehow...
+    yao = clean(ut.jloadfile(yao)) if yao else ''
+    rnaz = clean(ut.jloadfile(rnaz)) if rnaz else ''
+
+    ##############
+    # positives
+    ##############
+    pos2 = glob.glob("%s/pos2/*.sto" % path)
+    pos1 = glob.glob("%s/pos/*.sto" % path)
+    pos = pos1+pos2
+
+
+
+    ###########
+    # negatives
+    ##############
+    negfnames = glob.glob("%s/neg/*.sto" % path)
+    # neg = ["%s/neg/%s" % (path, f) for f in negfnames if f not in blacklist]
+    neg = negfnames
+
+    if filterlist:
+        oklist  =  ut.jloadfile(filterlist)
+        oklist  = {k[k.rfind("/")+1:] for k in oklist}
+        pos = [f for f in pos if f[f.rfind("/")+1:] in oklist]
+        neg = [f for f in neg if f[f.rfind("/")+1:] in oklist]
+
+    # make the thing
+    fnames = lambda x: fname_to_dict(x,yao,rnaz, check_prealignment)
+    pos = ut.xmap(fnames, pos)
+    neg = ut.xmap(fnames, neg)
 
     return pos, neg

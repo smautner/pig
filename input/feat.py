@@ -208,12 +208,9 @@ def yao_score(ali):
     pass
 
             
-            
 def getfeatures(ali):
     d={}
     for f in [conservation,blocktype,stemlength,stemflankconservation,
              percstem, lencount, stemcov, get_sloppy, bmm]:
         d.update(f(ali))
     return d
-            
-  
