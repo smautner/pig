@@ -8,6 +8,7 @@ from sklearn.preprocessing import normalize
 import math
 import ubergauss.tools as ut
 from yoda import ali2graph
+from yoda import alignment as ali
 
 
 
@@ -30,9 +31,8 @@ def split_on_empty_lines(s):
 def readfile(fname):
     text =  open(fname, 'r').read()
     alignments = split_on_empty_lines(text)
-    return Map(ali.Alignment(alignments), fname = fname)
-
-
+    r =  Map(ali.read_single_alignment,alignments, fname = fname)
+    return [a for a in r if a]
 
 
 def mkgraph(alignment, return_graph = False, method = '2020', discrete = True):
@@ -86,6 +86,34 @@ bad = '''/home/stefan/WEINBERG//neg/550-1278861-0-0.sto
 /home/stefan/WEINBERG//neg/550-2308630-0-0.sto
 /home/stefan/WEINBERG//neg/550-2308630-0-0.sto
 /home/stefan/WEINBERG//neg/550-1708760-0-0.sto'''.split('\n')
+
+
+from collections import Counter
+
+def count_chr(row):
+    return len([e for e in row if e in f'AUCG'])
+
+def filter_alignments(alis):
+    # remove short alignments
+    alis = [ali for ali in alis if count_chr(ali.alignment[0]) > 15]
+    # remove classes with 2 or less instances
+    count = Counter([ali.label for ali in alis])
+    alis = [ali for ali in alis if count[ali.label] > 2 ]
+    return alis
+
+def loadrfamome(path, verbose = True):
+    currentfiles  = glob.glob(f'{path}/*')
+    alis = ut.xmap(readfile, currentfiles)
+
+    # filter bs and crap
+    alis = flatten (alis)
+    alis = filter_alignments(alis)
+    # print stats
+    count = Counter([ali.label for ali in alis])
+    print(count)
+    print(len(count))
+    print(len(alis))
+    for ali in alis: print(ali)
 
 
 def _getfiles_70k(path = '',removesmall=True, limit = 0):
