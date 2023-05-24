@@ -17,6 +17,21 @@ def grepfamily(name):
     return re.findall(r'RF\d\d\d\d\d',name)[0]
 
 
+
+import re
+def split_on_newseq(s):
+    blank_line_regex = r'>.*'
+    return re.split(blank_line_regex, s.strip())
+
+def read_fasta(fname):
+    text =  open(fname, 'r').read()
+    sequences = split_on_newseq(text)
+    sequences = [s.strip() for s in sequences if s]
+    sequences = np.array([list(a.upper()) for a in sequences])
+    return Alignment(sequences, {}, {}, fname)
+
+
+
 def read_single_alignment(text,fname):
     alignment = []
     gc = {}
@@ -47,4 +62,28 @@ def fasta(ali):
     text = f'\n'.join(text)
     return filename
 
+def process_cov(alis, debug = False):
+    for ali in alis:
+        try:
+            s= ali.struct
+            cov = ali.rscape
+        except:
+            print(f'structure and cov are missing... abort')
 
+        stack = []
+        pairs = []
+        for i,e in enumerate(s):
+            if e == f'(':
+                stack.append(i)
+            if e == f')':
+                pairs.append((stack.pop(),i))
+        annotation = [0]*len(s)
+        for start,end,value in cov:
+            if (start,end) in pairs:
+                annotation[start] = value
+                annotation[end] = value
+        ali.covariance = annotation
+        ali.pairs = pairs
+        if debug:
+            print(f"{ annotation}")
+    return alis

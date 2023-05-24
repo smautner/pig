@@ -119,5 +119,54 @@ def mainchainentropy(ali, structure  = 'SS_cons'):
     graph.graph['sequence'] = sequence
     return graph
 
+import structout as so
+
+import warnings
+warnings.filterwarnings("ignore")
+
+def scclust(ali):
+    '''
+    we try to recreate rna sc clust
+    '''
+    graph = nx.Graph()
+
+
+    # adding nodes
+    for i,(e,c) in enumerate(zip(ali.alignment[0], ali.covariance)):
+        if e == f'.':
+            continue
+        symbol = e if c < .05 else f'C'
+        graph.add_node(i, label=symbol)
+
+    # adding structure
+    for i,j in ali.pairs:
+        if i in graph and j in graph:
+            graph.add_edge(i, j, label='=', len=1)
+        else:
+            ali.skippedAPair = True
+    # adding backbone
+    nodes = list(graph.nodes())
+    nodes.sort()
+    for i in range(len(nodes)-1):
+        graph.add_edge(nodes[i], nodes[i+1], label='-', len=1)
+
+    # add fakenodes
+    pairdict = dict(ali.pairs)
+    for i in range(len(nodes)-1):
+        # i and i+1 are definitely connected...
+        i,j = nodes[i],nodes[i+1]
+        a = pairdict.get(i,-1)
+        b = pairdict.get(j,-1)
+        dict_of_a_or_empty = graph._adj.get(a,{})
+        if b in dict_of_a_or_empty:
+            newnode = max(nodes)+1
+            graph.add_node(newnode, label=f'o')
+            graph.add_edges_from([(newnode,z) for z in [i,j,a,b]],label = f'*')
+
+
+    # so.gprint(graph, size = 30)
+        #graph.add_edge(nodes[i], nodes[i+1], label='-', len=1)
+    return graph
+
 
 

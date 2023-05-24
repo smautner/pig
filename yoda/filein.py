@@ -90,30 +90,13 @@ bad = '''/home/stefan/WEINBERG//neg/550-1278861-0-0.sto
 
 from collections import Counter
 
-def count_chr(row):
-    return len([e for e in row if e in f'AUCG'])
-
-def filter_alignments(alis):
-    # remove short alignments
-    alis = [ali for ali in alis if count_chr(ali.alignment[0]) > 15]
-    # remove classes with 2 or less instances
-    count = Counter([ali.label for ali in alis])
-    alis = [ali for ali in alis if count[ali.label] > 2 ]
-    return alis
 
 def loadrfamome(path, verbose = True):
-    currentfiles  = glob.glob(f'{path}/*')
-    alis = ut.xmap(readfile, currentfiles)
+    currentfiles  = glob.glob(f'{path}/*.fasta')
+    alis = ut.xmap(ali.read_fasta, currentfiles)
+    print(f"{Counter([ali.label for ali in alis])}")
+    return alis
 
-    # filter bs and crap
-    alis = flatten (alis)
-    alis = filter_alignments(alis)
-    # print stats
-    count = Counter([ali.label for ali in alis])
-    print(count)
-    print(len(count))
-    print(len(alis))
-    for ali in alis: print(ali)
 
 
 def _getfiles_70k(path = '',removesmall=True, limit = 0):
@@ -149,4 +132,26 @@ def getXYFiles_70k(path = '', limit = 0, encode = 'mainchainentropy'):
     return vectors, values, alis
 
 
+def _mktuple(x):
+    x = x.split()
+    return (int(x[1])-1,int( x[2])-1, float(x[4])) #  ['~', '46', '124', '4.14138', '0.0468148', '6', '0.03']
 
+
+def addcov(alis):
+    for a in alis:
+        covname = a.fname.replace(f'.fasta',f'_1.cov')
+        try:
+            text =  open(covname, 'r').read()
+        except:
+            text = f''
+            print(f" no cov file ; { covname=}")
+        allcov = re.findall(r'~.*', text)
+        a.rscape = [_mktuple(f) for f in allcov]
+    return alis
+
+def addstructure(alis):
+    for a in alis:
+        strname = a.fname+f'.lina'
+        text =  open(strname, 'r').readlines()[1].strip()
+        a.struct = text
+    return alis
