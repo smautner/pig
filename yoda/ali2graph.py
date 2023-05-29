@@ -1,6 +1,6 @@
+from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 import numpy as np
 import networkx as nx
-from lmz import *
 import eden.graph as eg # eden-kernel in pip
 from collections import defaultdict, Counter
 
@@ -74,6 +74,7 @@ def _most_common_nucs(ali):
 
 def mainchainentropy(ali, structure  = 'SS_cons'):
     '''
+        ATTENTION: . is sometimes in preserved columns so this is  bad-ish
         cleaning up the graph generation a bit,
         will keep a main alignment and just encode that together with the entropy...
         hopefully will keep a consensus to use for printing later..
@@ -170,3 +171,47 @@ def scclust(ali):
 
 
 
+def rfamseedfilebasic(ali, structure  = 'SS_cons'):
+
+    graph = nx.Graph()
+    lifo = defaultdict(list)
+    if f'RF' not in ali.gc:
+        print(f"{ ali.gf = }")
+        print(f"{ ali.gc = }")
+    nucs = ali.gc[f'RF'].upper()
+    simple_sscons = ali.gc[structure]
+    simple_sscons = simple_sscons.replace(',',':')
+    simple_sscons = simple_sscons.replace('-',':')
+    simple_sscons = simple_sscons.replace('_',':')
+    ali.gc[structure] = simple_sscons
+
+    sequence = ''
+    conSS = ''
+
+    for i, (struct,nuc) in enumerate(zip(simple_sscons,nucs)):
+        if nuc != f'.': # ATTENTION! some structures have a :  but there is not even one nucleotide listed
+            try:
+                conSS += struct
+                sequence+=nuc
+                myv  = [ ord(ali.gc[k][i]) for k in ali.gc.keys() ]
+                graph.add_node(i, label=nuc, vec=myv)
+                # handle hydrogen bonds
+                if struct in ['(','[','<']:
+                    lifo['x'].append(i)
+                if struct in [')',']','>']:
+                    j = lifo['x'].pop()
+                    graph.add_edge(i, j, label='=', type='basepair', len=1)
+            except:
+                print("ERROR IN FILE", ali.fname)
+
+    # ADD BACKBONE
+    nodes = list(graph)
+    nodes.sort()
+    for i in Range(len(nodes)-1):
+            a,b = nodes[i], nodes[i+1]
+            graph.add_edge(a,b, label='-', type='backbone', len=1)
+
+    graph.graph = {}
+    graph.graph['structure'] = conSS
+    graph.graph['sequence'] = sequence
+    return graph

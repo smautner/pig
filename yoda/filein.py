@@ -1,7 +1,7 @@
+from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 import numpy as np
 import glob
 import networkx as nx
-from lmz import *
 import eden.graph as eg # eden-kernel in pip
 from collections import defaultdict, Counter
 from sklearn.preprocessing import normalize
@@ -9,6 +9,7 @@ import math
 import ubergauss.tools as ut
 from yoda import ali2graph
 from yoda import alignment as ali
+
 
 
 
@@ -23,17 +24,28 @@ now we do the grap but use vec to annotate the graph
 
 import re
 
-def split_on_empty_lines(s):
+def _split_on_empty_lines(s):
     blank_line_regex = r'\r?\n\s*\n'
     return re.split(blank_line_regex, s.strip())
 
 
 def readfile(fname):
     text =  open(fname, 'r').read()
-    alignments = split_on_empty_lines(text)
+    alignments = _split_on_empty_lines(text)
     r =  Map(ali.read_single_alignment,alignments, fname = fname)
     return [a for a in r if a]
 
+
+def _split_on_slashstockholm(s):
+    blank_line_regex = r'//\n# STOCKHOLM 1.0'
+    return re.split(blank_line_regex, s.strip())
+
+
+def readseedfile(fname):
+    text =  open(fname, 'r').read()
+    alignments = _split_on_slashstockholm(text)
+    r =  Map(ali.read_single_alignment,alignments, fname = False)
+    return [a for a in r if a]
 
 def mkgraph(alignment, return_graph = False, method = '2020', discrete = True):
 

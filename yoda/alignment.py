@@ -6,6 +6,8 @@ class Alignment:
         self.alignment = ali
         self.gc = gc
         self.gf = gf
+        if not fname:
+            fname= gf.get(f'AC', f'no idea :) ')
         self.fname = fname
         self.label  = grepfamily(fname)
 
