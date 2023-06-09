@@ -1,14 +1,17 @@
 from lmz import Map,Zip,Filter,Grouper,Range,Transpose
+
+import yoda.filein
 from yoda import filein, alignment, ali2graph , simpleMl
 from ubergauss import tools as ut
 import eden.graph as eg
 
 
-def countbla():
+def rfamOme_labeldistribution():
+    '''just looks at the distribution of labels in the rfamome dataset'''
     import glob
     from collections import Counter
     f = glob.glob(f'../../rfamome/*.stk')
-    m = map(alignment.grepfamily, f)
+    m = map(alignment.grepfamily, f) # the name is in the filename
     c = Counter(m)
     print(sum([v for v in c.values() if v > 2]))
     print(c)
@@ -18,7 +21,7 @@ def runbaseline():
     alis = filein.loadrfamome(path = f'../../rfamome')
     alis = filein.addstructure(alis) # a.struct
     alis = filein.addcov(alis)       # a.rscape [(start,stop,e-valus)]
-    alis = alignment.process_cov(alis, debug = False)
+    alis = yoda.filein.process_cov(alis, debug = False)
 
     graphs = Map(ali2graph.scclust,alis) # not done!
     X = eg.vectorize(graphs)

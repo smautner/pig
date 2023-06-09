@@ -11,6 +11,8 @@ from yoda import ali2graph
 from yoda import alignment as ali
 import re
 
+from yoda.alignment import Alignment
+
 '''
 i think we should just load alignments here...
 '''
@@ -21,47 +23,41 @@ def _split_on_empty_lines(s):
     blank_line_regex = r'\r?\n\s*\n'
     return re.split(blank_line_regex, s.strip())
 
-
-def readfile(fname):
+def read_stk_file(fname):
     text = open(fname, 'r').read()
     alignments = _split_on_empty_lines(text)
-    r = Map(ali.read_single_alignment,alignments, fname = fname)
+    r = Map(ali.stk_to_alignment, alignments, fname = fname)
     return [a for a in r if a]
 
+
+
+def readseedfile(fname):
+    text = open(fname, 'r').read()
+    alignments = _split_on_slashstockholm(text)
+    r = Map(ali.stk_to_alignment, alignments, fname = False)
+    return [a for a in r if a]
 
 def _split_on_slashstockholm(s):
     blank_line_regex = r'//\n# STOCKHOLM 1.0'
     return re.split(blank_line_regex, s.strip())
 
 
-def readseedfile(fname):
-    text = open(fname, 'r').read()
-    alignments = _split_on_slashstockholm(text)
-    r = Map(ali.read_single_alignment,alignments, fname = False)
-    return [a for a in r if a]
 
-def mkgraph(alignment, return_graph = False, method = '2020', discrete = True):
-
-    if method == '2020':
-        graph = ali2graph.nested_frag_encoder(alignment)
-    if method == 'mainchainentropy':
-        graph = ali2graph.mainchainentropy(alignment)
-    if return_graph:
-        return graph
-    return eg.vectorize([graph], min_r = 1, min_d = 1, discrete = discrete) # discrete allows us to use the vec attribute, which contains the covariance info
+def split_on_newseq(s):
+    blank_line_regex = r'>.*'
+    return re.split(blank_line_regex, s.strip())
 
 
+def read_fasta(fname):
+    text =  open(fname, 'r').read()
+    sequences = split_on_newseq(text)
+    sequences = [s.strip() for s in sequences if s]
+    sequences = np.array([list(a.upper()) for a in sequences])
+    return Alignment(sequences, {}, {}, fname)
 
-
-def ali2vec(alignment, method = 'mainchainentropy', discrete = True):
-    vector = mkgraph(alignment,return_graph = False, method = method, discrete = discrete)
-    return vector
-
-def filetograph(file, method = 'mainchainentropy'):
-    ali = readfile(file)
-    graph = mkgraph(ali[0],return_graph = True, method=method)
-    return graph
-
+#############################
+# nanaman
+#############################
 
 
 # TODO, theese are not actually bad they just contain columns without nucleotides
@@ -96,13 +92,6 @@ bad = '''/home/stefan/WEINBERG//neg/550-1278861-0-0.sto
 from collections import Counter
 
 
-def loadrfamome(path, verbose = True):
-    currentfiles  = glob.glob(f'{path}/*.fasta')
-    alis = ut.xmap(ali.read_fasta, currentfiles)
-    print(f"{Counter([ali.label for ali in alis])}")
-    return alis
-
-
 
 def _getfiles_70k(path = '',removesmall=True, limit = 0):
     files = []
@@ -119,7 +108,7 @@ def _getfiles_70k(path = '',removesmall=True, limit = 0):
     return files
 
 def issmall(f):
-    return readfile(f)[0].alignment.shape[0] < 3
+    return read_stk_file(f)[0].alignment.shape[0] < 3
 
 def filtersmall(files):
     toosmall = ut.xmap(issmall, files)
@@ -129,17 +118,26 @@ def filtersmall(files):
 def getXYFiles_70k(path = '', limit = 0, encode = 'mainchainentropy'):
     allfiles = _getfiles_70k(path = path,removesmall = True, limit = limit)
     flatfiles = Flatten(allfiles)
-    alis = ut.xmap(readfile, flatfiles)
+    alis = ut.xmap(read_stk_file, flatfiles)
     alis = Flatten(alis)
-    vectors = ut.xmap(lambda x: ali2vec(x,method = 'mainchainentropy'),
-                      alis, processes = 88)
+    mkvec = lambda x: eg.vectorize([ali2graph.mainchainentropy(x)])
+    vectors = ut.xmap(mkvec, alis, processes = 88)
     values = [ i  for i,e in enumerate(allfiles) for z in Range(e) ]
     return vectors, values, alis
 
-
+#########################################
+# RFAMOME
+####################################
 def _mktuple(x):
     x = x.split()
     return (int(x[1])-1,int( x[2])-1, float(x[4])) #  ['~', '46', '124', '4.14138', '0.0468148', '6', '0.03']
+
+
+def loadrfamome(path, verbose = True):
+    currentfiles  = glob.glob(f'{path}/*.fasta')
+    alis = ut.xmap(read_fasta, currentfiles)
+    print(f"{Counter([ali.label for ali in alis])}")
+    return alis
 
 
 def addcov(alis):
@@ -160,3 +158,31 @@ def addstructure(alis):
         text = open(strname, 'r').readlines()[1].strip()
         a.struct = text
     return alis
+
+
+def process_cov(alis, debug = False):
+    for ali in alis:
+        try:
+            s= ali.struct
+            cov = ali.rscape
+        except:
+            print(f'structure and cov are missing... abort')
+
+        stack = []
+        pairs = []
+        for i,e in enumerate(s):
+            if e == f'(':
+                stack.append(i)
+            if e == f')':
+                pairs.append((stack.pop(),i))
+        annotation = [0]*len(s)
+        for start,end,value in cov:
+            if (start,end) in pairs:
+                annotation[start] = value
+                annotation[end] = value
+        ali.covariance = annotation
+        ali.pairs = pairs
+        if debug:
+            print(f"{ annotation}")
+    return alis
+

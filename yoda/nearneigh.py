@@ -1,11 +1,12 @@
 from lmz import *
-import eden.display as ed
 import numpy as np
 import structout as so
 from ubergauss import tools as ut
-
+from yoda import ali2graph
+from yoda.filein import read_stk_file
 import yoda.pairwise_alignments
 import yoda.filein as vv
+from yoda.simpleMl import overlap_coef
 
 '''
 use the vectors to make a nearest neighbor model...
@@ -13,16 +14,9 @@ there is a filter to remove stuff that is too similar
 '''
 
 
-def _overlap(a,b):
-    score =  len(np.intersect1d(a.indices, b.indices)) / min(len(a.indices), len(b.indices))
-    # score = np.intersect1d(a, b)/ min(len(a), len(b))
-    return 1-score
-
-
-
 def neighbors(vecz, k = 100):
     def doarow(x):
-        distances = np.array([_overlap(vecz[x], vecz[y]) for y in Range(vecz)])
+        distances = np.array([overlap_coef(vecz[x], vecz[y]) for y in Range(vecz)])
 
         if k < 1:
             return distances, 0
@@ -66,10 +60,12 @@ def _sortbythresh(distances, indices):
     dst.sort()
     return dst
 
+
 def _plot_alignments(filelist):
     #!cat {files[b]}
     #!cat {files[a]}
-    graphs = [vv.filetograph(f) for f in filelist]
+    file2graph = lambda x: ali2graph.mainchainentripy(read_stk_file(x)[0])
+    graphs = [file2graph for f in filelist]
     # ed.draw_graph_set(graphs, vertex_border=False, vertex_size=200)
     #plt.show()
     #so.gprint(graphs, size = 40)

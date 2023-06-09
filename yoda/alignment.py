@@ -1,6 +1,7 @@
 import numpy as np
-import uuid
 import re
+
+
 class Alignment:
     def __init__(self, ali,gc,gf, fname = ''):
         self.alignment = ali
@@ -20,21 +21,9 @@ def grepfamily(name):
 
 
 
-import re
-def split_on_newseq(s):
-    blank_line_regex = r'>.*'
-    return re.split(blank_line_regex, s.strip())
-
-def read_fasta(fname):
-    text =  open(fname, 'r').read()
-    sequences = split_on_newseq(text)
-    sequences = [s.strip() for s in sequences if s]
-    sequences = np.array([list(a.upper()) for a in sequences])
-    return Alignment(sequences, {}, {}, fname)
 
 
-
-def read_single_alignment(text,fname):
+def stk_to_alignment(text, fname):
     alignment = []
     gc = {}
     gf = {}
@@ -54,6 +43,7 @@ def read_single_alignment(text,fname):
     alignment = np.array([list(a.upper()) for a in alignment])
     return Alignment(alignment, gc, gf, fname)
 
+'''
 def fasta(ali):
     out = f''
     text= []
@@ -63,29 +53,5 @@ def fasta(ali):
         text.append(f''.join(line)) # this could work...
     text = f'\n'.join(text)
     return filename
+'''
 
-def process_cov(alis, debug = False):
-    for ali in alis:
-        try:
-            s= ali.struct
-            cov = ali.rscape
-        except:
-            print(f'structure and cov are missing... abort')
-
-        stack = []
-        pairs = []
-        for i,e in enumerate(s):
-            if e == f'(':
-                stack.append(i)
-            if e == f')':
-                pairs.append((stack.pop(),i))
-        annotation = [0]*len(s)
-        for start,end,value in cov:
-            if (start,end) in pairs:
-                annotation[start] = value
-                annotation[end] = value
-        ali.covariance = annotation
-        ali.pairs = pairs
-        if debug:
-            print(f"{ annotation}")
-    return alis

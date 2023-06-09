@@ -1,6 +1,11 @@
-
 from  sklearn.neighbors import KNeighborsClassifier
 import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.metrics import adjusted_rand_score, f1_score
+from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import cross_val_score
+import logging
+
 
 def _repeat_as_column(a,n):
     return np.tile(a,(n,1)).T
@@ -23,8 +28,6 @@ def knn_accuracy(X, y,n_neighbors):
 
     return agreement
 
-from sklearn.cluster import KMeans
-from sklearn.metrics import adjusted_rand_score, f1_score
 
 def kmeans_ari(X,y,k=20):
     means = KMeans(n_clusters = k)
@@ -33,9 +36,7 @@ def kmeans_ari(X,y,k=20):
 
 
 
-from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection import cross_val_score
-import logging
+
 def knn_f1(X,y,n_neighbors = 3,cv_strati_splits = 3):
 
     knn = KNeighborsClassifier(n_neighbors=n_neighbors)
@@ -55,3 +56,9 @@ def knn_f1(X,y,n_neighbors = 3,cv_strati_splits = 3):
     calc_jointly =  f1_score(real,pred,average=f'weighted')
     # mean of f1 scores as in rnascclust paper
     return np.mean( cross_val_score(knn, X, y, cv=skf, scoring=f'f1_weighted', n_jobs=1))
+
+
+def overlap_coef(csr_a, csr_b):
+    score =  len(np.intersect1d(csr_a.indices, csr_b.indices)) / min(len(csr_a.indices), len(csr_b.indices))
+    # score = np.intersect1d(a, b)/ min(len(a), len(b))
+    return 1-score

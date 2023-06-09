@@ -1,6 +1,5 @@
 import numpy as np
 
-
 match = lambda x,y: 1 if x==y else -1
 def needle(a,b, gap = -1, edgegap= -.1):
 
@@ -16,7 +15,6 @@ def needle(a,b, gap = -1, edgegap= -.1):
 	choices [0] = 2
 	choices [:,0] = 1
 
-
 	# lets fill the matrix
 	for i in range(la):
 		for j in range(lb):
@@ -25,8 +23,6 @@ def needle(a,b, gap = -1, edgegap= -.1):
 					   matrix[i+1,j]+(gap if i < la-1 else edgegap))              # sideways
 			matrix[i+1,j+1] = max(options)
 			choices[i+1,j+1] = np.argmax(options)
-
-
 	a = list(a)
 	b = list(b)
 	ca,cb = la,lb
