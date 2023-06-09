@@ -9,20 +9,13 @@ import math
 import ubergauss.tools as ut
 from yoda import ali2graph
 from yoda import alignment as ali
-
-
-
-
-'''
-#####################
-alignmentfile to vector
-##################
-now we do the grap but use vec to annotate the graph
-
-'''
-
-
 import re
+
+'''
+i think we should just load alignments here...
+'''
+
+
 
 def _split_on_empty_lines(s):
     blank_line_regex = r'\r?\n\s*\n'
@@ -30,9 +23,9 @@ def _split_on_empty_lines(s):
 
 
 def readfile(fname):
-    text =  open(fname, 'r').read()
+    text = open(fname, 'r').read()
     alignments = _split_on_empty_lines(text)
-    r =  Map(ali.read_single_alignment,alignments, fname = fname)
+    r = Map(ali.read_single_alignment,alignments, fname = fname)
     return [a for a in r if a]
 
 
@@ -42,9 +35,9 @@ def _split_on_slashstockholm(s):
 
 
 def readseedfile(fname):
-    text =  open(fname, 'r').read()
+    text = open(fname, 'r').read()
     alignments = _split_on_slashstockholm(text)
-    r =  Map(ali.read_single_alignment,alignments, fname = False)
+    r = Map(ali.read_single_alignment,alignments, fname = False)
     return [a for a in r if a]
 
 def mkgraph(alignment, return_graph = False, method = '2020', discrete = True):
@@ -135,9 +128,9 @@ def filtersmall(files):
 
 def getXYFiles_70k(path = '', limit = 0, encode = 'mainchainentropy'):
     allfiles = _getfiles_70k(path = path,removesmall = True, limit = limit)
-    flatfiles = flatten(allfiles)
+    flatfiles = Flatten(allfiles)
     alis = ut.xmap(readfile, flatfiles)
-    alis = flatten(alis)
+    alis = Flatten(alis)
     vectors = ut.xmap(lambda x: ali2vec(x,method = 'mainchainentropy'),
                       alis, processes = 88)
     values = [ i  for i,e in enumerate(allfiles) for z in Range(e) ]
@@ -153,7 +146,7 @@ def addcov(alis):
     for a in alis:
         covname = a.fname.replace(f'.fasta',f'_1.cov')
         try:
-            text =  open(covname, 'r').read()
+            text = open(covname, 'r').read()
         except:
             text = f''
             print(f" no cov file ; { covname=}")
@@ -164,6 +157,6 @@ def addcov(alis):
 def addstructure(alis):
     for a in alis:
         strname = a.fname+f'.lina'
-        text =  open(strname, 'r').readlines()[1].strip()
+        text = open(strname, 'r').readlines()[1].strip()
         a.struct = text
     return alis

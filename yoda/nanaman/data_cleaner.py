@@ -14,7 +14,7 @@ INIT and vectorize
 '''
 start = time.time()
 limit = 0
-# X,y,files = vv.getXYFiles(path = '/home/stefan/WEINBERG/',limit = limit, discrete = True); ut.dumpfile((X,y,files), f'{limit}delme.dmp')
+# X,y,files = vv.getXYFiles(path = ut.fixpath('~/WEINBERG/)',limit = limit, discrete = True); ut.dumpfile((X,y,files), f'{limit}delme.dmp')
 (X,y,files)  = ut.loadfile(f'{limit}delme.dmp')
 print(f"vectorized   used so far:{(time.time()-start)/60}")
 

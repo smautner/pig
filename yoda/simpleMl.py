@@ -2,7 +2,7 @@
 from  sklearn.neighbors import KNeighborsClassifier
 import numpy as np
 
-def repeat_as_column(a,n):
+def _repeat_as_column(a,n):
     return np.tile(a,(n,1)).T
 
 def knn_accuracy(X, y,n_neighbors):
@@ -19,7 +19,7 @@ def knn_accuracy(X, y,n_neighbors):
     neighbor_labels = neighbor_labels[:, 1:]
 
     # Compute the training error
-    agreement = (repeat_as_column(y_train,n_neighbors) == neighbor_labels).mean()
+    agreement = (_repeat_as_column(y_train,n_neighbors) == neighbor_labels).mean()
 
     return agreement
 
