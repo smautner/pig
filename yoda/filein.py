@@ -160,6 +160,7 @@ def addstructure(alis):
     return alis
 
 
+
 def process_cov(alis, debug = False):
     for ali in alis:
         try:
@@ -186,3 +187,19 @@ def process_cov(alis, debug = False):
             print(f"{ annotation}")
     return alis
 
+
+
+################
+# ijust do this on the rfam dataset....
+####################
+def addcov_rfam(alis):
+    for ali in alis:
+        cname = ut.fixpath( f'~/rfam/test/{ali.label}_{ali.gf["ID"][3:]}.sorted.cov' )
+        try:
+            text = open(cname, 'r').read()
+            allcov = re.findall(r'~.*', text)
+            ali.rscape = [_mktuple(f) for f in allcov]
+        except:
+            print(f"no file: { cname=}, no problem there is just nothing covariing")
+            ali.rscape = []
+    return alis

@@ -5,6 +5,7 @@ from sklearn.metrics import adjusted_rand_score, f1_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import cross_val_score
 import logging
+import ubergauss.tools as ut
 
 
 def _repeat_as_column(a,n):
@@ -62,3 +63,28 @@ def overlap_coef(csr_a, csr_b):
     score =  len(np.intersect1d(csr_a.indices, csr_b.indices)) / min(len(csr_a.indices), len(csr_b.indices))
     # score = np.intersect1d(a, b)/ min(len(a), len(b))
     return 1-score
+
+def overlap(csrs):
+    s = csrs.shape[0]
+    m = np.zeros((s,s))
+    for i in range(s):
+        for j in range(i,s):
+            m[i,j] = m[j,i] =overlap_coef(csrs[i], csrs[j])
+    return m
+
+def overlap2(csrs):
+    s = csrs.shape[0]
+    def dorow(i):
+        m = np.zeros(s)
+        for j in range(i,s):
+            m[j] = overlap_coef(csrs[i], csrs[j])
+        return m
+
+    return np.vstack(ut.xmap(dorow,range(s)))
+
+
+import sklearn
+def permutation_score(X,y):
+    estimator = sklearn.cluster.KMeans(n_clusters = len(np.unique(y)))
+    score = sklearn.model_selection.permutation_test_score(estimator, X, y, cv = 2)
+    return score[2] # this is the pvalue

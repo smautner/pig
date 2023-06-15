@@ -36,8 +36,8 @@ def stk_to_alignment(text, fname):
         elif line.startswith("#=GF"):
             split = line.split()
             gf[split[1]] = ' '.join(split[1:])
-        else:
-            alignment.append(line.split()[-1])
+        elif not line.startswith('#='):
+            alignment.append(line.split()[1])
     if not alignment:
         return None
     alignment = np.array([list(a.upper()) for a in alignment])

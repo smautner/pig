@@ -161,8 +161,8 @@ def scclust(ali):
         dict_of_a_or_empty = graph._adj.get(a,{})
         if b in dict_of_a_or_empty:
             newnode = max(nodes)+1
-            graph.add_node(newnode, label=f'o')
-            graph.add_edges_from([(newnode,z) for z in [i,j,a,b]],label = f'*')
+            graph.add_node(newnode, label='o')
+            graph.add_edges_from([(newnode,z) for z in [i,j,a,b]],label = '*')
 
 
     # so.gprint(graph, size = 30)
@@ -215,3 +215,150 @@ def rfamseedfilebasic(ali, structure  = 'SS_cons'):
     graph.graph['structure'] = conSS
     graph.graph['sequence'] = sequence
     return graph
+
+
+def clean_structure(struct):
+    struct = struct.replace(',',':')
+    struct = struct.replace('-',':')
+    struct = struct.replace('_',':')
+    struct = struct.replace('[','(')
+    struct = struct.replace('<','(')
+    struct = struct.replace('{','(')
+    struct = struct.replace(']',')')
+    struct = struct.replace('>',')')
+    struct = struct.replace('}',')')
+    return  struct
+
+
+
+def  rfam_clean(ali):
+
+    graph = nx.Graph()
+    lifo = []
+    assert f'RF' in ali.gc
+
+    ali.gc[f'clean_structure'] =  clean_structure (ali.gc[f'SS_cons'])
+    sequence = ''
+    conSS = ''
+
+    for i, (struct,nuc) in enumerate(zip(ali.gc[f'clean_structure'],ali.gc[f'RF'].upper())):
+        if nuc != '.': # ATTENTION! some structures have a :  but there is not even one nucleotide listed
+            try:
+                conSS += struct
+                sequence+=nuc
+                # myv  = [ ord(ali.gc[k][i]) for k in ali.gc.keys() ]
+                graph.add_node(i, label=nuc, vec=[])
+                # handle hydrogen bonds
+                if struct  == f'(':
+                    lifo.append(i)
+                if struct == f')':
+                    j = lifo.pop()
+                    graph.add_edge(i, j, label='=', type='basepair', len=1)
+            except:
+                print("ERROR IN FILE", ali.fname)
+
+    # ADD BACKBONE
+    nodes = list(graph)
+    nodes.sort()
+    for i in Range(len(nodes)-1):
+            a,b = nodes[i], nodes[i+1]
+            graph.add_edge(a,b, label='-', type='backbone', len=1)
+    graph.graph = {}
+    graph.graph['structure'] = conSS
+    graph.graph['sequence'] = sequence
+
+    ali.graph = graph
+    ali.graphnodes = list(graph)
+
+    return ali
+
+
+def normalize(ctr):
+    ctr.pop(f'-',None)
+    su = sum(ctr.values())
+    return [(k, v/su) for k,v in ctr.most_common()]
+
+def rfam_graph_decoration(ali, RY_thresh = .1,
+                          conservation = [.50,.75,.90,.95],
+                          covariance = False,
+                          sloppy = False,
+                          fake_nodes = False):
+    vec = []
+    if RY_thresh or conservation or sloppy:
+        nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
+
+    if RY_thresh:
+        def assignbase(i):
+            nucleotide_frequency = nuc_distribution[i]
+            nucleotide_frequency+=[('',0)]
+            if nucleotide_frequency[1][1]  > RY_thresh:
+                if {nucleotide_frequency[0][0], nucleotide_frequency[1][0]} == set("AG"):
+                    ali.graph.nodes[i]['label'] = f'R'
+                if {nucleotide_frequency[0][0], nucleotide_frequency[1][0]} == set("CU"):
+                    ali.graph.nodes[i]['label'] = f'Y'
+        Map(assignbase, list(ali.graph))
+
+    if conservation:
+        vec+=[0]*len(conservation)
+        for i in list(ali.graph):
+            nf = {a:0 for a in f"ACGU"}
+            nf.update(dict(nuc_distribution[i]))
+            label = ali.graph.nodes[i]['label']
+            percentage = nf[label] if label in 'ACGU' else (nf['A']+nf['G'] if label == 'R' else nf['C']+nf['U'])
+            cons = [int(percentage > x) for x in conservation]
+            ali.graph.nodes[i]['vec']+=cons
+
+    if covariance:
+            for a,b,v in ali.rscape:
+                if v < .05:
+                    if a in ali.graph and b in ali.graph and  ali.graph.has_edge(a,b):
+                        ali.graph.nodes[a]['label']= 'N'
+                        ali.graph.nodes[b]['label']= 'N'
+                    else:
+                        pass #print(f"cov missmatch:{ ali.fname} {a} {b}")
+
+    if sloppy:
+
+            vec+=[0]*2
+            for i in list(ali.graph):
+                ali.graph.nodes[i]['vec']+=[0,0]
+            if '(' in ali.alignment:
+                 print (ali.fname)
+            for a,b,data in ali.graph.edges(data=True):
+
+                if data['label'] ==  '=':
+                    for z in zip(ali.alignment[:,a], ali.alignment[:,b]):
+
+                        if sorted(z) == list('GU'):
+                            ali.graph.nodes[a]['vec'][-2] = 1
+                            ali.graph.nodes[b]['vec'][-2] = 1
+                            break
+
+                    for z in zip(ali.alignment[:,a], ali.alignment[:,b]):
+                        if sorted(z) == list('CU') or sorted(z) == list('AG') or sorted(z) == list('AC'):
+                            ali.graph.nodes[a]['vec'][-1] = 1
+                            ali.graph.nodes[b]['vec'][-1] = 1
+                            break
+    if fake_nodes:
+        # add fakenodes
+        pairdict = dict(Flatten([[(a,b),(b,a)] for a,b,data in ali.graph.edges(data=True) if data['label']=='=']))
+        nodes = list(ali.graph)
+
+        for n in range(len(nodes)-1):
+            # i and i+1 are definitely connected...
+            i,j = nodes[n],nodes[n+1]
+            a = pairdict.get(i,-1)
+            b = pairdict.get(j,-1)
+            dict_of_a_or_empty = ali.graph._adj.get(a,{})
+            if b in dict_of_a_or_empty and i < a: # i<a prevents foring it twice
+                newnode = max(ali.graph)+1
+                ali.graph.add_node(newnode, label='o',vec=[])
+                ali.graph.add_edges_from([(newnode,z) for z in [i,j,a,b]],label = '*')
+                if len(vec) > 0:
+                    ali.graph.nodes[newnode]['vec']= vec
+
+    #if 'vec' in ali.graph.nodes[list(ali.graph.nodes)]:
+    for n in ali.graph.nodes:
+        ali.graph.nodes[n]['vec'] = np.array(ali.graph.nodes[n]['vec'])
+
+    return ali
