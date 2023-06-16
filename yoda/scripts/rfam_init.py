@@ -154,9 +154,10 @@ def getlabels(ali):
 
 
 
-def vectorize(alignments,min_rd = 1, ignorevectorlabels = False):
+def vectorize(alignments,min_rd = 1, ignorevectorlabels = False, mp = False):
     vectorizer = lambda x: eg.vectorize([x.graph], discrete = ignorevectorlabels, min_r = min_rd, min_d = min_rd)
-    vectors = ut.xmap(vectorizer, alignments)
+    mapper = ut.xmap if mp else Map
+    vectors = mapper(vectorizer, alignments)
     vectors = sparse.vstack(vectors)
     return vectors
 
@@ -228,95 +229,140 @@ def plotneighbors(alignments,dist, alignment_id = 5, num = 3):
             plotalign(alignments[alignment_id], alignments[i])
 
 
-def run(labels, alignments):
-    alignments = ut.xmap( lambda ali:ali2graph.rfam_graph_decoration(ali, RY_thresh = .1,
-                          conservation = [.50,.75,.90,.95],
-                          covariance = False, # run rscape with -s to boost covariance in structure
-                          sloppy = False,
-                          fake_nodes = True), alignments)
+def get_distance_method(distance_measure):
+    if distance_measure == 'euclidean':
+        di = pairwise.euclidean_distances
+    elif distance_measure == 'overlap':
+        di = simpleMl.overlap
+    elif distance_measure == 'linkern':
+        di = lambda x: 10 - pairwise.linear_kernel(x)
+    else:
+        assert False, 'distance_measure invalid'
+    return di
 
-    showgraph(alignments[4])
+
+def run(labels, alignments,
+        RY_thresh = .01, conservation = [.50,.75,.90,.95],
+        covariance = .05, sloppy = False, fake_nodes = False,
+        distance_measure = 'euclidean',min_rd = 2,n_dim = 6, mp = False):
+
+
+    mapper = ut.xmap if mp else Map
+    alignments = mapper( lambda ali:ali2graph.rfam_graph_decoration(ali, RY_thresh = .1,
+                          conservation = conservation,
+                          covariance = covariance, # run rscape with -s to boost covariance in structure
+                          sloppy = sloppy,
+                          fake_nodes = fake_nodes),
+                          alignments)
+
+    # showgraph(alignments[4])
     # breakpoint()
     # vectors = vectorize_debug(alignments)
 
-    vectors = vectorize(alignments)
-    for mkdist in [lambda x: 10 - pairwise.linear_kernel(x), pairwise.euclidean_distances, simpleMl.overlap2]:
-        dist = mkdist(vectors)
-        X = embed(dist)
-        plotneighbors(alignments,dist, alignment_id = 5, num  = 4)
-        # scatter(X, labels)
-        print(f"{ silhouette_score(X, labels) = }")
-        # print(f"{ simpleMl.permutation_score(X, labels) = }")
+    vectors = vectorize(alignments, min_rd = min_rd,ignorevectorlabels= False,mp=mp)
+    di = get_distance_method(distance_measure)
+    dist = di(vectors)
+    X = embed(dist, n_dim= n_dim)
+    # plotneighbors(alignments,dist, alignment_id = 5, num  = 4)
+    # scatter(X, labels)
+    # print(f"{ simpleMl.permutation_score(X, labels) = }")
+
+    return silhouette_score(X, labels)
+
+
+############
+# get goodd features
+#####################
+def subset(l,a, mask):
+    # return [aa for ll,aa in zip(mask,a) if  ll], l[mask]
+    return a[mask], l[mask]
+def split(l,a,testlab):
+    yes = [ll in testlab for ll in l]
+    return subset(l,a,[False if a else True for a in yes]),subset(l,a,yes)
+
+
+from sklearn.ensemble import RandomForestClassifier as RF
+def get_features(X,y,n_ft = 100):
+    clf = RF().fit(X,y)
+    featscores =  clf.feature_importances_
+    # print(f"{ featscores=}")
+    return ut.binarize(featscores, n_ft)
+
+def eval_ft(ft,X,y):
+    # X=X.todense()
+    X = X[:,ft==1]
+    X = pairwise.euclidean_distances(X)
+    X = embed(X, n_dim= 6)
+    return silhouette_score(X, y)
+
+
+
+def decorate(ali):
+    return  ut.xmap( lambda ali:ali2graph.rfam_graph_decoration(ali, RY_thresh = .2,
+                          covariance = 0.05,
+                          sloppy = False,
+                          fake_nodes = True),
+                          ali)
+def supervised(l,a, n_ft = 100):
+    asd = np.unique(l)
+    np.random.shuffle(asd)
+    X = vectorize(decorate(a),min_rd=2, mp= True)
+    r = []
+    for testlabels in np.split(asd,3):
+        train, test = split(l,X, testlabels)
+        ft = get_features(*train, n_ft)
+        r.append( (eval_ft(ft, *test)) )
+    print(np.mean(r))
 
 
 
 
 
+############
+#   grip optimization
+##########
+from ubergauss import optimization as opti
+grid = {
+        #'RY_thresh' : np.linspace(0.1, 0.3, 3),
+        'covariance': [.05, .07, .1],
+        'distance_measure': 'euclidean'.split(),
+        'fake_nodes': [False,True],
+        'min_rd': [2]}
 
-
-
-
-
-
-
-
-
-
-
-methods = 'euclidean linkern overlap'.split()
-
-def dotheloop():
+def optimize():
     labels, alignments = prepdata(full = False)
-    alignments = ut.xmap(ali2graph.rfam_clean, alignments)
-    res = []
-    for RY_thresh in [.03, .05 ,.07]:
-        for covariation in [True,False]:
-            for sloppy in [False]:
-                for fake_nodes in [True,False]:
-                    for min_rd in [1,2]:
-                        alignments2 = ut.xmap( lambda ali:ali2graph.rfam_graph_decoration(ali, RY_thresh = RY_thresh,
-                              conservation = [.50,.75,.90,.95],
-                              covariance = covariation,
-                              sloppy = sloppy,
-                              fake_nodes = fake_nodes), alignments)
+    df =  opti.gridsearch(run, grid, (labels, alignments))
 
-                        args = {'covariation':covariation, f"sloppy":sloppy, f"fake_nodes":fake_nodes, 'min_rd':min_rd, f"RY_thresh":RY_thresh}
-                        vectors = vectorize(alignments2,min_rd=min_rd)
-                        def evaluate(task):
-                                '''
-                                task has pdim and method...
-                                '''
-                                meth = task['method']
-                                def methods(meth):
-                                    if meth == 'linkern':
-                                        return lambda x: 10 - pairwise.linear_kernel(x)
-                                    elif meth == 'euclidean':
-                                        return pairwise.euclidean_distances
-                                    return simpleMl.overlap2
+    print(df.corr(method='pearson'))
+    print(df.corr(method='spearman'))
+    print(df.corr(method='kendall'))
+    print(df.sort_values(by = 'score'))
 
-                                dist = methods(meth)(vectors)
-
-                                X = embed(dist,task['pdim'])
-                                return silhouette_score(X,labels), meth
-
-                        # tasks = [{'pdim':pdim, 'method':method} for pdim in [6] for method in methods]
-                        tasks = [{'pdim':6, 'method':'euclidean'}]
-                        scores_method = Map(evaluate , tasks)
-                        sco,meth = Transpose(scores_method)
-                        for t,s,m in zip(tasks,sco,meth):
-                            d= dict(args)
-                            d.update(t)
-                            d['method']  = m
-                            d['score']  = s
-                            res.append(d)
-                        print(res)
-    print()
-    print()
-    print()
-    print()
-    print(res)
-    ut.dumpfile(res, 'optiresults2.delme')
-
-        # print(f"{ simpleMl.permutation_score(X, labels) = }")
+def run_st(labels, alignments, distance_measure = 'euclidean',min_rd = 1,n_dim = 6, mp = True):
 
 
+    mapper = ut.xmap if mp else Map
+    alignments = mapper(ali2graph.rfam_graph_structure_deco, alignments)
+
+    # showgraph(alignments[4])
+    # breakpoint()
+    # vectors = vectorize_debug(alignments)
+
+    vectors = vectorize(alignments, min_rd = min_rd,ignorevectorlabels= False,mp=mp)
+    print(vectors[0].data.shape)
+
+    # z= alignments[0].graph
+    # for n in z:
+    #     print(f"{z.nodes[n]['vec'] = }")
+
+    # vectors = vectorize(alignments, min_rd = min_rd,ignorevectorlabels= True,mp=mp)
+    # print(vectors[0].data.shape)
+
+    di = get_distance_method(distance_measure)
+    dist = di(vectors)
+    X = embed(dist, n_dim= n_dim)
+    # plotneighbors(alignments,dist, alignment_id = 5, num  = 4)
+    # scatter(X, labels)
+    # print(f"{ simpleMl.permutation_score(X, labels) = }")
+
+    return silhouette_score(X, labels)
