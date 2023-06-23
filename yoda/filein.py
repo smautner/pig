@@ -194,7 +194,7 @@ def process_cov(alis, debug = False):
 ####################
 def addcov_rfam(alis):
     for ali in alis:
-        cname = ut.fixpath( f'~/rfam/test/{ali.label}_{ali.gf["ID"][3:]}.sorted.cov' )
+        cname = ut.fixpath( f'~/rfam/test2/{ali.label}_{ali.gf["ID"][3:]}.sorted.cov' )
         try:
             text = open(cname, 'r').read()
             allcov = re.findall(r'~.*', text)

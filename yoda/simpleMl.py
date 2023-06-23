@@ -59,17 +59,18 @@ def knn_f1(X,y,n_neighbors = 3,cv_strati_splits = 3):
     return np.mean( cross_val_score(knn, X, y, cv=skf, scoring=f'f1_weighted', n_jobs=1))
 
 
-def overlap_coef(csr_a, csr_b):
-    score =  len(np.intersect1d(csr_a.indices, csr_b.indices)) / min(len(csr_a.indices), len(csr_b.indices))
+def overlap_coef(csr_a, csr_b, nonorm=False):
+    norm = 1 if nonorm else min(len(csr_a.indices), len(csr_b.indices))
+    score =  len(np.intersect1d(csr_a.indices, csr_b.indices)) / norm
     # score = np.intersect1d(a, b)/ min(len(a), len(b))
     return 1-score
 
-def overlap(csrs):
+def overlap(csrs, nonorm =False):
     s = csrs.shape[0]
     m = np.zeros((s,s))
     for i in range(s):
         for j in range(i,s):
-            m[i,j] = m[j,i] =overlap_coef(csrs[i], csrs[j])
+            m[i,j] = m[j,i] =overlap_coef(csrs[i], csrs[j],nonorm=nonorm)
     return m
 
 def overlap2(csrs):

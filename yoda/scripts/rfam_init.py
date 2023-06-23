@@ -1,4 +1,6 @@
 from lmz import Map,Zip,Filter,Grouper,Range,Transpose
+from sklearn.cluster import KMeans
+from sklearn.ensemble import RandomForestClassifier as RF
 import traceback
 import numpy as np
 from yoda import filein, simpleMl
@@ -7,7 +9,7 @@ from ubergauss import tools as ut
 from yoda import ali2graph
 import eden.graph as eg
 from scipy import sparse
-from sklearn.metrics import pairwise
+from sklearn.metrics import pairwise, adjusted_rand_score
 import matplotlib
 matplotlib.use('module://matplotlib-sixel')
 from matplotlib import pyplot as plt
@@ -155,19 +157,12 @@ def getlabels(ali):
 
 
 def vectorize(alignments,min_rd = 1, ignorevectorlabels = False, mp = False):
-    vectorizer = lambda x: eg.vectorize([x.graph], discrete = ignorevectorlabels, min_r = min_rd, min_d = min_rd)
+    vectorizer = lambda x: eg.vectorize([x.graph], discrete = ignorevectorlabels, min_r = min_rd, min_d = min_rd) # normalization=False, inner_normalization=False)
     mapper = ut.xmap if mp else Map
     vectors = mapper(vectorizer, alignments)
     vectors = sparse.vstack(vectors)
     return vectors
 
-def vectorize_debug(alignments,min_rd = 1, ignorevectorlabels = False):
-    vectorizer = lambda x: eg.vectorize([x.graph], discrete = ignorevectorlabels, min_r = min_rd, min_d = min_rd)
-    def vec(ali):
-            return vectorizer(ali)
-    vectors = Map(vec, alignments)
-    vectors = sparse.vstack(vectors)
-    return vectors
 
 def get_ali_dist():
     # iconv -f ISO-8859-1 -t UTF-8 Rfam.seed > Rfam.seed.utf8
@@ -234,6 +229,8 @@ def get_distance_method(distance_measure):
         di = pairwise.euclidean_distances
     elif distance_measure == 'overlap':
         di = simpleMl.overlap
+    elif distance_measure == 'overlap_nonorm':
+        di = lambda x: 1 - simpleMl.overlap(x,nonorm=True)
     elif distance_measure == 'linkern':
         di = lambda x: 10 - pairwise.linear_kernel(x)
     else:
@@ -241,16 +238,45 @@ def get_distance_method(distance_measure):
     return di
 
 
+import grakel
+
+
+def convert_to_grakel_graph(graph: nx.DiGraph) -> grakel.Graph:
+    dol = nx.convert.to_dict_of_lists(graph)
+    node_attr = dict()
+    for nid, attr in graph.nodes(data=True):
+        node_attr[nid] = np.asarray([attr['label']]+attr['vec'].tolist())
+
+    result = grakel.Graph(dol, node_labels=node_attr, graph_format='dictionary')
+    for node in [n for n in dol.keys() if n not in result.edge_dictionary.keys()]:
+        result.edge_dictionary[node] = {}
+    return result
+
+def grakel_vectorize(alignment, vectorizer= 'WeisfeilerLehman'):
+    g =  convert_to_grakel_graph( alignment.graph)
+    d = {'normalize' : False, 'sparse' : True}
+    return eval('grakel'.vectorizer)(**d).fit_transform(g)
+
+# def grakel_vectorize(alignment, vectorizer= None):
+#     g =  convert_to_grakel_graph( alignment.graph)
+#     if vectorizer is None:
+#         vectorizer = grakel.WeisfeilerLehman
+#     for ker in [kernellists... ]..
+#     return eval('grakel'.vectori)(n_iter= 4, normalize = False, sparse = True).fit_transform(g)
+
+
+
+
 def run(labels, alignments,
         RY_thresh = .01, conservation = [.50,.75,.90,.95],
-        covariance = .05, sloppy = False, fake_nodes = False,
+        covariance = .05, sloppy = False, fake_nodes = False, vectorizer = 'WeisfeilerLehman',
         distance_measure = 'euclidean',min_rd = 2,n_dim = 6, mp = False):
 
 
     mapper = ut.xmap if mp else Map
     alignments = mapper( lambda ali:ali2graph.rfam_graph_decoration(ali, RY_thresh = .1,
                           conservation = conservation,
-                          covariance = covariance, # run rscape with -s to boost covariance in structure
+                          covariance = covariance,
                           sloppy = sloppy,
                           fake_nodes = fake_nodes),
                           alignments)
@@ -259,15 +285,25 @@ def run(labels, alignments,
     # breakpoint()
     # vectors = vectorize_debug(alignments)
 
-    vectors = vectorize(alignments, min_rd = min_rd,ignorevectorlabels= False,mp=mp)
+    # vectors = vectorize(alignments,
+    #                     min_rd = min_rd,
+    #                     ignorevectorlabels= False,
+    #                     mp=mp)
+
+    vectors  = mapper(lambda vectorizer:grakel_vectorize(x,vectorizer),alignments)
+
     di = get_distance_method(distance_measure)
     dist = di(vectors)
     X = embed(dist, n_dim= n_dim)
+
     # plotneighbors(alignments,dist, alignment_id = 5, num  = 4)
     # scatter(X, labels)
     # print(f"{ simpleMl.permutation_score(X, labels) = }")
 
     return silhouette_score(X, labels)
+    return silhouette_score(X, labels), adjusted_rand_score(
+                        KMeans(n_clusters=len(np.unique(labels))).fit_predict(X),
+                        labels)
 
 
 ############
@@ -281,9 +317,10 @@ def split(l,a,testlab):
     return subset(l,a,[False if a else True for a in yes]),subset(l,a,yes)
 
 
-from sklearn.ensemble import RandomForestClassifier as RF
+
 def get_features(X,y,n_ft = 100):
-    clf = RF().fit(X,y)
+    # clf = RF(n_estimators = 100,max_features=None).fit(X,y)
+    clf = RF(n_estimators = 200).fit(X,y)
     featscores =  clf.feature_importances_
     # print(f"{ featscores=}")
     return ut.binarize(featscores, n_ft)
@@ -301,18 +338,26 @@ def decorate(ali):
     return  ut.xmap( lambda ali:ali2graph.rfam_graph_decoration(ali, RY_thresh = .2,
                           covariance = 0.05,
                           sloppy = False,
-                          fake_nodes = True),
+                          fake_nodes = False),
                           ali)
+
+
 def supervised(l,a, n_ft = 100):
-    asd = np.unique(l)
-    np.random.shuffle(asd)
-    X = vectorize(decorate(a),min_rd=2, mp= True)
-    r = []
-    for testlabels in np.split(asd,3):
+
+    list_of_classes = np.unique(l)
+    np.random.shuffle(list_of_classes)
+
+    # a = ut.xmap(ali2graph.rfam_graph_structure_deco, a)
+    a = decorate(a)
+    X = vectorize(a,min_rd=1, mp= True)
+    test_scores = []
+    for testlabels in np.split(list_of_classes,3):
         train, test = split(l,X, testlabels)
         ft = get_features(*train, n_ft)
-        r.append( (eval_ft(ft, *test)) )
-    print(np.mean(r))
+        test_scores.append( (eval_ft(ft, *test)) )
+        print(f"{ eval_ft(ft, *train) = }")
+    print(f"{ np.mean(test_scores)= }")
+
 
 
 
@@ -324,23 +369,24 @@ def supervised(l,a, n_ft = 100):
 from ubergauss import optimization as opti
 grid = {
         #'RY_thresh' : np.linspace(0.1, 0.3, 3),
-        'covariance': [.05, .07, .1],
-        'distance_measure': 'euclidean'.split(),
+        'covariance': [.05, .1],
+        # 'distance_measure': 'euclidean '.split(),
         'fake_nodes': [False,True],
-        'min_rd': [2]}
+        # 'sloppy': [False,True],
+        'mp': [False],
+        'min_rd': [1,2]}
 
 def optimize():
     labels, alignments = prepdata(full = False)
     df =  opti.gridsearch(run, grid, (labels, alignments))
 
     print(df.corr(method='pearson'))
-    print(df.corr(method='spearman'))
-    print(df.corr(method='kendall'))
+    # print(df.corr(method='spearman'))
+    # print(df.corr(method='kendall'))
+
     print(df.sort_values(by = 'score'))
 
 def run_st(labels, alignments, distance_measure = 'euclidean',min_rd = 1,n_dim = 6, mp = True):
-
-
     mapper = ut.xmap if mp else Map
     alignments = mapper(ali2graph.rfam_graph_structure_deco, alignments)
 
@@ -349,7 +395,6 @@ def run_st(labels, alignments, distance_measure = 'euclidean',min_rd = 1,n_dim =
     # vectors = vectorize_debug(alignments)
 
     vectors = vectorize(alignments, min_rd = min_rd,ignorevectorlabels= False,mp=mp)
-    print(vectors[0].data.shape)
 
     # z= alignments[0].graph
     # for n in z:
