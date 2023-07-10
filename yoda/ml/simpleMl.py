@@ -1,4 +1,6 @@
 from  sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier as RF
+import sklearn
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score, f1_score
@@ -83,8 +85,13 @@ def overlap2(csrs):
 
     return np.vstack(ut.xmap(dorow,range(s)))
 
+def featuremask(X,y,n_ft = 100):
+    # clf = RF(n_estimators = 100,max_features=None).fit(X,y)
+    clf = RF(n_estimators = 100).fit(X,y)
+    featscores =  clf.feature_importances_
+    # print(f"{ featscores=}")
+    return ut.binarize(featscores, n_ft)
 
-import sklearn
 def permutation_score(X,y):
     estimator = sklearn.cluster.KMeans(n_clusters = len(np.unique(y)))
     score = sklearn.model_selection.permutation_test_score(estimator, X, y, cv = 2)

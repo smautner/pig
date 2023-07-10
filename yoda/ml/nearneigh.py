@@ -39,8 +39,6 @@ def neighbors(vecz, k = 100):
 
 
 
-
-
 #########
 # plotting and related functions
 ############

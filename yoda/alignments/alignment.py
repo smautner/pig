@@ -21,8 +21,6 @@ def grepfamily(name):
 
 
 
-
-
 def stk_to_alignment(text, fname):
     alignment = []
     gc = {}

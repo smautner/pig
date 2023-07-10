@@ -17,8 +17,6 @@ from yoda.alignment import Alignment
 i think we should just load alignments here...
 '''
 
-
-
 def _split_on_empty_lines(s):
     blank_line_regex = r'\r?\n\s*\n'
     return re.split(blank_line_regex, s.strip())
