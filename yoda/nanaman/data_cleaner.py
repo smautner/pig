@@ -9,6 +9,8 @@ import numpy as np
 import ubergauss.tools as ut
 import time
 
+import yoda.draw
+
 '''
 INIT and vectorize
 '''
@@ -25,17 +27,17 @@ get kneighbors
 # dist, inst = nn.neighbors(X,k = 400);  ut.dumpfile((dist, inst), f'{limit}nndelme.dmp')
 (dist, inst) = ut.loadfile(f'{limit}nndelme.dmp')
 print(f"we have neighbors now   used so far:{(time.time()-start)/60}")
-nn.plot_NN(dist)
+yoda.draw.plot_NN(dist)
 
 
 
 '''
 inspect neighbors? all ok?
 '''
-nn.plotbythresh(dist,inst,files, thresh = .6, max = 2)
-nn.plotbythresh(dist,inst,files, thresh = .65, max = 2)
-nn.plotbythresh(dist,inst,files, thresh = .7, max = 2)
-nn.plotbythresh(dist,inst,files, thresh = .75, max = 2)
+yoda.draw.plotbythresh(dist, inst, files, thresh = .6, max = 2)
+yoda.draw.plotbythresh(dist, inst, files, thresh = .65, max = 2)
+yoda.draw.plotbythresh(dist, inst, files, thresh = .7, max = 2)
+yoda.draw.plotbythresh(dist, inst, files, thresh = .75, max = 2)
 print('is k large enough?', sum(dist[:,-1] < .7 ))  # zero is good
 
 exit()
@@ -50,7 +52,7 @@ print(f"filtered  used so far:{(time.time()-start)/60}")
 checking the filter:
 '''
 dist2, inst2 = nn.neighbors([x for k,x in enumerate(X) if k not in rmlist],k = 2)
-nn.plot_NN(dist2)
+yoda.draw.plot_NN(dist2)
 print(f"confirmationNNdone  used so far:{(time.time()-start)/60}")
 
 
