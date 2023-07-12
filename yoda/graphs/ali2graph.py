@@ -282,7 +282,9 @@ def normalize(ctr):
 
 
 def rfam_graph_structure_deco(ali):
+
     nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
+
     def dist2vec(nudi):
         nudi = dict(nudi)
         nudi['R'] = sum([nudi.get(x,0) for x in 'A G'.split()])
@@ -294,6 +296,7 @@ def rfam_graph_structure_deco(ali):
     for n in ali.graph:
         ali.graph.nodes[n]['label'] = '1'
         ali.graph.nodes[n]['vec'] = dist2vec(nuc_distribution[n])
+
     return ali
 
 def rfam_graph_decoration(ali, RY_thresh = .1,

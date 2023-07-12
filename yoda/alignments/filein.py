@@ -7,11 +7,10 @@ from collections import defaultdict, Counter
 from sklearn.preprocessing import normalize
 import math
 import ubergauss.tools as ut
-from yoda import ali2graph
-from yoda import alignment as ali
+from yoda.graphs import ali2graph
+import yoda.alignments.alignment as ali
 import re
 
-from yoda.alignment import Alignment
 
 '''
 i think we should just load alignments here...
@@ -51,7 +50,7 @@ def read_fasta(fname):
     sequences = split_on_newseq(text)
     sequences = [s.strip() for s in sequences if s]
     sequences = np.array([list(a.upper()) for a in sequences])
-    return Alignment(sequences, {}, {}, fname)
+    return ali.Alignment(sequences, {}, {}, fname)
 
 #############################
 # nanaman

@@ -1,12 +1,11 @@
-from lmz import *
+from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 import numpy as np
 import structout as so
 from ubergauss import tools as ut
-from yoda import ali2graph
-from yoda.filein import read_stk_file
-import yoda.pairwise_alignments
-import yoda.filein as vv
-from yoda.simpleMl import overlap_coef
+from yoda.graphs import ali2graph
+import yoda.ml.pairwise_alignments
+import yoda.alignments.filein as vv
+from yoda.ml.simpleMl import overlap_coef
 
 '''
 use the vectors to make a nearest neighbor model...
@@ -62,7 +61,7 @@ def _sortbythresh(distances, indices):
 def _plot_alignments(filelist):
     #!cat {files[b]}
     #!cat {files[a]}
-    file2graph = lambda x: ali2graph.mainchainentripy(read_stk_file(x)[0])
+    file2graph = lambda x: ali2graph.mainchainentripy(vv.read_stk_file(x)[0])
     graphs = [file2graph for f in filelist]
     # ed.draw_graph_set(graphs, vertex_border=False, vertex_size=200)
     #plt.show()

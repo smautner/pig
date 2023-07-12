@@ -4,6 +4,7 @@ from lmz import Map
 from scipy import sparse
 from ubergauss import tools as ut
 from eden import graph as eg
+import grakel
 
 
 def vectorize_alignments(alignments,min_rd = 1, ignorevectorlabels = False, mp = False):

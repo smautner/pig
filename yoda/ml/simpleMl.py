@@ -37,7 +37,13 @@ def kmeans_ari(X,y,k=20):
     predicted = means.fit_predict(X)
     return adjusted_rand_score(y,predicted)
 
+from yoda import ml
+from yoda import draw
 
+def kmeans_bla(dist,labels):
+    X = ml.embed(dist, n_dim = 2)
+    draw.scatter(X,labels)
+    adjusted_rand_score( KMeans(n_clusters=len(np.unique(labels))).fit_predict(X), labels)
 
 
 def knn_f1(X,y,n_neighbors = 3,cv_strati_splits = 3):
