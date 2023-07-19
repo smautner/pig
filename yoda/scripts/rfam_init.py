@@ -7,7 +7,8 @@ from yoda.graphs import ali2graph
 from sklearn.metrics import pairwise
 import matplotlib
 from yoda.draw import asciigraph
-from yoda.graphs import vectorize_alignments, grakel_vectorize
+# from yoda.graphs import vectorize_alignments, grakel_vectorize
+import yoda.graphs as graphs
 from yoda.ml import embed, get_distance_method
 matplotlib.use('module://matplotlib-sixel')
 import ubergauss.optimization as uo
@@ -30,17 +31,24 @@ from yoda import alignments
 
 
 def run( alignments,labels,
+
         RY_thresh = .1, conservation = [.50,.75,.90,.95],
-        covariance = .05, sloppy = False, fake_nodes = False, vectorizer = 'WeisfeilerLehman',
-        distance_measure = 'euclidean',min_rd = 2,n_dim = 6, mp = False):
+        covariance = .05, sloppy = False, fake_nodes = False,
+        vectorizer = f'', # 'WeisfeilerLehman',
+        distance_measure = 'euclidean',min_rd = 2,n_dim = 6, mp = False, **kwargs):
 
     mapper = ut.xmap if mp else Map
-    alignments = mapper( lambda ali:ali2graph.rfam_graph_decoration(ali, RY_thresh = RY_thresh ,
-                          conservation = conservation,
-                          covariance = covariance,
-                          sloppy = sloppy,
-                          fake_nodes = fake_nodes),
-                          alignments)
+
+    # alignments = mapper( lambda ali:ali2graph.rfam_graph_decoration(ali, RY_thresh = RY_thresh ,
+    #                       conservation = conservation,
+    #                       covariance = covariance,
+    #                       sloppy = sloppy,
+    #                       fake_nodes = fake_nodes),
+    #                       alignments)
+
+    alignments = mapper( lambda ali:ali2graph.set_base_label(ali,**kwargs), alignments)
+
+
 
     # asciigraph(alignments[4])
 
@@ -52,10 +60,13 @@ def run( alignments,labels,
     #                     ignorevectorlabels= False,
     #                     mp=mp)
 
-    # vectors  = mapper(lambda vectorizer: grakel_vectorize(x, vectorizer), alignments)
-    vectors = vectorize_alignments(alignments, mp=mp, min_rd= min_rd)
-    di = get_distance_method(distance_measure)
-    return silhouette_score(di(vectors), labels, metric=f'precomputed')
+    if vectorizer:
+        distance_matrix  = graphs.grakel_vectorize(alignments, vectorizer)
+    else:
+        vectors = graphs.vectorize_alignments(alignments, mp=mp, min_rd= min_rd)
+        distance_matrix = get_distance_method(distance_measure)(vectors)
+
+    return silhouette_score(distance_matrix, labels, metric=f'precomputed')
 
     # dist = di(vectors)
     # X = embed(dist, n_dim= n_dim)
@@ -110,17 +121,32 @@ def supervised(a,l, n_ft = 100):
 ##########
 from ubergauss import optimization as opti
 grid = {
-        'RY_thresh' : np.linspace(0.1, 0.3, 3),
-        'covariance': [.05, .1],
+        # 'RYlimit' : np.linspace(0.9, 0.99, 10),
+        # 'nuclimit': np.linspace(.74,.99,1),
         # 'distance_measure': 'euclidean '.split(),
         # 'fake_nodes': [False,True],
         # 'sloppy': [False,True],
-        'min_rd': [1,2]}
+        # 'min_rd': [1,2]
+        f'vectorizer' : graphs.grakel_kernels
+        }
 
 def optimize():
-    data = alignments.load_rfam(full = False)
+    data = alignments.load_rfam(full = False)[:50]
     df =  opti.gridsearch(run, grid, data)
-    print(df.corr(method='pearson'))
-    opti.print(df)
-    print(df.sort_values(by = 'score'))
+    print(df.corr(method='spearman'))
+    opti.dfprint(df)
+    ut.dumpfile(df,f'lastopti.delme')
+
+def drawoptidf():
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    # sns.scatterplot(data = df, x = f'RYlimit', y = f'nuclimit', c = list(-df['score']))
+    df = ut.loadfile(f'lastopti.delme')
+    mydf = df.pivot(f'RYlimit', f'nuclimit', f'score')
+    sns.heatmap(mydf)
+    plt.tight_layout()
+    plt.show()
+    plt.close()
+
+
 

@@ -6,9 +6,6 @@ from matplotlib import pyplot as plt
 from structout.rnagraph import RNAprint
 
 import yoda.alignments
-from yoda.alignments import filein as vv
-from yoda.graphs import ali2graph
-from yoda.ml import nearneigh as nn
 
 def scatter(X, y):
     plt.scatter(*X.T, c = y)

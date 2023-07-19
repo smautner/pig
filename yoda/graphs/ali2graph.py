@@ -274,15 +274,12 @@ def  rfam_clean(ali):
 
 
 def normalize(ctr):
-    ctr.pop(f'-',None)
+    ctr.pop('-',None)
     su = sum(ctr.values())
     return [(k, v/su) for k,v in ctr.most_common()]
 
 
-
-
 def rfam_graph_structure_deco(ali):
-
     nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
 
     def dist2vec(nudi):
@@ -291,6 +288,7 @@ def rfam_graph_structure_deco(ali):
         nudi['Y'] = sum([nudi.get(x,0) for x in 'C U'.split()])
         levels =  np.array([nudi.get(x,0) for x in f"A G C U Y R".split()])
         thresh = [.25,.5,.75,.95]
+        print(f"{nudi=}")
         return np.array([ e > t for e in levels for t in thresh])
 
     for n in ali.graph:
@@ -299,7 +297,7 @@ def rfam_graph_structure_deco(ali):
 
     return ali
 
-def rfam_graph_decoration(ali, RY_thresh = .1,
+def rfam_graph_decoration(ali, RY_thresh = .6, nuc_thresh = .85,
                           conservation = [.50,.75,.90,.95],
                           covariance = False,
                           sloppy = False,
@@ -308,7 +306,7 @@ def rfam_graph_decoration(ali, RY_thresh = .1,
     if RY_thresh or conservation or sloppy:
         nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
 
-    if RY_thresh:
+    if RY_thresh or nuc:
         def assignbase(i):
             nucleotide_frequency = nuc_distribution[i]
             nucleotide_frequency+=[('',0)]
@@ -383,3 +381,27 @@ def rfam_graph_decoration(ali, RY_thresh = .1,
         ali.graph.nodes[n]['vec'] = np.array(ali.graph.nodes[n]['vec'])
 
     return ali
+
+
+def set_base_label(ali, nuc_thresh = .85 , RY_thresh = .6):
+
+    nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
+    thresh = nuc_thresh
+    bonus = RY_thresh
+    def chooselabel(nudi):
+        nudi = dict(nudi)
+        # return max(nudi.items(), key = lambda x:x[1])[0]
+        for k,v in nudi.items():
+            if v > thresh:
+                 return k
+        if sum([nudi.get(x,0) for x in 'A G'.split()]) > bonus:
+            return f'R'
+        if sum([nudi.get(x,0) for x in 'C U'.split()]) > bonus:
+            return f"Y"
+        return f'0'
+
+    for n in ali.graph:
+        ali.graph.nodes[n]['label'] = chooselabel(nuc_distribution[n])
+        # ali.graph.nodes[n]['vec'] = dist2vec(nuc_distribution[n])
+    return ali
+

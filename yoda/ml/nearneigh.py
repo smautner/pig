@@ -98,3 +98,5 @@ def filter_thresh(distances, indices, thresh = .7, checkmax = 400):
 def filter_dump(rmlist, files, out = 'okfiles.json'):
     filesF = [f for i,f in enumerate(files) if i not in rmlist]
     ut.jdumpfile(filesF,out)
+
+
