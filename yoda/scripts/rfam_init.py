@@ -101,7 +101,7 @@ def supervised(a,l, n_ft = 100):
     # a = ut.xmap(ali2graph.rfam_graph_structure_deco, a)
     a = add_vector_attributes(a)
 
-    X = vectorize_alignments(a, min_rd=1, mp= True)
+    X = graphs.vectorize_alignments(a, min_rd=1, mp= True)
     test_scores = []
 
     for train, test in uo.groupCV(n_splits = 3).split(X,l,l):

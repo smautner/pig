@@ -171,6 +171,7 @@ def scclust(ali):
 
 
 
+'''
 def rfamseedfilebasic(ali, structure  = 'SS_cons'):
 
     graph = nx.Graph()
@@ -215,6 +216,7 @@ def rfamseedfilebasic(ali, structure  = 'SS_cons'):
     graph.graph['structure'] = conSS
     graph.graph['sequence'] = sequence
     return graph
+'''
 
 
 def clean_structure(struct):
@@ -279,6 +281,7 @@ def normalize(ctr):
     return [(k, v/su) for k,v in ctr.most_common()]
 
 
+'''
 def rfam_graph_structure_deco(ali):
     nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
 
@@ -296,85 +299,42 @@ def rfam_graph_structure_deco(ali):
         ali.graph.nodes[n]['vec'] = dist2vec(nuc_distribution[n])
 
     return ali
+'''
 
 def rfam_graph_decoration(ali, RY_thresh = .6, nuc_thresh = .85,
                           conservation = [.50,.75,.90,.95],
                           covariance = False,
                           sloppy = False,
+                          progress = False,
+                          cons_raw = False,
                           fake_nodes = False):
     vec = []
-    if RY_thresh or conservation or sloppy:
-        nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
+    nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
 
-    if RY_thresh or nuc:
-        def assignbase(i):
-            nucleotide_frequency = nuc_distribution[i]
-            nucleotide_frequency+=[('',0)]
-            if nucleotide_frequency[1][1]  > RY_thresh:
-                if {nucleotide_frequency[0][0], nucleotide_frequency[1][0]} == set("AG"):
-                    ali.graph.nodes[i]['label'] = f'R'
-                if {nucleotide_frequency[0][0], nucleotide_frequency[1][0]} == set("CU"):
-                    ali.graph.nodes[i]['label'] = f'Y'
-        Map(assignbase, list(ali.graph))
+    if RY_thresh or nuc_thresh:
+        set_base_label(ali,nuc_distribution, nuc_thresh= nuc_thresh,RY_thresh= RY_thresh)
 
     if conservation:
         vec+=[0]*len(conservation)
-        for i in list(ali.graph):
-            nf = {a:0 for a in f"ACGU"}
-            nf.update(dict(nuc_distribution[i]))
-            label = ali.graph.nodes[i]['label']
-            percentage = nf[label] if label in 'ACGU' else (nf['A']+nf['G'] if label == 'R' else nf['C']+nf['U'])
-            cons = [int(percentage > x) for x in conservation]
-            ali.graph.nodes[i]['vec']+=cons
+        vec_add_conservation(ali, nuc_distribution, conservation)
 
     if covariance:
-            for a,b,v in ali.rscape:
-                if v < covariance:
-                    if a in ali.graph and b in ali.graph and  ali.graph.has_edge(a,b):
-                        ali.graph.nodes[a]['label']= 'N'
-                        ali.graph.nodes[b]['label']= 'N'
-                    else:
-                        pass #print(f"cov missmatch:{ ali.fname} {a} {b}")
+        set_base_covariance(ali, covariance)
 
     if sloppy:
+        vec+=[0]*2
+        vec_add_sloppy(ali)
 
-            vec+=[0]*2
-            for i in list(ali.graph):
-                ali.graph.nodes[i]['vec']+=[0,0]
-            if '(' in ali.alignment:
-                 print (ali.fname)
-            for a,b,data in ali.graph.edges(data=True):
+    if progress:
+        vec_add_progress(ali)
+        vec += [0]
+    if cons_raw:
+        vec += [0]
+        vec_add_cons_raw(ali, nuc_distribution)
 
-                if data['label'] ==  '=':
-                    for z in zip(ali.alignment[:,a], ali.alignment[:,b]):
-
-                        if sorted(z) == list('GU'):
-                            ali.graph.nodes[a]['vec'][-2] = 1
-                            ali.graph.nodes[b]['vec'][-2] = 1
-                            break
-
-                    for z in zip(ali.alignment[:,a], ali.alignment[:,b]):
-                        if sorted(z) == list('CU') or sorted(z) == list('AG') or sorted(z) == list('AC'):
-                            ali.graph.nodes[a]['vec'][-1] = 1
-                            ali.graph.nodes[b]['vec'][-1] = 1
-                            break
     if fake_nodes:
-        # add fakenodes
-        pairdict = dict(Flatten([[(a,b),(b,a)] for a,b,data in ali.graph.edges(data=True) if data['label']=='=']))
-        nodes = list(ali.graph)
-
-        for n in range(len(nodes)-1):
-            # i and i+1 are definitely connected...
-            i,j = nodes[n],nodes[n+1]
-            a = pairdict.get(i,-1)
-            b = pairdict.get(j,-1)
-            dict_of_a_or_empty = ali.graph._adj.get(a,{})
-            if b in dict_of_a_or_empty and i < a: # i<a prevents foring it twice
-                newnode = max(ali.graph)+1
-                ali.graph.add_node(newnode, label='o',vec=[])
-                ali.graph.add_edges_from([(newnode,z) for z in [i,j,a,b]],label = '*')
-                if len(vec) > 0:
-                    ali.graph.nodes[newnode]['vec']= vec
+        # add this last so that we know how long the vecs of the default nodes are
+        add_fake_nodes(ali, vec)
 
     #if 'vec' in ali.graph.nodes[list(ali.graph.nodes)]:
     for n in ali.graph.nodes:
@@ -383,9 +343,87 @@ def rfam_graph_decoration(ali, RY_thresh = .6, nuc_thresh = .85,
     return ali
 
 
-def set_base_label(ali, nuc_thresh = .85 , RY_thresh = .6):
+def vec_add_progress(ali):
+    nodes = list(ali.graph)
+    for n in nodes:
+        ali.graph.nodes[n]['vec'] += [ n/len(nodes) ]
 
-    nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
+
+def vec_add_cons_raw(ali, nuc_distribution):
+    nodes = list(ali.graph)
+    for n in nodes:
+        add = 0
+        if ali.graph.nodes[n]['label'] in 'ACGU':
+            add = nuc_distribution[n][1]
+        if ali.graph.nodes[n]['label'] == 'Y':
+            nf = dict(nuc_distribution[i])
+            add = nf['C'] + nf['U'])
+        if ali.graph.nodes[n]['label'] == 'R':
+            nf = dict(nuc_distribution[i])
+            add = nf['A'] + nf['G']
+        ali.graph.nodes[n]['vec'] += [ add ]
+
+
+def add_fake_nodes(ali,vec):
+    # add fakenodes
+    pairdict = dict(Flatten([[(a, b), (b, a)] for a, b, data in ali.graph.edges(data=True) if data['label'] == '=']))
+    nodes = list(ali.graph)
+    for n in range(len(nodes) - 1):
+        # i and i+1 are definitely connected...
+        i, j = nodes[n], nodes[n + 1]
+        a = pairdict.get(i, -1)
+        b = pairdict.get(j, -1)
+        dict_of_a_or_empty = ali.graph._adj.get(a, {})
+        if b in dict_of_a_or_empty and i < a:  # i<a prevents foring it twice
+            newnode = max(ali.graph) + 1
+            ali.graph.add_node(newnode, label='o', vec=[])
+            ali.graph.add_edges_from([(newnode, z) for z in [i, j, a, b]], label='*')
+            if len(vec) > 0:
+                ali.graph.nodes[newnode]['vec'] = vec
+
+
+def vec_add_sloppy(ali):
+    for i in list(ali.graph):
+        ali.graph.nodes[i]['vec'] += [0, 0]
+    if '(' in ali.alignment:
+        print(ali.fname)
+    for a, b, data in ali.graph.edges(data=True):
+
+        if data['label'] == '=':
+            for z in zip(ali.alignment[:, a], ali.alignment[:, b]):
+
+                if sorted(z) == list('GU'):
+                    ali.graph.nodes[a]['vec'][-2] = 1
+                    ali.graph.nodes[b]['vec'][-2] = 1
+                    break
+
+            for z in zip(ali.alignment[:, a], ali.alignment[:, b]):
+                if sorted(z) == list('CU') or sorted(z) == list('AG') or sorted(z) == list('AC'):
+                    ali.graph.nodes[a]['vec'][-1] = 1
+                    ali.graph.nodes[b]['vec'][-1] = 1
+                    break
+
+
+def set_base_covariance(ali, covariance):
+            for a,b,v in ali.rscape:
+                    if v < covariance:
+                        if a in ali.graph and b in ali.graph and  ali.graph.has_edge(a,b):
+                            ali.graph.nodes[a]['label']= 'N'
+                            ali.graph.nodes[b]['label']= 'N'
+                        else:
+                            pass #print(f"cov missmatch:{ ali.fname} {a} {b}")
+
+def vec_add_conservation(ali, nuc_distribution, conservation):
+    for i in list(ali.graph):
+        nf = {a: 0 for a in f"ACGU"}
+        nf.update(dict(nuc_distribution[i]))
+        label = ali.graph.nodes[i]['label']
+        percentage = nf[label] if label in 'ACGU' else (nf['A'] + nf['G'] if label == 'R' else nf['C'] + nf['U'])
+        cons = [int(percentage > x) for x in conservation]
+        ali.graph.nodes[i]['vec'] += cons
+
+
+def set_base_label(ali,nuc_distribution,  nuc_thresh = .85 , RY_thresh = .6):
     thresh = nuc_thresh
     bonus = RY_thresh
     def chooselabel(nudi):
