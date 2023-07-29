@@ -305,10 +305,12 @@ def rfam_graph_decoration(ali, RY_thresh = .6, nuc_thresh = .85,
                           conservation = [.50,.75,.90,.95],
                           covariance = False,
                           sloppy = False,
-                          progress = False,
+                          progress = 0,
                           cons_raw = False,
                           fake_nodes = False):
     vec = []
+    for n in ali.graph.nodes:
+        ali.graph.nodes[n]['vec'] = []
     nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
 
     if RY_thresh or nuc_thresh:
@@ -326,8 +328,8 @@ def rfam_graph_decoration(ali, RY_thresh = .6, nuc_thresh = .85,
         vec_add_sloppy(ali)
 
     if progress:
-        vec_add_progress(ali)
-        vec += [0]
+        v_used = vec_add_progress(ali,progress)
+        vec += [0]*v_used
     if cons_raw:
         vec += [0]
         vec_add_cons_raw(ali, nuc_distribution)
@@ -343,10 +345,16 @@ def rfam_graph_decoration(ali, RY_thresh = .6, nuc_thresh = .85,
     return ali
 
 
-def vec_add_progress(ali):
+def vec_add_progress(ali, progress):
+    proglen = progress if progress > 1 else 25
     nodes = list(ali.graph)
-    for n in nodes:
-        ali.graph.nodes[n]['vec'] += [ n/len(nodes) ]
+    for i,n in enumerate(nodes):
+        prog = i/len(nodes)
+        prog = int(prog*proglen)
+        base = [0]*proglen
+        base [prog] = 1
+        ali.graph.nodes[n]['vec'] += base
+    return proglen
 
 
 def vec_add_cons_raw(ali, nuc_distribution):
@@ -356,10 +364,10 @@ def vec_add_cons_raw(ali, nuc_distribution):
         if ali.graph.nodes[n]['label'] in 'ACGU':
             add = nuc_distribution[n][1]
         if ali.graph.nodes[n]['label'] == 'Y':
-            nf = dict(nuc_distribution[i])
-            add = nf['C'] + nf['U'])
+            nf = dict(nuc_distribution[n])
+            add = nf['C'] + nf['U']
         if ali.graph.nodes[n]['label'] == 'R':
-            nf = dict(nuc_distribution[i])
+            nf = dict(nuc_distribution[n])
             add = nf['A'] + nf['G']
         ali.graph.nodes[n]['vec'] += [ add ]
 
@@ -423,19 +431,22 @@ def vec_add_conservation(ali, nuc_distribution, conservation):
         ali.graph.nodes[i]['vec'] += cons
 
 
-def set_base_label(ali,nuc_distribution,  nuc_thresh = .85 , RY_thresh = .6):
+def set_base_label(ali, nuc_distribution,  nuc_thresh = .85 , RY_thresh = .6):
     thresh = nuc_thresh
     bonus = RY_thresh
     def chooselabel(nudi):
-        nudi = dict(nudi)
+        nudid = dict(nudi)
         # return max(nudi.items(), key = lambda x:x[1])[0]
-        for k,v in nudi.items():
-            if v > thresh:
-                 return k
-        if sum([nudi.get(x,0) for x in 'A G'.split()]) > bonus:
+        k,v =  nudi[0]
+        if v > thresh:
+             return k
+
+        if sum([nudid.get(x,0) for x in 'A G'.split()]) > bonus:
             return f'R'
-        if sum([nudi.get(x,0) for x in 'C U'.split()]) > bonus:
+        if sum([nudid.get(x,0) for x in 'C U'.split()]) > bonus:
             return f"Y"
+
+
         return f'0'
 
     for n in ali.graph:

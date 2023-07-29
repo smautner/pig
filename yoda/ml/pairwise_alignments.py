@@ -2,6 +2,31 @@ import numpy as np
 
 match = lambda x,y: 1 if x==y else -1
 
+
+
+
+
+def smith_waterman_score(a,b, gap = -1, edgegap= -.03):
+
+    # make some variables
+    la = len(a)
+    lb = len(b)
+    matrix = np.zeros((la+1,lb+1))
+
+    # # we also need to init oO
+    # matrix[0] = np.arange(lb+1) * edgegap
+    # matrix[:,0] = np.arange(la+1) * edgegap
+
+    # lets fill the matrix
+    for i in range(la):
+        for j in range(lb):
+            options = (matrix[i,j]+match(a[i], b[j]),0, # diagonal or zero ;)
+                       matrix[i,j+1]+(gap if j < lb-1 else edgegap),             # down
+                       matrix[i+1,j]+(gap if i < la-1 else edgegap))              # sideways
+            matrix[i+1,j+1] = np.max(options)
+
+    return np.max(matrix)
+
 def needle(a,b, gap = -1, edgegap= -.03, get_score_only = False):
 
     # make some variables
@@ -53,11 +78,6 @@ def needle(a,b, gap = -1, edgegap= -.03, get_score_only = False):
             cb -=1
 
     return reta[::-1], retb[::-1]
-
-
-
-
-
 
 
 

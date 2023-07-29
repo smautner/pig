@@ -25,19 +25,31 @@ def convert_to_grakel_graph(alignment) -> grakel.Graph:
     node_attr = dict()
     for nid, attr in graph.nodes(data=True):
         # node_attr[nid] = np.asarray([attr['label']]+attr['vec'].tolist())
-        node_attr[nid] = np.asarray([attr['label']]+attr['vec'])
+        node_attr[nid] = ord(attr[f'label'])# np.asarray([ord(attr['label'])]+attr['vec'])
 
-    result = grakel.Graph(dol, node_labels=node_attr, graph_format='dictionary')
+    edge_attr = {}
+    for e in graph.edges:
+        a,b = e
+        edge_attr[e] = ord(graph.edges[a,b]['label'])
+
+    result = grakel.Graph(dol, node_labels=node_attr, edge_labels=edge_attr, graph_format='dictionary')
     for node in [n for n in dol.keys() if n not in result.edge_dictionary.keys()]:
         result.edge_dictionary[node] = {}
     return result
 
 
-def grakel_vectorize(alignments, vectorizer= 'WeisfeilerLehman'):
-    g =  Map(convert_to_grakel_graph, alignments )
-    d = {} # 'normalize' : False, 'sparse' : True}
-    starttime= time.time()
-    res =  eval(f'grakel.{vectorizer}')(**d).fit_transform(g)
-    return time.time()-starttime
 
-grakel_kernels = 'RandomWalk RandomWalkLabeled PyramidMatch NeighborhoodHash ShortestPath ShortestPathAttr GraphletSampling SubgraphMatching WeisfeilerLehman HadamardCode NeighborhoodSubgraphPairwiseDistance LovaszTheta SvmTheta Propagation PropagationAttr OddSth MultiscaleLaplacian HadamardCode VertexHistogram EdgeHistogram GraphHopper CoreFramework WeisfeilerLehmanOptimalAssignment'.split(f' ')
+def grakel_vectorize(alignments, kernel= 'WeisfeilerLehman'):
+    g =  Map(convert_to_grakel_graph, alignments )
+    d = {'normalize' : False} # , 'sparse' : True}
+    # jstarttime = time.time()
+    if kernel == f'OddSth':
+        d[f'h'] = 4
+    res =  eval(f'grakel.{kernel}')(**d).fit_transform(g)
+    # return time.time()-starttime
+    return res
+# GraphHopper RandomWalkLabeled
+grakel_kernels = 'ShortestPath RandomWalk PyramidMatch NeighborhoodHash GraphletSampling SubgraphMatching WeisfeilerLehman HadamardCode NeighborhoodSubgraphPairwiseDistance LovaszTheta SvmTheta Propagation PropagationAttr OddSth MultiscaleLaplacian HadamardCode VertexHistogram EdgeHistogram CoreFramework WeisfeilerLehmanOptimalAssignment'.split(f' ')
+
+
+
