@@ -299,11 +299,13 @@ def rfam_graph_structure_deco(ali):
         ali.graph.nodes[n]['vec'] = dist2vec(nuc_distribution[n])
 
     return ali
+
 '''
 
 def rfam_graph_decoration(ali, RY_thresh = .6, nuc_thresh = .85,
                           conservation = [.50,.75,.90,.95],
                           covariance = False,
+                          nucleotideRNAFM = False ,
                           sloppy = False,
                           progress = 0,
                           cons_raw = False,
@@ -333,6 +335,10 @@ def rfam_graph_decoration(ali, RY_thresh = .6, nuc_thresh = .85,
     if cons_raw:
         vec += [0]
         vec_add_cons_raw(ali, nuc_distribution)
+
+    if nucleotideRNAFM:
+        vec += [0]*620
+        vec_add_nucleotideembedding(ali)
 
     if fake_nodes:
         # add this last so that we know how long the vecs of the default nodes are
@@ -446,11 +452,20 @@ def set_base_label(ali, nuc_distribution,  nuc_thresh = .85 , RY_thresh = .6):
         if sum([nudid.get(x,0) for x in 'C U'.split()]) > bonus:
             return f"Y"
 
-
         return f'0'
 
     for n in ali.graph:
         ali.graph.nodes[n]['label'] = chooselabel(nuc_distribution[n])
         # ali.graph.nodes[n]['vec'] = dist2vec(nuc_distribution[n])
     return ali
+
+
+
+def vec_add_nucleotideembedding(ali):
+    # assert len(ali) == 408, 'there are files called 0..407'
+    vectors = np.load(f"/home/ubuntu/RNAEMBED/RNA-FM/redevelop/results/representations/{ali.gf['AC'].split()[1]}.npy")
+    for n,vec in zip(list(ali.graph), vectors):
+        ali.graph.nodes[n]['vec'] += vec.tolist()
+    return ali
+
 

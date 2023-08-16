@@ -10,7 +10,7 @@ def load_rfam(full = False):
     if not full:
         oklabel = labels != 0
         labels = labels[oklabel]
-        alignments = [a for a,ok in zip(alignments,labels) if ok]
+        alignments = [a for a,ok in zip(alignments,oklabel) if ok > 0]
 
     alignments = filein.addcov_rfam(alignments)
 

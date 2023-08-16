@@ -7,7 +7,7 @@ def getlabels(ali):
 
     returns cluster-labels
     '''
-    y = np.zeros(len(ali))
+    y = np.zeros(len(ali),dtype=int)
     for i,e in enumerate(clans.split(f'\n')):
         rnaid = e.split()[1:]
         for j,a in enumerate( ali):
@@ -16,8 +16,13 @@ def getlabels(ali):
     return y
 
 
+# these clans are too long for the NEURAL NETWORK Node embedder RNA-FM
+#CL00112	5_8S_rRNA	LSU_rRNA_archaea	LSU_rRNA_bacteria	LSU_rRNA_eukarya	LSU_trypano_mito
+#CL00111	SSU_rRNA_bacteria	SSU_rRNA_archaea	SSU_rRNA_eukarya	SSU_rRNA_microsporidia	SSU_trypano_mito
+#CL00004	Telomerase-vert	Telomerase-cil	Sacc_telomerase	Telomerase_Asco
+
+
 clans = '''CL00110	mir-19	mir-363
-CL00111	SSU_rRNA_bacteria	SSU_rRNA_archaea	SSU_rRNA_eukarya	SSU_rRNA_microsporidia	SSU_trypano_mito
 CL00071	SNORD88	snR76	snoR118
 CL00070	snosnR60_Z15	SNORD77	Afu_263
 CL00073	snoR30	SNORD100
@@ -80,7 +85,6 @@ CL00120	Twister-P5	twister-P3	twister-P1
 CL00001	tRNA	tmRNA	alpha_tmRNA	beta_tmRNA	cyano_tmRNA	tRNA-Sec	mt-tmRNA
 CL00002	RNaseP_nuc	RNaseP_bact_a	RNaseP_bact_b	RNase_MRP	RNaseP_arch	RNase_P	RNaseP-T
 CL00003	Metazoa_SRP	Bacteria_small_SRP	Fungi_SRP	Dictyostelium_SRP	Bacteria_large_SRP	Plant_SRP	Protozoa_SRP	Archaea_SRP	Bacteroidales_small_SRP
-CL00004	Telomerase-vert	Telomerase-cil	Sacc_telomerase	Telomerase_Asco
 CL00005	U1	U1_yeast	U11	Gl_U1
 CL00006	U2	U12
 CL00007	U4	U4atac
@@ -130,7 +134,6 @@ CL00116	aCoV-5UTR	bCoV-5UTR	gCoV-5UTR	dCoV-5UTR	Sarbecovirus-5UTR
 CL00117	s2m	Corona_pk3	aCoV-3UTR	bCoV-3UTR	gCoV-3UTR	dCoV-3UTR	Sarbecovirus-3UTR
 CL00114	LhrC	rli22	rli33
 CL00115	DUF805b	DUF805
-CL00112	5_8S_rRNA	LSU_rRNA_archaea	LSU_rRNA_bacteria	LSU_rRNA_eukarya	LSU_trypano_mito
 CL00113	5S_rRNA	mtPerm-5S
 CL00059	SNORD43	snR70
 CL00058	SNORD57	SNORD41	snR51

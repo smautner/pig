@@ -18,11 +18,18 @@ def data_to_reffile(data):
 
 def data_to_fasta(data):
     alis,_ = data
-    sequences = [ ali.graph.graph['sequence'] for ali in alis]
     lines = []
-    for i,s in enumerate(sequences):
-        lines.append( f'>{i}')
-        lines.append( s)
+
+    # sequences = [ ali.graph.graph['sequence'] for ali in alis]
+    # for i,s in enumerate(sequences):
+    #     lines.append( f'>{i}')
+    #     lines.append( s)
+
+    for ali in alis:
+        rfamid = ali.gf['AC'].split()[1]
+        lines.append( f'>{rfamid}')
+        lines.append( ali.graph.graph['sequence'])
+
     with open(f'fasta.delme',f'w') as f:
         f.write(f'\n'.join(lines))
     return lines
@@ -61,7 +68,6 @@ if __name__ == f"__main__":
     cmcalibrate reffile.delme.cm
     cmscan -g -E 10000 --noali --acc --tblout=delme.tbl  reffile.delme.cm fasta.delme
     '''
-
     dist = readCmscanAndMakeTable(data)
     for e in np.logspace(1,-50):
         d2 = dist.copy()

@@ -23,18 +23,17 @@ from yoda import alignments
 
 
 
-def find_working_grakel_kernels(d,i):
+def find_working_grakel_kernels(alignments,i):
     """
     this is just to figure out which kernels work in the first place
     """
     grakel_kernels = graphs.grakel_kernels
-    a,l = d
-    a = add_vector_attributes(a[:2])
-    graphs.grakel_vectorize(a,grakel_kernels[i])
+    alignments = add_vector_attributes(alignments[:2])
+    graphs.grakel_vectorize(alignments,grakel_kernels[i])
     oklist = []
     for i,v in enumerate(grakel_kernels):
         try:
-            dist = graphs.grakel_vectorize(a,v)
+            dist = graphs.grakel_vectorize(alignments,v)
             # print(f"{ dist=}")
             print(f"{ v=}{i=} ok")
             oklist.append(v)
@@ -44,10 +43,11 @@ def find_working_grakel_kernels(d,i):
 
 import structout as so
 def run( alignments,labels,
-        RY_thresh = .6,nuc_thresh = .85, conservation = [],
+        RY_thresh = .5,nuc_thresh = .5, conservation = [],
         covariance = False, sloppy = False, fake_nodes = False, progress = False,
         kernel = f'', # 'WeisfeilerLehman',
-        distance_measure = 'euclidean',min_rd = 2,n_dim = 6, mp = False, **kwargs):
+        nucleotideRNAFM = False,
+        distance_measure = 'euclidean',min_rd = 2,n_dim = 6, mp = False):
 
     mapper = ut.xmap if mp else Map
 
@@ -55,6 +55,7 @@ def run( alignments,labels,
                           RY_thresh = RY_thresh ,
                           nuc_thresh=nuc_thresh,
                           conservation = conservation,
+                          nucleotideRNAFM = nucleotideRNAFM,
                           covariance = covariance,
                           sloppy = sloppy,
                           progress= progress,
@@ -86,8 +87,6 @@ def run( alignments,labels,
     # # print(f"{ simpleMl.permutation_score(X, labels) = }")
     # return silhouette_score(X, labels)
     # # return silhouette_score(X, labels),
-
-
 ############
 # get goodd features
 #####################
@@ -98,26 +97,27 @@ def eval_ft(ft,X,y):
     X = X[:,ft==1]
     X = pairwise.euclidean_distances(X)
     # X = embed(X, n_dim= 6)
-    return silhouette_score(X, y, metrix= f'precomputed')
+    return silhouette_score(X, y, metric= f'precomputed')
 
 def add_vector_attributes(ali):
     return  ut.xmap( lambda ali:ali2graph.rfam_graph_decoration(ali,
-                          covariance = 0.05,
-                          sloppy = False,
-                          fake_nodes = False),
-                          ali)
+                       RY_thresh = .5,nuc_thresh = .5, conservation = [],
+                        covariance = False, sloppy = False, fake_nodes = False, progress = False,
+                        nucleotideRNAFM = False),
+                ali)
 
-def supervised(a,l, n_ft = 100):
+def supervised(alis,labels, n_ft = 100):
     # a = ut.xmap(ali2graph.rfam_graph_structure_deco, a)
-    a = add_vector_attributes(a)
-
+    a = add_vector_attributes(alis)
     X = graphs.vectorize_alignments(a, min_rd=1, mp= True)
     test_scores = []
 
-    for train, test in uo.groupCV(n_splits = 3).split(X,l,l):
-        ft = simpleMl.featuremask(*train, n_ft)
-        test_scores.append( (eval_ft(ft, *test)) )
-        print(f"{ eval_ft(ft, *train) = }")
+    for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
+        tr = X[train], labels[train]
+        te = X[test], labels[test]
+        ft = simpleMl.featuremask(*tr, n_ft)
+        test_scores.append( (eval_ft(ft, *te)) )
+        print(f"{ eval_ft(ft, *tr) = }")
 
     print(f"{ np.mean(test_scores)= }")
 
@@ -131,20 +131,21 @@ def supervised(a,l, n_ft = 100):
 ##########
 from ubergauss import optimization as opti
 grid = {
-        'RY_thresh' : np.linspace(0.5, 0.9, 10),
-        'nuc_thresh': np.linspace(.6,.99,10),
+        # 'RY_thresh' : np.linspace(0.4, 0.75, 10),
+        # 'nuc_thresh': np.linspace(.36,.7,10),
         # 'distance_measure': 'euclidean '.split(),
-        # 'fake_nodes': [False],
-        # 'sloppy': [False,True],
-        # 'min_rd': [1,2]
-        # 'progress' : Range(2,40,2)
-        # f'covariance': [False, .05]
+        'fake_nodes': [False, True],
+        'sloppy': [False,True],
+        # 'min_rd': [1,2],
+        'progress' : Range(2,40,10),
+        f'covariance': [False, .05],
+        # 'nucleotideRNAFM':[True, False],
         # 'vectorizer' : ['ShortestPath', 'PyramidMatch', 'NeighborhoodHash', 'GraphletSampling', 'WeisfeilerLehman', 'SvmTheta', 'Propagation', 'OddSth', 'VertexHistogram', 'EdgeHistogram', 'CoreFramework', 'WeisfeilerLehmanOptimalAssignment']
         }
 
 def optimize():
     data = alignments.load_rfam(full = False)
-    data = data[0], data[1]
+    # data, label  = data
     df =  opti.gridsearch(run, grid, data)
     print(df.corr(method='spearman'))
     opti.dfprint(df)
@@ -161,6 +162,7 @@ def drawoptidf():
     plt.tight_layout()
     plt.show()
     plt.close()
+
 
 
 
