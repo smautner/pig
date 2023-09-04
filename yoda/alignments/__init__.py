@@ -14,8 +14,15 @@ def load_rfam(full = False):
 
     alignments = filein.addcov_rfam(alignments)
     alignments = ut.xmap(ali2graph.rfam_clean, alignments)
+
+    #check_labels(alignments,labels)
+
     return alignments, labels
 
+
+def check_labels(alignments, labels):
+    for a,l in zip(alignments[:5], labels[:5]):
+        print(f"{l=}  {a.gf[f'ID'][3:]=} {a.gf[f'AC'].split()[1:]=}")
 
 
 def subsample(a,l, num = 10):

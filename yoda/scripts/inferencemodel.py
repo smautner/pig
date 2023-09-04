@@ -53,14 +53,31 @@ def readCmscanAndMakeTable(data):
             evalue = float(line[15])
             distmtx[x,y] = evalue
             distmtx[y,x] = evalue
-            print(f"{ evalue=}")
+            # print(f"{ evalue=}")
     np.fill_diagonal(distmtx,0)
     return distmtx
 from yoda import ml, draw
 
 
 import matplotlib
-matplotlib.use('module://matplotlib-sixel')
+matplotlib.use('module://matplotlib-backend-sixel')
+from matplotlib import pyplot as plt
+
+
+
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics.cluster import adjusted_rand_score
+def eval_agglo_ari(dist,labels):
+    results = []
+    for n in np.unique(dist):
+        predict = AgglomerativeClustering(n_clusters = None,linkage='single',
+                    distance_threshold=n,affinity = 'precomputed').fit_predict(dist)
+        results.append(adjusted_rand_score(predict, labels))
+    print(f"{max(results)=}")
+
+
+
+
 if __name__ == f"__main__":
     data = alignments.load_rfam()
 
@@ -76,18 +93,24 @@ if __name__ == f"__main__":
     cmcalibrate reffile.delme.cm
     cmscan -g -E 10000 --noali --acc --tblout=delme.tbl  reffile.delme.cm fasta.delme
     '''
-
-
     dist = readCmscanAndMakeTable(data)
+    eval_agglo_ari(dist,data[1])
+    exit()
 
     import structout as so
     from scipy import sparse
+    import seaborn as sns
+
+    sns.clustermap(dist)
+    plt.show()
+
     so.heatmap(sparse.csr_matrix(dist))
+
     em = ml.embed(dist)
-
     draw.scatter(em, data[1])
-    # draw.scatter(em, Range(data[1]))
 
+
+    # draw.scatter(em, Range(data[1]))
     # for e in np.logspace(1,-50):
     #     d2 = dist.copy()
     #     d2[d2==10] = e
