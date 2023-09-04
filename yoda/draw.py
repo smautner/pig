@@ -10,6 +10,7 @@ import yoda.alignments
 def scatter(X, y):
     plt.scatter(*X.T, c = y)
     plt.show()
+    plt.close()
 
 
 def asciigraph(ali):

@@ -9,14 +9,27 @@ def load_rfam(full = False):
 
     if not full:
         oklabel = labels != 0
-        labels = labels[oklabel]
         alignments = [a for a,ok in zip(alignments,oklabel) if ok > 0]
+        labels = labels[oklabel]
 
     alignments = filein.addcov_rfam(alignments)
-
     alignments = ut.xmap(ali2graph.rfam_clean, alignments)
-
     return alignments, labels
 
 
+
+def subsample(a,l, num = 10):
+    return a[:num], l[:num]
+
+
+if __name__ == "__main__":
+    z = load_rfam()[0]
+    z = [zz for zz in z if zz.pseudoknot]
+    import structout as so
+    for zz in z:
+        try:
+            #so.rnagraph.RNAprint(zz.graph)
+            so.gprint(zz.graph, size = 70)
+        except:
+            pass
 

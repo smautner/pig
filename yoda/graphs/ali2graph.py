@@ -231,19 +231,23 @@ def clean_structure(struct):
     struct = struct.replace('}',')')
     return  struct
 
-
+letterpairs = { chr(97+i):chr(65+i) for i in range(26) }
 
 def  rfam_clean(ali):
 
     graph = nx.Graph()
     lifo = []
-    assert f'RF' in ali.gc
+    lifo_pseudoknots = defaultdict(list)
+    assert 'RF' in ali.gc
 
-    ali.gc[f'clean_structure'] =  clean_structure (ali.gc[f'SS_cons'])
+    ali.gc['clean_structure'] =  clean_structure (ali.gc['SS_cons'])
+
+
     sequence = ''
     conSS = ''
+    ali.pseudoknot = any([a in letterpairs.keys() for a in ali.gc['clean_structure']])
 
-    for i, (struct,nuc) in enumerate(zip(ali.gc[f'clean_structure'],ali.gc[f'RF'].upper())):
+    for i, (struct,nuc) in enumerate(zip(ali.gc['clean_structure'],ali.gc['RF'].upper())):
         if nuc != '.': # ATTENTION! some structures have a :  but there is not even one nucleotide listed
             try:
                 conSS += struct
@@ -251,13 +255,21 @@ def  rfam_clean(ali):
                 # myv  = [ ord(ali.gc[k][i]) for k in ali.gc.keys() ]
                 graph.add_node(i, label=nuc, vec=[])
                 # handle hydrogen bonds
-                if struct  == f'(':
+                if struct  == '(':
                     lifo.append(i)
-                if struct == f')':
+                if struct == ')':
                     j = lifo.pop()
                     graph.add_edge(i, j, label='=', type='basepair', len=1)
-            except:
-                print("ERROR IN FILE", ali.fname)
+                if ali.pseudoknot:
+                    if struct in letterpairs.values():
+                        lifo_pseudoknots[struct].append(i)
+                    if struct in letterpairs.keys():
+                        j = lifo_pseudoknots[letterpairs[struct]].pop()
+                        graph.add_edge(i, j, label='=', type='basepair', len=1)
+
+            except Exception as e:
+                print("ERROR IN FILE", ali.fname,e)
+                print (letterpairs, ali.gc['clean_structure'])
 
     # ADD BACKBONE
     nodes = list(graph)
@@ -467,5 +479,25 @@ def vec_add_nucleotideembedding(ali):
     for n,vec in zip(list(ali.graph), vectors):
         ali.graph.nodes[n]['vec'] += vec.tolist()
     return ali
+
+
+import copy, random
+def manifest_subgraph(ali,n):
+    ali = copy.deepcopy(ali)
+    for nid in list(ali.graph):
+        ali.graph.nodes[nid]['label'] = ali.alignment[n][nid]
+    return ali
+
+def manifest_subgraphs(a_l,maxgraphs = 100):
+    ali, label = a_l
+    ali_n_graphs = ali.alignment.shape[0]
+
+    graphs_to_manifest = Range(ali_n_graphs)
+    if ali_n_graphs > maxgraphs:
+        random.shuffle(graphs_to_manifest)
+        graphs_to_manifest= graphs_to_manifest[:maxgraphs]
+
+    return [(manifest_subgraph(ali,x),label) for x in graphs_to_manifest ]
+
 
 

@@ -78,7 +78,7 @@ def run( alignments,labels,
         vectors = graphs.vectorize_alignments(alignments, mp=mp, min_rd= min_rd)
         distance_matrix = get_distance_method(distance_measure)(vectors)
 
-    return silhouette_score(distance_matrix, labels, metric=f'precomputed')
+    return silhouette_score(distance_matrix, labels, metric='precomputed')
 
     # dist = di(vectors)
     # X = embed(dist, n_dim= n_dim)
@@ -101,27 +101,52 @@ def eval_ft(ft,X,y):
 
 def add_vector_attributes(ali):
     return  ut.xmap( lambda ali:ali2graph.rfam_graph_decoration(ali,
-                       RY_thresh = .5,nuc_thresh = .5, conservation = [],
-                        covariance = False, sloppy = False, fake_nodes = False, progress = False,
+                       RY_thresh = .7,nuc_thresh = .65, conservation = [],
+                        covariance = 0.05, sloppy = False, fake_nodes = False, progress = False,
                         nucleotideRNAFM = False),
                 ali)
 
 def supervised(alis,labels, n_ft = 100):
-    # a = ut.xmap(ali2graph.rfam_graph_structure_deco, a)
     a = add_vector_attributes(alis)
-    X = graphs.vectorize_alignments(a, min_rd=1, mp= True)
-    test_scores = []
 
+    a,labels = Transpose( Flatten ( ut.xmap(lambda x: ali2graph.manifest_subgraphs(x,maxgraphs = 10),zip(a,labels))))
+    # a, labels = Transpose(Flatten ([ (newali,label)  for ali,label in zip(a,labels) for newali in ali2graph.manifest_subgraphs(ali,100) ] ))
+    labels = np.array(labels)
+
+    X = graphs.vectorize_alignments(a, min_rd=1, mp= True)
+    for n_ft in [1000,3000]:
+        test_scores = []
+        for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
+            tr = X[train], labels[train]
+            te = X[test], labels[test]
+            ft = simpleMl.featuremask(*tr, n_ft)
+            test_scores.append( (eval_ft(ft, *te)) )
+            print(f"{ eval_ft(ft, *tr) = }")
+
+        print(f"{ np.mean(test_scores)= }")
+
+from scipy import sparse
+
+def supervised_graphaverage(alis,labels, n_ft = 100):
+    a = add_vector_attributes(alis)
+
+    def stacksamples(ali):
+        aliss, _  = Transpose(ali2graph.manifest_subgraphs((ali,False),maxgraphs = 10) )
+        X = graphs.vectorize_alignments(aliss, min_rd=1, mp= False)
+        return np.mean(X, axis = 0)
+
+    X =  ut.xmap(stacksamples , a)
+    X = np.vstack(X)
+
+    print(f"{X.shape=}")
+    test_scores = []
     for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
         tr = X[train], labels[train]
         te = X[test], labels[test]
         ft = simpleMl.featuremask(*tr, n_ft)
         test_scores.append( (eval_ft(ft, *te)) )
         print(f"{ eval_ft(ft, *tr) = }")
-
     print(f"{ np.mean(test_scores)= }")
-
-
 
 
 
@@ -162,7 +187,4 @@ def drawoptidf():
     plt.tight_layout()
     plt.show()
     plt.close()
-
-
-
 

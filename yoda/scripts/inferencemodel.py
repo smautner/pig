@@ -1,3 +1,4 @@
+from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 from yoda import alignments
 from sklearn.metrics import silhouette_score
 import numpy as np
@@ -34,28 +35,35 @@ def data_to_fasta(data):
         f.write(f'\n'.join(lines))
     return lines
 
-
 from ubergauss import tools as ut
 def readCmscanAndMakeTable(data):
     reflist = data_to_reffile(data)
     refdict = {nr:idx for idx,nr in enumerate(reflist)}
     l = len(refdict)
     distmtx= np.ones((l,l))
-    distmtx*=10
+    distmtx*=0
     for  line in open(f'delme.tbl',f'r').readlines():
         if not line.startswith(f"#"):
             line = line.split()
+            if line[1] not in refdict:
+                continue
             x = refdict[line[1]]
-            y = int(line[2])
+            #y = int(line[2])
+            y = refdict[line[2]]
             evalue = float(line[15])
             distmtx[x,y] = evalue
             distmtx[y,x] = evalue
             print(f"{ evalue=}")
     np.fill_diagonal(distmtx,0)
     return distmtx
+from yoda import ml, draw
 
+
+import matplotlib
+matplotlib.use('module://matplotlib-sixel')
 if __name__ == f"__main__":
     data = alignments.load_rfam()
+
 
     # data_to_fasta(data)
     # data_to_reffile(data)
@@ -68,10 +76,21 @@ if __name__ == f"__main__":
     cmcalibrate reffile.delme.cm
     cmscan -g -E 10000 --noali --acc --tblout=delme.tbl  reffile.delme.cm fasta.delme
     '''
+
+
     dist = readCmscanAndMakeTable(data)
-    for e in np.logspace(1,-50):
-        d2 = dist.copy()
-        d2[d2==10] = e
-        print(f"{e=}")
-        print(f"{score(d2, data)=}")
+
+    import structout as so
+    from scipy import sparse
+    so.heatmap(sparse.csr_matrix(dist))
+    em = ml.embed(dist)
+
+    draw.scatter(em, data[1])
+    # draw.scatter(em, Range(data[1]))
+
+    # for e in np.logspace(1,-50):
+    #     d2 = dist.copy()
+    #     d2[d2==10] = e
+    #     print(f"{e=}")
+    #     print(f"{score(d2, data)=}")
 

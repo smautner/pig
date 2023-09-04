@@ -13,7 +13,7 @@ class Alignment:
         self.label  = grepfamily(fname)
 
     def __repr__(self):
-        return f'\n'.join([f''.join(row) for row in self.alignment])+f'\n'
+        return f'\n'.join([f''.join(row) for row in self.alignment])+'\n'
 
 
 def grepfamily(name):
