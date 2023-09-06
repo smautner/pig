@@ -491,13 +491,16 @@ def manifest_subgraph(ali,n):
 def manifest_subgraphs(a_l,maxgraphs = 100):
     ali, label = a_l
     ali_n_graphs = ali.alignment.shape[0]
-
     graphs_to_manifest = Range(ali_n_graphs)
     if ali_n_graphs > maxgraphs:
         random.shuffle(graphs_to_manifest)
         graphs_to_manifest= graphs_to_manifest[:maxgraphs]
-
     return [(manifest_subgraph(ali,x),label) for x in graphs_to_manifest ]
 
+def manifest_sequences(alignments, labels, instances = 10, mp = False):
+    mapper = ut.xmap if mp else Map
+    a,labels = Transpose( Flatten ( mapper(lambda x: manifest_subgraphs(x,
+                                                maxgraphs = instances),zip(a,labels))))
+    return a, labels
 
 
