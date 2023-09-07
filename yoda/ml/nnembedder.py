@@ -5,17 +5,28 @@ import networkx.linalg as nxlin
 import numpy as np
 def makematrix(graph, maxlen = None):
 
+    startpadding = 5
+    endpadding = 5
+
     # add padding nodes
     missing_nodes = maxlen - len(graph)
+    missing_nodes += endpadding # extra padding
+    maxlen += startpadding+endpadding
+
     for i in range(missing_nodes):
         graph.add_node(max(graph.nodes)+1 , label = 'N')
 
-    adjacency_matrix = nxlin.adjacency_matrix(graph).todense()
+    for i in range(startpadding):
+        graph.add_node( -i-1 , label = 'N')
+
+    assert len(graph)== maxlen, f"{len(graph)=}, {maxlen=}"
+    sorted_nodes = sorted(graph.nodes)
+    adjacency_matrix = nxlin.adjacency_matrix(graph,nodelist=sorted_nodes).todense()
     # now we need to add another axis and add node infos
     res = np.zeros((11, maxlen, maxlen))
     indices = np.repeat ( Range(maxlen), maxlen).reshape((maxlen,maxlen))
     def makeonehot(char):
-        return np.repeat ( [ 1 if graph.nodes[n]['label'] == char else 0 for n in graph.nodes ] , maxlen).reshape((maxlen,maxlen))
+        return np.repeat ( [ 1 if graph.nodes[n]['label'] == char else 0 for n in sorted_nodes ] , maxlen).reshape((maxlen,maxlen))
 
     ONEHOT = np.array( Map(makeonehot, 'AUGC'))
     res[:4] = ONEHOT
@@ -37,6 +48,10 @@ def test_toarray():
     from yoda import alignments
     a,l = alignments.load_rfam()
     atensor = toarray(a[:2])[0]
-    print(atensor)
+
+
+    import structout as so
+    for layer in atensor:
+        so.heatmap(layer)
 
 

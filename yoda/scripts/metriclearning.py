@@ -46,10 +46,10 @@ def supervised(alis,labels, n_ft = 100):
     # a,labels = Transpose( Flatten ( ut.xmap(lambda x: ali2graph.manifest_subgraphs(x, maxgraphs = 10),zip(a,labels))))
     # a, labels = Transpose(Flatten ([ (newali,label)  for ali,label in zip(a,labels) for newali in ali2graph.manifest_subgraphs(ali,100) ] ))
     # there is manifest_sequences now !
+    a, labels = ali2graph.manifest_sequences(a,labels, instances = 5  )
 
     labels = np.array(labels)
     X = graphs.vectorize_alignments(a, min_rd=1, mp= True)
-
 
     # remove empty columns
     X=X.toarray()
@@ -60,11 +60,10 @@ def supervised(alis,labels, n_ft = 100):
 
     test_scores = []
     for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
-
         tr = X[train], labels[train]
         te = X[test], labels[test]
         print(f"{ Counter(tr[1])=}")
-        model = metric_learn.LMNN(k=1, n_components = 6)
+        model = metric_learn.LFDA(n_components = 6) # LFDA and MLKR should be tried
         train_transformed = model.fit_transform(*tr)
         test_transformed = model.transform(*te)
         test_scores.append( (eval_ft(test_transformed, *te)) )

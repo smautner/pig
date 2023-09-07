@@ -499,8 +499,8 @@ def manifest_subgraphs(a_l,maxgraphs = 100):
 
 def manifest_sequences(alignments, labels, instances = 10, mp = False):
     mapper = ut.xmap if mp else Map
-    a,labels = Transpose( Flatten ( mapper(lambda x: manifest_subgraphs(x,
-                                                maxgraphs = instances),zip(a,labels))))
+    a,labels = Transpose( Flatten ( mapper(manifest_subgraphs , zip(alignments,labels),
+                                                maxgraphs = instances)))
     return a, labels
 
 
