@@ -1,22 +1,13 @@
 import numpy as np
 
 
-# def getlabels(ali):
-#     '''
-#     matches the ID field in the alignments with the "clans"-cluster-list
-#     returns cluster-labels
-#     '''
-#     y = np.zeros(len(ali),dtype=int)
-#     for i,e in enumerate(clans.split(f'\n')):
-#         rnaid = e.split()[1:]
-#         for j,a in enumerate( ali):
-#             if a.gf[f'ID'][3:] in rnaid:
-#                y[j] = i + 1
-#     return y
 
 
 
 def get_label_dictionary():
+    '''
+    produces a dictionary {rna_name -> clusterlabel}
+    '''
     d = {}
     for i,e in enumerate(clans.split(f'\n')):
         rna_ids = e.split()[1:]
@@ -24,16 +15,15 @@ def get_label_dictionary():
             d[rna_id] = i+1
     return d
 
-def getlabels(ali):
+def getlabels(alignments):
     '''
     matches the ID field in the alignments with the "clans"-cluster-list
     returns cluster-labels
     '''
-
     label_dict = get_label_dictionary()
     print(f"{ label_dict=}")
-    y = np.zeros(len(ali),dtype=int)
-    for j,a in enumerate( ali):
+    y = np.zeros(len(alignments),dtype=int)
+    for j,a in enumerate( alignments):
         label = label_dict.get( a.gf[f'ID'][3:] ,  0 )
         y[j] = label
     return y

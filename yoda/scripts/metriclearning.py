@@ -39,7 +39,7 @@ def add_vector_attributes(ali):
 
 import metric_learn
 from collections import Counter
-def supervised(alis,labels, n_ft = 100):
+def supervised(alis,labels):
     a = add_vector_attributes(alis)
 
     # i think this samples sequences
@@ -51,13 +51,13 @@ def supervised(alis,labels, n_ft = 100):
     labels = np.array(labels)
     X = graphs.vectorize_alignments(a, min_rd=1, mp= True)
 
-    # remove empty columns
     X=X.toarray()
     import yoda.ml.simpleMl as ml
     ft = ml.featuremask(X, labels, n_ft = 1000)
     X = X[:,ft==1]
     print(f"{X.shape=}")
 
+    # remove empty columns
     # empty_columns = np.all(X == 0, axis=0)
     # X = X[:, ~empty_columns]
 
@@ -66,7 +66,6 @@ def supervised(alis,labels, n_ft = 100):
     for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
         tr = X[train], labels[train]
         te = X[test], labels[test]
-        print(f"{ Counter(tr[1])=}")
         model = metric_learn.LFDA(n_components = 6) # LFDA and MLKR should be tried
         train_transformed = model.fit_transform(*tr)
         test_transformed = model.transform(te[0])
