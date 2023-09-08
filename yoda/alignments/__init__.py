@@ -3,16 +3,16 @@ from yoda.graphs import ali2graph
 from yoda.alignments import filein, clans, alignment
 
 
-def load_rfam(full = False):
-    alignments = filein.readseedfile(ut.fixpath( f'~/Rfam.seed.utf8'))
+def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/test2'):
+    alignments = filein.readseedfile(ut.fixpath( seedpath))
     labels = clans.getlabels(alignments)
 
     if not full:
         oklabel = labels != 0
         alignments = [a for a,ok in zip(alignments,oklabel) if ok > 0]
         labels = labels[oklabel]
-
-    alignments = filein.addcov_rfam(alignments)
+    if add_cov:
+        alignments = filein.addcov_rfam(alignments, add_cov)
     alignments = ut.xmap(ali2graph.rfam_clean, alignments)
 
     #check_labels(alignments,labels)
