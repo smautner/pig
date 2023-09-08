@@ -53,9 +53,13 @@ def supervised(alis,labels, n_ft = 100):
 
     # remove empty columns
     X=X.toarray()
-    empty_columns = np.all(X == 0, axis=0)
-    X = X[:, ~empty_columns]
+    import yoda.ml.simpleMl as ml
+    ft = ml.featuremask(X, labels, n_ft = 1000)
+    X = X[:,ft==1]
     print(f"{X.shape=}")
+
+    # empty_columns = np.all(X == 0, axis=0)
+    # X = X[:, ~empty_columns]
 
 
     test_scores = []
@@ -65,7 +69,7 @@ def supervised(alis,labels, n_ft = 100):
         print(f"{ Counter(tr[1])=}")
         model = metric_learn.LFDA(n_components = 6) # LFDA and MLKR should be tried
         train_transformed = model.fit_transform(*tr)
-        test_transformed = model.transform(*te)
+        test_transformed = model.transform(te[0])
         test_scores.append( (eval_ft(test_transformed, *te)) )
         print(f"{ eval_ft(train_transformed, *tr) = }")
     print(f"{ np.mean(test_scores)= }")

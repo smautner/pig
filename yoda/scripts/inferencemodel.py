@@ -66,14 +66,18 @@ from matplotlib import pyplot as plt
 
 
 from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics.cluster import adjusted_rand_score
+from sklearn.metrics.cluster import adjusted_rand_score, rand_score
 def eval_agglo_ari(dist,labels):
-    results = []
+    rand_indices = []
+    adjusted_rand_indices = []
     for n in np.unique(dist):
         predict = AgglomerativeClustering(n_clusters = None,linkage='single',
                     distance_threshold=n,affinity = 'precomputed').fit_predict(dist)
-        results.append(adjusted_rand_score(predict, labels))
-    print(f"{max(results)=}")
+        adjusted_rand_indices.append(adjusted_rand_score(predict, labels))
+        rand_indices.append(rand_score(predict, labels))
+
+    print(f"{max(rand_indices)=}")
+    print(f"{max(adjusted_rand_indices)=}")
 
 
 
