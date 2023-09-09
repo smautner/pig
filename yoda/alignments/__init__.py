@@ -1,5 +1,6 @@
 from ubergauss import tools as ut
 from yoda.graphs import ali2graph
+from yoda.graphs.ali2graph import manifest_sequences
 from yoda.alignments import filein, clans, alignment
 
 

@@ -21,7 +21,7 @@ def getlabels(alignments):
     returns cluster-labels
     '''
     label_dict = get_label_dictionary()
-    print(f"{ label_dict=}")
+    # print(f"{ label_dict=}")
     y = np.zeros(len(alignments),dtype=int)
     for j,a in enumerate( alignments):
         label = label_dict.get( a.gf[f'ID'][3:] ,  0 )

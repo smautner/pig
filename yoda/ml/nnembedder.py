@@ -55,3 +55,48 @@ def test_toarray():
         so.heatmap(layer)
 
 
+
+
+
+import torch
+from torch.utils.data import Dataset, DataLoader
+
+class CustomDataset(Dataset):
+    def __init__(self, numpy_array_list, labels):
+        self.data = numpy_array_list
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        sample = self.data[idx]
+        label = self.labels[idx]
+        return torch.from_numpy(sample), torch.tensor(label)
+
+
+def makeloader(arrays_labels, batch_size):
+    return   DataLoader(CustomDataset(*arrays_labels), batch_size=batch_size, shuffle=True)
+
+
+import ubergauss.optimization as uo
+def torchloader(batch_size, alignments, labels):
+    X  = np.array(toarray(alignments)) # HOPE THIS WORKS
+    train, test = next(uo.groupedCV(n_splits = 3).split(X,labels,labels))
+    breakpoint()
+    tr = X[train], labels[train]
+    te = X[test], labels[test]
+
+    return makeloader(tr, batch_size), CustomDataset(*tr), CustomDataset(*te)
+
+
+
+
+
+
+
+
+
+
+
+
