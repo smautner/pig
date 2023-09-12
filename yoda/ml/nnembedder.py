@@ -44,16 +44,29 @@ def toarray(alis):
     return ut.xmap(makematrix, graphs, maxlen = maxlen)
 
 
+def len_hist(alis):
+    graphlens = [len(a.graph) for a in alis]
+    import matplotlib
+    matplotlib.use('module://matplotlib-backend-sixel')
+    import seaborn as sns
+    sns.histplot(graphlens)
+    matplotlib.pyplot.show()
+    matplotlib.pyplot.close()
+
 def test_toarray():
     from yoda import alignments
-    a,l = alignments.load_rfam()
+    a,l = alignments.load_rfam(add_cov='')
+    a,l = alignments.size_filter(a,l,400)
+
+    print(f"{len(a)=}")
     atensor = toarray(a[:2])[0]
-
-
     import structout as so
     for layer in atensor:
         so.heatmap(layer)
+    len_hist(a)
 
+if __name__ == f"__main__":
+    test_toarray()
 
 
 
@@ -83,7 +96,7 @@ import ubergauss.optimization as uo
 def torchloader(batch_size, alignments, labels):
     X  = np.array(toarray(alignments)) # HOPE THIS WORKS
     train, test = next(uo.groupedCV(n_splits = 3).split(X,labels,labels))
-    breakpoint()
+    labels = np.array(labels)
     tr = X[train], labels[train]
     te = X[test], labels[test]
 

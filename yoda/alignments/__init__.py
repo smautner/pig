@@ -1,8 +1,9 @@
+from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 from ubergauss import tools as ut
 from yoda.graphs import ali2graph
 from yoda.graphs.ali2graph import manifest_sequences
 from yoda.alignments import filein, clans, alignment
-
+import numpy as np
 
 def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/test2'):
     alignments = filein.readseedfile(ut.fixpath( seedpath))
@@ -19,6 +20,18 @@ def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/tes
     #check_labels(alignments,labels)
 
     return alignments, labels
+
+
+def size_filter(alis, labels, cutoff):
+    glens = np.array([len(ali.graph) for ali in alis])
+    alis = [ali for ali,cnt in zip(alis,glens) if cnt < cutoff]
+    labels = labels[glens < cutoff]
+
+    counts = np.unique(labels, return_counts= True)
+    badones = [l for l, count in zip(*counts) if count == 1 ]
+    alis, labels = Transpose([(ali,l) for ali,l in
+                              zip(alis, labels) if l not in badones])
+    return alis, labels
 
 
 def check_labels(alignments, labels):
