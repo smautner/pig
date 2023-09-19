@@ -172,7 +172,7 @@ def torchloader(batch_size, alignments, labels):
     graphs = [a.graph for a in alignments]
     maxlen = max(map(len, graphs))
 
-    train, test = next(uo.groupedCV(n_splits = 3).split(None,labels,labels))
+    train, test = next(uo.groupedCV(n_splits = 3).split(graphs,labels,labels))
     labels = np.array(labels)
     tr = labels[train]
     te = labels[test]
