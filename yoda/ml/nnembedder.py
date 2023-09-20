@@ -165,11 +165,11 @@ class CustomDataset(Dataset):
         return torch.from_numpy(sample), torch.tensor(label)
 
 def makeloader(ali,label, batch_size, maxlen):
-    return   DataLoader(CustomDataset(ali,label, maxlen), batch_size=batch_size, shuffle=True)
+    return   DataLoader(CustomDataset(ali,label, maxlen), batch_size=batch_size, shuffle=True, num_workers=10)
 
-def torchloader(batch_size, alignments, labels):
+def torchloader(batch_size, graphs, labels):
 
-    graphs = [a.graph for a in alignments]
+
     maxlen = max(map(len, graphs))
 
     train, test = next(uo.groupedCV(n_splits = 3).split(graphs,labels,labels))
