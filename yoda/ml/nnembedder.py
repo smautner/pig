@@ -165,7 +165,8 @@ class CustomDataset(Dataset):
         return torch.from_numpy(sample), torch.tensor(label)
 
 def makeloader(ali,label, batch_size, maxlen):
-    return   DataLoader(CustomDataset(ali,label, maxlen), batch_size=batch_size, shuffle=True, num_workers=10)
+    return   DataLoader(CustomDataset(ali,label, maxlen),prefetch_factor = None,
+                        batch_size=batch_size, shuffle=True, num_workers=32)
 
 def torchloader(batch_size, graphs, labels):
 

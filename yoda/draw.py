@@ -4,7 +4,6 @@ import structout as so
 from lmz import Range, Map
 from matplotlib import pyplot as plt
 from structout.rnagraph import RNAprint
-
 import yoda.alignments
 
 def scatter(X, y):

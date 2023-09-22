@@ -148,6 +148,21 @@ def supervised_graphaverage(alis,labels, n_ft = 100):
         print(f"{ eval_ft(ft, *tr) = }")
     print(f"{ np.mean(test_scores)= }")
 
+def supervised_manifestgraphs(alis,labels, n_ft = 100):
+    # a = add_vector_attributes(alis)
+
+    aliss, labels  = Transpose(ali2graph.manifest_subgraphs((ali,False),maxgraphs = 10) )
+    X = graphs.vectorize_alignments(aliss, min_rd=1, mp= True)
+    test_scores = []
+    for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
+        tr = X[train], labels[train]
+        te = X[test], labels[test]
+        ft = simpleMl.featuremask(*tr, n_ft)
+        test_scores.append( (eval_ft(ft, *te)) )
+        print(f"{ eval_ft(ft, *tr) = }")
+    print(f"{ np.mean(test_scores)= }")
+
+
 
 
 
