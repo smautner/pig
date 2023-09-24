@@ -116,42 +116,37 @@ def getdata():
     del a
     return graphs, labels
 
-import ubergauss.tools as ut
-graphs, labels = ut.cache('graphscache.delme',getdata)
-
-train_loader, dataset1, dataset2 = torchloader(batch_size, graphs,labels)
-
-
-model = Net().to(device)
-optimizer = optim.Adam(model.parameters(), lr=0.01)
-num_epochs = 100
-
-
-### pytorch-metric-learning stuff ###
-distance = distances.CosineSimilarity()
-reducer = reducers.ThresholdReducer(low=0)
-loss_func = losses.TripletMarginLoss(margin=0.2, distance=distance, reducer=reducer)
-mining_func = miners.TripletMarginMiner(
-    margin=0.2, distance=distance, type_of_triplets="semihard"
-)
-accuracy_calculator = AccuracyCalculator(include=("precision_at_1",), k=1)
-### pytorch-metric-learning stuff ###
-
-
 import structout as so
 def printres(res):
     s,a = Transpose(res)
     print("sil and ari so far...")
     so.lprint(s)
     so.lprint(a)
+import ubergauss.tools as ut
 
 
-res = []
+if __name__ == '__main__':
+    graphs, labels = ut.cache('graphscache.delme',getdata)
+    train_loader, dataset1, dataset2 = torchloader(batch_size, graphs,labels)
+    model = Net().to(device)
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    num_epochs = 100
 
-for epoch in range(1, num_epochs + 1):
-    train(model, loss_func, mining_func, device, train_loader, optimizer, epoch)
-    r = test(dataset1, dataset2, model, accuracy_calculator)
-    res.append(r)
-    printres(res)
+    ### pytorch-metric-learning stuff ###
+    distance = distances.CosineSimilarity()
+    reducer = reducers.ThresholdReducer(low=0)
+    loss_func = losses.TripletMarginLoss(margin=0.2, distance=distance, reducer=reducer)
+    mining_func = miners.TripletMarginMiner(
+        margin=0.2, distance=distance, type_of_triplets="semihard"
+    )
+    accuracy_calculator = AccuracyCalculator(include=("precision_at_1",), k=1)
+    ### pytorch-metric-learning stuff ###
 
-breakpoint()
+    res = []
+    for epoch in range(1, num_epochs + 1):
+        train(model, loss_func, mining_func, device, train_loader, optimizer, epoch)
+        r = test(dataset1, dataset2, model, accuracy_calculator)
+        res.append(r)
+        printres(res)
+
+    breakpoint()

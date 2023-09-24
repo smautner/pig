@@ -32,7 +32,9 @@ def knn_accuracy(X, y,n_neighbors):
     return agreement
 
 
-def kmeans_ari(X,y,k=20):
+def kmeans_ari(X,y,k=0):
+    if k == 0:
+        k = len(np.unique(labels))
     means = KMeans(n_clusters = k)
     predicted = means.fit_predict(X)
     return adjusted_rand_score(y,predicted)
@@ -40,10 +42,11 @@ def kmeans_ari(X,y,k=20):
 from yoda import ml
 from yoda import draw
 
-def kmeans_bla(dist,labels):
-    X = ml.embed(dist, n_dim = 2)
-    draw.scatter(X,labels)
-    adjusted_rand_score( KMeans(n_clusters=len(np.unique(labels))).fit_predict(X), labels)
+# def kmeans_bla(dist,labels):
+#     X = ml.embed(dist, n_dim = 2)
+#     draw.scatter(X,labels)
+#     # adjusted_rand_score( KMeans(n_clusters=len(np.unique(labels))).fit_predict(X), labels)
+#     return keams_ari(X, labels,k=0)
 
 
 def knn_f1(X,y,n_neighbors = 3,cv_strati_splits = 3):

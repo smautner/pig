@@ -99,6 +99,30 @@ def eval_ft(ft,X,y):
     # X = embed(X, n_dim= 6)
     return silhouette_score(X, y, metric= f'precomputed')
 
+def supervised_trainloop(X,labels, eval_ft = eval_ft):
+    test_scores=[]
+    for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
+        tr = X[train], labels[train]
+        te = X[test], labels[test]
+        ft = simpleMl.featuremask(*tr, n_ft)
+        test_scores.append( (eval_ft(ft, *te)) )
+        print(f"{ eval_ft(ft, *tr) = }")
+    return test_scores
+
+# def supervised_manifestgraphs(alis,labels, n_ft = 100):
+#     aliss, labels  = Transpose(ali2graph.manifest_subgraphs((ali,False),maxgraphs = 10) )
+#     X = graphs.vectorize_alignments(aliss, min_rd=1, mp= True)
+#     test_scores = supervised_trainloop(X,labels)
+#     print(f"{ np.mean(test_scores)= }")
+
+def supervised_manifestgraphs():
+    import yoda.scripts.torchmetriclearn as tml
+    graps, labels = ut.cache('graphscache.delme',tml.getdata)
+    X = graphs.eg.vectorize(graps)
+    eval = lambda ft,x,y : simpleMl.kmeans_ari(x[:,ft==1],x,y)
+    test_scores = supervised_trainloop(X,labels, eval_ft = eval)
+    print(f"{ np.mean(test_scores)= }")
+
 def add_vector_attributes(ali):
     return  ut.xmap( lambda ali:ali2graph.rfam_graph_decoration(ali,
                        RY_thresh = .7,nuc_thresh = .65, conservation = [],
@@ -108,25 +132,13 @@ def add_vector_attributes(ali):
 
 def supervised(alis,labels, n_ft = 100):
     a = add_vector_attributes(alis)
-
     a,labels = Transpose( Flatten ( ut.xmap(lambda x: ali2graph.manifest_subgraphs(x,maxgraphs = 10),zip(a,labels))))
-    # a, labels = Transpose(Flatten ([ (newali,label)  for ali,label in zip(a,labels) for newali in ali2graph.manifest_subgraphs(ali,100) ] ))
     labels = np.array(labels)
-
     X = graphs.vectorize_alignments(a, min_rd=1, mp= True)
-    for n_ft in [1000,3000]:
-        test_scores = []
-        for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
-            tr = X[train], labels[train]
-            te = X[test], labels[test]
-            ft = simpleMl.featuremask(*tr, n_ft)
-            test_scores.append( (eval_ft(ft, *te)) )
-            print(f"{ eval_ft(ft, *tr) = }")
-
-        print(f"{ np.mean(test_scores)= }")
+    test_scores = supervised_trainloop(X,labels)
+    print(f"{ np.mean(test_scores)= }")
 
 from scipy import sparse
-
 def supervised_graphaverage(alis,labels, n_ft = 100):
     a = add_vector_attributes(alis)
 
@@ -134,33 +146,12 @@ def supervised_graphaverage(alis,labels, n_ft = 100):
         aliss, _  = Transpose(ali2graph.manifest_subgraphs((ali,False),maxgraphs = 10) )
         X = graphs.vectorize_alignments(aliss, min_rd=1, mp= False)
         return np.mean(X, axis = 0)
-
     X =  ut.xmap(stacksamples , a)
     X = np.vstack(X)
-
     print(f"{X.shape=}")
-    test_scores = []
-    for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
-        tr = X[train], labels[train]
-        te = X[test], labels[test]
-        ft = simpleMl.featuremask(*tr, n_ft)
-        test_scores.append( (eval_ft(ft, *te)) )
-        print(f"{ eval_ft(ft, *tr) = }")
+    test_scores = supervised_trainloop(X,labels)
     print(f"{ np.mean(test_scores)= }")
 
-def supervised_manifestgraphs(alis,labels, n_ft = 100):
-    # a = add_vector_attributes(alis)
-
-    aliss, labels  = Transpose(ali2graph.manifest_subgraphs((ali,False),maxgraphs = 10) )
-    X = graphs.vectorize_alignments(aliss, min_rd=1, mp= True)
-    test_scores = []
-    for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
-        tr = X[train], labels[train]
-        te = X[test], labels[test]
-        ft = simpleMl.featuremask(*tr, n_ft)
-        test_scores.append( (eval_ft(ft, *te)) )
-        print(f"{ eval_ft(ft, *tr) = }")
-    print(f"{ np.mean(test_scores)= }")
 
 
 
