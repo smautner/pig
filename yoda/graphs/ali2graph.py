@@ -486,7 +486,8 @@ import copy, random
 def manifest_subgraph(ali,n):
     ali = copy.deepcopy(ali)
     for nid in list(ali.graph):
-        ali.graph.nodes[nid]['label'] = ali.alignment[n][nid]
+        if ali.graph.nodes[nid]['label'] in f"AGCU":
+            ali.graph.nodes[nid]['label'] = ali.alignment[n][nid]
     return ali
 
 def manifest_subgraphs(a_l,maxgraphs = 100):

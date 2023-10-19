@@ -24,6 +24,7 @@ class Net(nn.Module):
         self.dropout2 = nn.Dropout2d(0.5)
         self.fc1 = nn.Linear(602176, 9216)
         self.fc2 = nn.Linear(9216, 128)
+        self.fc3 = nn.Linear(128, 6)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -38,6 +39,7 @@ class Net(nn.Module):
         #print(f"{x.shape}")
         x = self.fc1(x) # NEW
         x = self.fc2(x)
+        x = self.fc3(x)
         return x
 
 
@@ -96,7 +98,7 @@ device = torch.device("cpu")
 #     [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
 # )
 
-batch_size = 128
+batch_size = 96
 
 # dataset1 = datasets.MNIST(".", train=True, download=True, transform=transform)
 # dataset2 = datasets.MNIST(".", train=False, transform=transform)

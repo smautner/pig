@@ -62,20 +62,28 @@ from yoda import ml, draw
 import matplotlib
 matplotlib.use('module://matplotlib-backend-sixel')
 from matplotlib import pyplot as plt
-
+import seaborn as sns
 
 
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics.cluster import adjusted_rand_score, rand_score
-def eval_agglo_ari(dist,labels):
+import structout as so
+def eval_agglo_ari(dist,labels, linkage = 'single'):
     rand_indices = []
     adjusted_rand_indices = []
     for n in np.unique(dist):
-        predict = AgglomerativeClustering(n_clusters = None,linkage='single',
+        predict = AgglomerativeClustering(n_clusters = None,
+                                          linkage=linkage,
                     distance_threshold=n,affinity = 'precomputed').fit_predict(dist)
+        if 1850 < n < 2100:
+            so.lprint(predict)
+            so.lprint(labels)
         adjusted_rand_indices.append(adjusted_rand_score(predict, labels))
         rand_indices.append(rand_score(predict, labels))
-
+    x = np.unique(dist)
+    plt.scatter(x,rand_indices)
+    plt.scatter(x,adjusted_rand_indices)
+    plt.show()
     print(f"{max(rand_indices)=}")
     print(f"{max(adjusted_rand_indices)=}")
 
@@ -98,7 +106,9 @@ if __name__ == f"__main__":
     cmscan -g -E 10000 --noali --acc --tblout=delme.tbl  reffile.delme.cm fasta.delme
     '''
     dist = readCmscanAndMakeTable(data)
-    eval_agglo_ari(dist,data[1])
+    for linkage in 'average complete single'.split():
+        print(f"{linkage=}")
+        eval_agglo_ari(dist,data[1],linkage=linkage)
     exit()
 
     import structout as so

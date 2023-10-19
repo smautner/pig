@@ -34,7 +34,7 @@ def knn_accuracy(X, y,n_neighbors):
 
 def kmeans_ari(X,y,k=0):
     if k == 0:
-        k = len(np.unique(labels))
+        k = len(np.unique(y))
     means = KMeans(n_clusters = k)
     predicted = means.fit_predict(X)
     return adjusted_rand_score(y,predicted)

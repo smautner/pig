@@ -18,7 +18,8 @@ def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/tes
     alignments = ut.xmap(ali2graph.rfam_clean, alignments)
 
     #check_labels(alignments,labels)
-
+    for a,label in zip(alignments, labels):
+        a.clusterlabel = label
     return alignments, labels
 
 

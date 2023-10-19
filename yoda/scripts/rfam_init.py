@@ -15,6 +15,8 @@ matplotlib.use('module://matplotlib-sixel')
 import ubergauss.optimization as uo
 from yoda import alignments
 
+import yoda.ml as yodaml
+
 
 ########################
 # so, first we cluster all the right alignments
@@ -99,12 +101,12 @@ def eval_ft(ft,X,y):
     # X = embed(X, n_dim= 6)
     return silhouette_score(X, y, metric= f'precomputed')
 
-def supervised_trainloop(X,labels, eval_ft = eval_ft):
+def supervised_trainloop(X,labels,num_features, eval_ft = eval_ft):
     test_scores=[]
     for train, test in uo.groupedCV(n_splits = 3).split(X,labels,labels):
         tr = X[train], labels[train]
         te = X[test], labels[test]
-        ft = simpleMl.featuremask(*tr, n_ft)
+        ft = simpleMl.featuremask(*tr, num_features)
         test_scores.append( (eval_ft(ft, *te)) )
         print(f"{ eval_ft(ft, *tr) = }")
     return test_scores
@@ -118,9 +120,15 @@ def supervised_trainloop(X,labels, eval_ft = eval_ft):
 def supervised_manifestgraphs():
     import yoda.scripts.torchmetriclearn as tml
     graps, labels = ut.cache('graphscache.delme',tml.getdata)
-    X = graphs.eg.vectorize(graps)
-    eval = lambda ft,x,y : simpleMl.kmeans_ari(x[:,ft==1],x,y)
-    test_scores = supervised_trainloop(X,labels, eval_ft = eval)
+    X = ut.cache('graphvectors.delme', lambda: graphs.eg.vectorize(graps).todense())
+    eval = lambda ft,x,y : simpleMl.kmeans_ari(x[:,ft==1],y,0)
+    labels = np.array(labels)
+    # 1400 -> .26
+    # 2600 -> .28
+    #for num_features in range(1600,3100,100):
+    num_features = 2000
+    print(f"{num_features=}")
+    test_scores = supervised_trainloop(X,labels,num_features = num_features, eval_ft = eval)
     print(f"{ np.mean(test_scores)= }")
 
 def add_vector_attributes(ali):
@@ -137,6 +145,27 @@ def supervised(alis,labels, n_ft = 100):
     X = graphs.vectorize_alignments(a, min_rd=1, mp= True)
     test_scores = supervised_trainloop(X,labels)
     print(f"{ np.mean(test_scores)= }")
+
+
+def test_interp():
+    eucl,alis = ut.loadfile( 'interpret.test.delme')
+    yodaml.interpretable_output(eucl, alis)
+
+def supervised_quicktest():
+    alis, labels = alignments.load_rfam()
+    alis, labels = alignments.size_filter(alis,labels,400)
+    alis = add_vector_attributes(alis)
+    alis,labels = alignments.manifest_sequences(alis,labels,instances=10, mp=True)
+    X = graphs.vectorize_alignments(alis,mp=True)
+
+
+    eval = lambda ft,x,y : simpleMl.kmeans_ari(x[:,ft==1],y,0)
+    labels = np.array(labels)
+    for num_features in range(700,2000,100):
+        print(f"{num_features=}")
+        test_scores = supervised_trainloop(X,labels,num_features = num_features, eval_ft = eval)
+        print(f"{ np.mean(test_scores)= }")
+
 
 from scipy import sparse
 def supervised_graphaverage(alis,labels, n_ft = 100):

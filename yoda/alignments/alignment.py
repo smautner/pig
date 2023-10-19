@@ -11,10 +11,15 @@ class Alignment:
             fname= gf.get(f'AC', f'no idea :) ')
         self.fname = fname
         self.label  = grepfamily(fname)
+        self.clusterlabel = -1 # should be set by load_rfam
 
     def __repr__(self):
         return f'\n'.join([f''.join(row) for row in self.alignment])+'\n'
 
+    def get_fam_id(self):
+        return self.fname
+    def get_fam_name(self):
+        return self.gf.get('ID', '   no id entry for this alignment')[3:]
 
 def grepfamily(name):
     return re.findall(r'RF\d\d\d\d\d',name)[0]
