@@ -38,7 +38,7 @@ class Net(nn.Module):
         x = self.dropout1(x)
         #print(f"{x.shape}")
         x = torch.flatten(x, 1)
-        print(f"{x.shape}")
+        # print(f"{x.shape}")
         x = self.fc1(x) # NEW
         x = self.fc2(x)
         x = self.fc3(x)
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     graphs, labels = ut.cache('graphscache.delme',getdata)
     train_loader, dataset1, dataset2 = torchloader(batch_size, graphs,labels)
     model = Net()
-    model = nn.DataParallel(model)
+    # model = nn.DataParallel(model) ;;;;
     model.to(device,dtype = net_dtype)
     # print(torch.cuda.memory_summary(device=device, abbreviated=False))
     # optimizer = optim.Adam(model.parameters(), lr=0.01)
