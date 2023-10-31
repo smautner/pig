@@ -27,7 +27,7 @@ def make_sincos_index(max_len, dim=4):
 def test_make_sincos_index():
     layers = make_sincos_index(20)
     import structout as so
-    print (layers.shape)
+    # print (layers.shape)
     for layer in layers:
         so.heatmap(layer)
 
@@ -165,14 +165,12 @@ class CustomDataset(Dataset):
         return torch.from_numpy(sample), torch.tensor(label)
 
 def makeloader(ali,label, batch_size, maxlen):
-    return   DataLoader(CustomDataset(ali,label, maxlen),prefetch_factor = None,
-                        batch_size=batch_size, shuffle=True, num_workers=32)
+    return   DataLoader(CustomDataset(ali,label, maxlen), prefetch_factor = 1,
+                        batch_size=batch_size, shuffle=True, num_workers=1)
 
 def torchloader(batch_size, graphs, labels):
 
-
     maxlen = max(map(len, graphs))
-
     train, test = next(uo.groupedCV(n_splits = 3).split(graphs,labels,labels))
     labels = np.array(labels)
     tr = labels[train]
