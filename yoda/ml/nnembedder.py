@@ -165,8 +165,8 @@ class CustomDataset(Dataset):
         return torch.from_numpy(sample), torch.tensor(label)
 
 def makeloader(ali,label, batch_size, maxlen):
-    return   DataLoader(CustomDataset(ali,label, maxlen), prefetch_factor = 1,
-                        batch_size=batch_size, shuffle=True, num_workers=1)
+    return   DataLoader(CustomDataset(ali,label, maxlen), prefetch_factor = 2,
+                        batch_size=batch_size, shuffle=True, num_workers=10)
 
 def torchloader(batch_size, graphs, labels):
 
@@ -176,7 +176,11 @@ def torchloader(batch_size, graphs, labels):
     tr = labels[train]
     te = labels[test]
     train_alignments  = [graphs[i] for i in train]
-    return makeloader(train_alignments,tr, batch_size, maxlen), CustomDataset(train_alignments, tr, maxlen), CustomDataset([graphs[i] for i in test], te, maxlen)
+
+
+    test_alignments = [graphs[i] for i in test]
+    return makeloader(train_alignments,tr, batch_size, maxlen), CustomDataset([graphs[i] for i in test], te, maxlen)
+            # CustomDataset(train_alignments, tr, maxlen),
 
 
 

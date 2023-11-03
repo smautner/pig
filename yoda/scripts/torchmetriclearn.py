@@ -50,21 +50,22 @@ timestart = time.time()
 def train(model, loss_func, mining_func, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (data, labels) in enumerate(train_loader):
-        data, labels = data.to(device, dtype =  net_dtype), labels.to(device,dtype = torch.bfloat16)
+        data, labels = data.to(device, dtype =  net_dtype), labels.to(device,dtype = net_dtype)
         optimizer.zero_grad()
         embeddings = model(data)
         indices_tuple = mining_func(embeddings, labels)
         loss = loss_func(embeddings, labels, indices_tuple)
         loss.backward()
         optimizer.step()
-        if batch_idx % 5 == 0:
+        if batch_idx % 2 == 0:
             print( "Ep {} Iter {} Loss {}, triplets {}, time {}".format(
                     epoch, batch_idx, loss, mining_func.num_triplets,time.time()-timestart ))
 
 
 ### convenient function from pytorch-metric-learning ###
 def get_all_embeddings(dataset, model):
-    tester = testers.BaseTester()
+    tester = testers.BaseTester(data_device = device, dtype = net_dtype)
+
     return tester.get_all_embeddings(dataset, model)
 
 
@@ -72,15 +73,17 @@ def get_all_embeddings(dataset, model):
 from sklearn.metrics import silhouette_score, adjusted_rand_score
 import numpy as np
 from sklearn.cluster import KMeans
-def test(train_set, test_set, model, accuracy_calculator):
+def test( test_set, model, accuracy_calculator):
     with torch.no_grad():
         test_embeddings, test_labels = get_all_embeddings(test_set, model)
 
-    test_labels = test_labels.squeeze(1)
 
-    silhou = silhouette_score(test_embeddings.numpy(),  test_labels)
+    test_embeddings = test_embeddings.cpu().to(dtype = torch.float32).numpy()
+    test_labels = test_labels.cpu()
+    test_labels = test_labels.squeeze(1)
+    silhou = silhouette_score(test_embeddings,  test_labels)
     print(f"{silhou= }")
-    ari = adjusted_rand_score( KMeans(n_clusters=len(np.unique(test_labels))).fit_predict(test_embeddings.numpy()), test_labels)
+    ari = adjusted_rand_score( KMeans(n_clusters=len(np.unique(test_labels))).fit_predict(test_embeddings), test_labels)
     print(f"{ ari=}")
     return silhou, ari
 
@@ -89,7 +92,7 @@ def test(train_set, test_set, model, accuracy_calculator):
 
 device = torch.device("cuda")
 # device = torch.device("cpu")
-batch_size = 256
+batch_size = 128
 net_dtype = torch.bfloat16
 
 
@@ -116,7 +119,7 @@ import ubergauss.tools as ut
 
 if __name__ == '__main__':
     graphs, labels = ut.cache('graphscache.delme',getdata)
-    train_loader, dataset1, dataset2 = torchloader(batch_size, graphs,labels)
+    train_loader,  test_set = torchloader(batch_size, graphs,labels)
     model = Net()
     # model = nn.DataParallel(model) ;;;;
     model.to(device,dtype = net_dtype)
@@ -138,8 +141,7 @@ if __name__ == '__main__':
     res = []
     for epoch in range(1, num_epochs + 1):
         train(model, loss_func, mining_func, device, train_loader, optimizer, epoch)
-        r = test(dataset1, dataset2, model, accuracy_calculator)
+        r = test( test_set, model, accuracy_calculator)
         res.append(r)
         printres(res)
 
-    breakpoint()
