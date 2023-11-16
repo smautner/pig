@@ -55,3 +55,78 @@ if __name__ == "__main__":
         except:
             pass
 
+
+
+
+#####################################################
+# we build something like this:
+
+    # (Pdb) df.iloc[2]
+    # sequence         [G, A, A, A, U, C, U, U, U, C, C, U, G, C, U, ...
+    # structure        [., ., (, (, (, (, (, (, (, (, (, (, (, (, (, ...
+    # pos1id           [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 1...
+    # pos2id           [113, 112, 111, 110, 109, 108, 107, 106, 105, ...
+    # pk               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...
+    # msa_id                                                           2
+    # set                                                          train
+    # is_pdb                                                       False
+    # has_pk                                                       False
+    # has_multiplet                                                False
+    # has_nc                                                       False
+    # has_msa                                                      False
+    # family                                                      MIR828
+    # Id                                                               2
+
+# noncanonical
+
+canonical_pairs = ['GC', 'CG', 'AU', 'UA', 'GU', 'UG']
+def is_nc(a,b):
+    return a+b in canonical_pairs
+
+def has_nc(s,x1,x2):
+    return any([is_nc(s[xx1],s[xx2]) for xx1,xx2 in zip(x1,x2)])
+
+import networkx as nx
+def ali_to_rnaformerlinedict(id:int,ali: alignment.Alignment):
+    # initialize, set values that ill ignore but rnaformer might want to see
+    ret = {}
+    ret['is_pdb'] = False
+    ret['has_pk'] = False
+    ret['has_multiplet'] = False
+    ret['has_msa'] = False
+
+    # important stuff first..
+    ret['sequence'] = list(ali.graph.graph['sequence'])
+    ret['structure'] = list(ali.graph.graph['structure'])
+    g = nx.convert_node_labels_to_integers(ali.graph)
+    try:
+        ret['pos1id'], ret['pos2id'] = Transpose([(a,b) for a,b,c in g.edges(data=True) if c['type'] =='basepair'])
+    except:
+        # sometimes there is no structure, e.g. RF00277
+        ret['pos1id'], ret['pos2id'] = [],[]
+    ret['pk'] = [0]*len(ret['pos1id'])
+
+    # not so important stuff now...
+    ret['family'] = ali.get_fam_name()
+    ret['Id'] = id
+    ret['has_nc'] = has_nc(ret['sequence'], ret['pos2id'], ret['pos1id'])
+    ret['msa_id'] = 0
+    ret['set'] = ali.get_fam_id()[3:]
+    return ret
+
+
+import pandas as pd
+def make_rnaformerdata():
+    a,l = load_rfam(add_cov='')
+    a,l = size_filter(a,l,400)
+
+    a,l = manifest_sequences(a,l,instances=10000, mp=True)
+    dict_dat = Map(ali_to_rnaformerlinedict, *Transpose(enumerate(a)))
+    df = pd.DataFrame(dict_dat)
+    print(df)
+    df.to_pickle('rnaformer_rfam.plk')
+    return df
+
+
+
+

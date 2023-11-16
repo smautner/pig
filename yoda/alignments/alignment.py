@@ -18,6 +18,7 @@ class Alignment:
 
     def get_fam_id(self):
         return self.fname
+
     def get_fam_name(self):
         return self.gf.get('ID', '   no id entry for this alignment')[3:]
 
