@@ -87,8 +87,9 @@ def has_nc(s,x1,x2):
     return any([is_nc(s[xx1],s[xx2]) for xx1,xx2 in zip(x1,x2)])
 
 import networkx as nx
-def ali_to_rnaformerlinedict(id:int,ali: alignment.Alignment):
+def ali_to_rnaformerlinedict(id:int, thing):
     # initialize, set values that ill ignore but rnaformer might want to see
+    ali, label = thing
     ret = {}
     ret['is_pdb'] = False
     ret['has_pk'] = False
@@ -107,11 +108,11 @@ def ali_to_rnaformerlinedict(id:int,ali: alignment.Alignment):
     ret['pk'] = [0]*len(ret['pos1id'])
 
     # not so important stuff now...
-    ret['family'] = ali.get_fam_name()
+    ret['family'] = ali.get_fam_id()[3:] #ali.get_fam_name()
     ret['Id'] = id
     ret['has_nc'] = has_nc(ret['sequence'], ret['pos2id'], ret['pos1id'])
     ret['msa_id'] = 0
-    ret['set'] = ali.get_fam_id()[3:]
+    ret['set'] = label
     return ret
 
 
@@ -119,9 +120,8 @@ import pandas as pd
 def make_rnaformerdata():
     a,l = load_rfam(add_cov='')
     a,l = size_filter(a,l,400)
-
-    a,l = manifest_sequences(a,l,instances=10000, mp=True)
-    dict_dat = Map(ali_to_rnaformerlinedict, *Transpose(enumerate(a)))
+    a,l = manifest_sequences(a,l,instances=100000, mp=True)
+    dict_dat = Map(ali_to_rnaformerlinedict, *Transpose(enumerate(zip(a,l))))
     df = pd.DataFrame(dict_dat)
     print(df)
     df.to_pickle('rnaformer_rfam.plk')
