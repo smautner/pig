@@ -100,128 +100,120 @@ class SinusoidalPosEmb(nn.Module):
 
 
 
+# class LenMatchBatchSampler(torch.utils.data.BatchSampler):
+#     def __iter__(self):
+#         buckets = [[]] * 100
+#         yielded = 0
+
+#         for idx in self.sampler:
+#             s = self.sampler.data_source[idx]
+#             if isinstance(s,tuple): L = s[0]["mask"].sum()
+#             else: L = s["mask"].sum()
+#             L = max(1,L // 16)
+#             if len(buckets[L]) == 0:  buckets[L] = []
+#             buckets[L].append(idx)
+
+#             if len(buckets[L]) == self.batch_size:
+#                 batch = list(buckets[L])
+#                 yield batch
+#                 yielded += 1
+#                 buckets[L] = []
+#         batch = []
+#         leftover = [idx for bucket in buckets for idx in bucket]
+#         for idx in leftover:
+#             batch.append(idx)
+#             if len(batch) == self.batch_size:
+#                 yielded += 1
+#                 yield batch
+#                 batch = []
+#         if len(batch) > 0 and not self.drop_last:
+#             yielded += 1
+#             yield batch
+
+
 
 
 ###############################
 #  IMPLEMENTATION STARTS HERE
 #################################
 
-
+from ubergauss.optimization import groupedCV
 class RNA_Dataset(Dataset):
-    def __init__(self, df, mode='train', seed=2023, fold=0, nfolds=4,
-                 mask_only=False, **kwargs):
+    def __init__(self, df, mode='train', seed=2023, fold=0, nfolds=4, **kwargs):
         self.seq_map = {'A':0,'C':1,'G':2,'U':3}
-        self.Lmax = 206
-        df['L'] = df.sequence.apply(len)
-        df_2A3 = df.loc[df.experiment_type=='2A3_MaP']
-        df_DMS = df.loc[df.experiment_type=='DMS_MaP']
+        self.Lmax = 400
 
-        split = list(KFold(n_splits=nfolds, random_state=seed,
-                shuffle=True).split(df_2A3))[fold][0 if mode=='train' else 1]
-        df_2A3 = df_2A3.iloc[split].reset_index(drop=True)
-        df_DMS = df_DMS.iloc[split].reset_index(drop=True)
+        labels = df['set'].values
+        split = list(groupedCV(n_splits=nfolds, randseed=seed).split(df,labels, groups=labels))[fold][0 if mode=='train' else 1]
 
-        m = (df_2A3['SN_filter'].values > 0) & (df_DMS['SN_filter'].values > 0)
-        df_2A3 = df_2A3.loc[m].reset_index(drop=True)
-        df_DMS = df_DMS.loc[m].reset_index(drop=True)
+        df = df.iloc[split].sample(frac=1).reset_index(drop=True)
+        # df = df.iloc[split].reset_index(drop=True)
 
-        self.seq = df_2A3['sequence'].values
-        self.L = df_2A3['L'].values
-
-        self.react_2A3 = df_2A3[[c for c in df_2A3.columns if \
-                                 'reactivity_0' in c]].values
-        self.react_DMS = df_DMS[[c for c in df_DMS.columns if \
-                                 'reactivity_0' in c]].values
-        self.react_err_2A3 = df_2A3[[c for c in df_2A3.columns if \
-                                 'reactivity_error_0' in c]].values
-        self.react_err_DMS = df_DMS[[c for c in df_DMS.columns if \
-                                'reactivity_error_0' in c]].values
-        self.sn_2A3 = df_2A3['signal_to_noise'].values
-        self.sn_DMS = df_DMS['signal_to_noise'].values
-        self.mask_only = mask_only
+        # our df has 'set' (labels), sequence, pos1id, pos2id
+        self.seq = df['sequence'].values
+        self.labels = df['set'].values
+        self.p1 = df['pos1id'].values
+        self.p2 = df['pos2id'].values
 
     def __len__(self):
         return len(self.seq)
 
     def __getitem__(self, idx):
         seq = self.seq[idx]
-        if self.mask_only:
-            mask = torch.zeros(self.Lmax, dtype=torch.bool)
-            mask[:len(seq)] = True
-            return {'mask':mask},{'mask':mask}
         seq = [self.seq_map[s] for s in seq]
         seq = np.array(seq)
-        mask = torch.zeros(self.Lmax, dtype=torch.bool)
-        mask[:len(seq)] = True
-        seq = np.pad(seq,(0,self.Lmax-len(seq)))
+        seq = np.pad(seq, (0,self.Lmax-len(seq)))
+        label = np.array(self.labels[idx])
+        p1 =  np.array(self.p1[idx])
+        p2 =  np.array(self.p2[idx])
+        p1 = np.hstack((p1,[-1]*(self.Lmax-len(p1))), dtype = np.int32, casting = 'unsafe')
+        p2 = np.hstack((p2,[-1]*(self.Lmax-len(p2))), dtype = np.int32, casting = 'unsafe')
 
-        react = torch.from_numpy(np.stack([self.react_2A3[idx],
-                                           self.react_DMS[idx]],-1))
-        react_err = torch.from_numpy(np.stack([self.react_err_2A3[idx],
-                                               self.react_err_DMS[idx]],-1))
-        sn = torch.FloatTensor([self.sn_2A3[idx],self.sn_DMS[idx]])
-
-        return {'seq':torch.from_numpy(seq), 'mask':mask}, \
-               {'react':react, 'react_err':react_err,
-                'sn':sn, 'mask':mask}
-
-class LenMatchBatchSampler(torch.utils.data.BatchSampler):
-    def __iter__(self):
-        buckets = [[]] * 100
-        yielded = 0
-
-        for idx in self.sampler:
-            s = self.sampler.data_source[idx]
-            if isinstance(s,tuple): L = s[0]["mask"].sum()
-            else: L = s["mask"].sum()
-            L = max(1,L // 16)
-            if len(buckets[L]) == 0:  buckets[L] = []
-            buckets[L].append(idx)
-
-            if len(buckets[L]) == self.batch_size:
-                batch = list(buckets[L])
-                yield batch
-                yielded += 1
-                buckets[L] = []
-
-        batch = []
-        leftover = [idx for bucket in buckets for idx in bucket]
-
-        for idx in leftover:
-            batch.append(idx)
-            if len(batch) == self.batch_size:
-                yielded += 1
-                yield batch
-                batch = []
-
-        if len(batch) > 0 and not self.drop_last:
-            yielded += 1
-            yield batch
+        return {'seq':torch.from_numpy(seq), 'label':label, 'p1':p1, 'p2':p2}, {'label':label}
 
 
 
 class RNA_Model(nn.Module):
-    def __init__(self, dim=192, depth=12, head_size=32, **kwargs):
+    def __init__(self, dim=128, depth=12, head_size=32, **kwargs):
         super().__init__()
-        self.emb = nn.Embedding(4,dim)
-        self.pos_enc = SinusoidalPosEmb(dim)
+        self.emb = nn.Embedding(4,64)
+        self.pos_enc = SinusoidalPosEmb(32)
+
         self.transformer = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=dim, nhead=dim//head_size, dim_feedforward=4*dim,
                 dropout=0.1, activation=nn.GELU(), batch_first=True, norm_first=True), depth)
         self.proj_out = nn.Linear(dim,2)
 
+
     def forward(self, x0):
-        mask = x0['mask']
-        Lmax = mask.sum(-1).max()
-        mask = mask[:,:Lmax]
-        x = x0['seq'][:,:Lmax]
+        # note i removed the masking maybe that was too much cleaning
+        x = x0['seq']
+        p1,p2 = x0['p1'], x0['p2']
 
-        pos = torch.arange(Lmax, device=x.device).unsqueeze(0)
-        pos = self.pos_enc(pos)
-        x = self.emb(x)
-        x = x + pos
 
-        x = self.transformer(x, src_key_padding_mask=~mask)
+        pos = torch.arange(x.shape[1], device=x.device)
+        pos= pos.unsqueeze(0)
+        pos = self.pos_enc(pos) # bsx400
+        pos = torch.repeat_interleave(pos, 128, dim=0 )
+
+
+
+
+
+        struct = torch.zeros((128,400,32), device = pos.device)
+        # for i,(pp1,pp2) in enumerate(zip(p1,p2)):
+        #     # pp1 = pp1[pp1!=-1]
+        #     # pp2 = pp2[pp2!=-1]
+        #     pp1 = pp1!=-1
+        #     pp2 = pp2!=-1
+        #     struct[i,pp1] = pos[i,pp2]
+        #     struct[i,pp2] = pos[i,pp1 ]
+        struct[p1!=-1] = pos[p2!=-1]
+        struct[p2!=-1] = pos[p1!=-1]
+
+        x = self.emb(x) # bs 400 dim
+        x = torch.cat((x,pos,struct),2)
+        x = self.transformer(x)
         x = self.proj_out(x)
 
         return x
@@ -257,9 +249,9 @@ class MAE(Metric):
 
 
 fname = 'example0'
-PATH = '/kaggle/input/stanford-ribonanza-rna-folding-converted/'
+PATH = '../rnaformer_rfam.plk'
 OUT = './'
-bs = 256
+bs = 128
 num_workers = 2
 SEED = 2023
 nfolds = 4
@@ -269,35 +261,30 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 seed_everything(SEED)
 os.makedirs(OUT, exist_ok=True)
-df = pd.read_parquet(os.path.join(PATH,'train_data.parquet'))
-from fastai.lerner import Learner
+df = pd.read_pickle(PATH)
+from fastai.learner import Learner
 
 for fold in [0]: # running multiple folds at kaggle may cause OOM
 
+    # DATA LOADING
     ds_train = RNA_Dataset(df, mode='train', fold=fold, nfolds=nfolds)
-    ds_train_len = RNA_Dataset(df, mode='train', fold=fold, nfolds=nfolds, mask_only=True)
-    sampler_train = torch.utils.data.RandomSampler(ds_train_len)
-    len_sampler_train = LenMatchBatchSampler(sampler_train, batch_size=bs, drop_last=True)
-
-    dl_train = DeviceDataLoader(torch.utils.data.DataLoader(ds_train,
-                batch_sampler=len_sampler_train, num_workers=num_workers,
-                persistent_workers=True), device)
+    dl_train = DeviceDataLoader(torch.utils.data.DataLoader(ds_train, batch_size= bs, num_workers=num_workers, persistent_workers=True), device)
 
     ds_val = RNA_Dataset(df, mode='eval', fold=fold, nfolds=nfolds)
-    ds_val_len = RNA_Dataset(df, mode='eval', fold=fold, nfolds=nfolds, mask_only=True)
-    sampler_val = torch.utils.data.SequentialSampler(ds_val_len)
-    len_sampler_val = LenMatchBatchSampler(sampler_val, batch_size=bs, drop_last=False)
-    dl_val= DeviceDataLoader(torch.utils.data.DataLoader(ds_val, batch_sampler=len_sampler_val, num_workers=num_workers), device)
-    gc.collect()
+    dl_val= DeviceDataLoader(torch.utils.data.DataLoader(ds_val, batch_size=bs, num_workers=num_workers), device)
 
+    gc.collect()
     data = DataLoaders(dl_train, dl_val)
+
+
     model = RNA_Model()
     model = model.to(device)
     learn = Learner(data, model, loss_func=loss,cbs=[GradientClip(3.0)], metrics=[MAE()]).to_fp16()
-
     learn.fit_one_cycle(32, lr_max=5e-4, wd=0.05, pct_start=0.02)
-    torch.save(learn.model.state_dict(),os.path.join(OUT,f'{fname}_{fold}.pth'))
-    gc.collect()
+
+    # later ....
+    # torch.save(learn.model.state_dict(),os.path.join(OUT,f'{fname}_{fold}.pth'))
+    # gc.collect()
 
 
 
