@@ -182,8 +182,8 @@ class RNA_Model(nn.Module):
         self.transformer = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=dim, nhead=dim//head_size, dim_feedforward=4*dim,
                 dropout=0.1, activation=nn.GELU(), batch_first=True, norm_first=True), depth)
-        self.proj_out = nn.Linear(dim,2)
-
+        self.fc1 = nn.Linear(51200, 1024)
+        self.fc2 = nn.Linear(1024, 8)
 
     def forward(self, x0):
         # note i removed the masking maybe that was too much cleaning
@@ -194,13 +194,9 @@ class RNA_Model(nn.Module):
         pos = torch.arange(x.shape[1], device=x.device)
         pos= pos.unsqueeze(0)
         pos = self.pos_enc(pos) # bsx400
-        pos = torch.repeat_interleave(pos, 128, dim=0 )
-
-
-
-
-
-        struct = torch.zeros((128,400,32), device = pos.device)
+        num_instances = p1.shape[0]
+        pos = torch.repeat_interleave(pos, num_instances, dim=0 )
+        struct = torch.zeros((num_instances,400,32), device = pos.device)
         # for i,(pp1,pp2) in enumerate(zip(p1,p2)):
         #     # pp1 = pp1[pp1!=-1]
         #     # pp2 = pp2[pp2!=-1]
@@ -214,20 +210,29 @@ class RNA_Model(nn.Module):
         x = self.emb(x) # bs 400 dim
         x = torch.cat((x,pos,struct),2)
         x = self.transformer(x)
-        x = self.proj_out(x)
 
+        x = torch.flatten(x, 1)
+        x = self.fc1(x)
+        x = self.fc2(x)
         return x
 
+from pytorch_metric_learning import distances, losses, miners, reducers, testers
+from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
+distance = distances.CosineSimilarity()
+reducer = reducers.ThresholdReducer(low=0)
+loss_func = losses.TripletMarginLoss(margin=0.2, distance=distance, reducer=reducer)
+mining_func = miners.TripletMarginMiner( margin=0.2, distance=distance, type_of_triplets="semihard")
+accuracy_calculator = AccuracyCalculator(include=("precision_at_1",), k=1)
 
 def loss(pred,target):
-    p = pred[target['mask'][:,:pred.shape[1]]]
-    y = target['react'][target['mask']].clip(0,1)
-    loss = F.l1_loss(p, y, reduction='none')
-    loss = loss[~torch.isnan(loss)].mean()
-
+    indices_tuple = mining_func(pred, target['label'])
+    loss = loss_func(pred, target['label'], indices_tuple)
     return loss
 
-class MAE(Metric):
+from sklearn.metrics import silhouette_score, adjusted_rand_score
+from sklearn.cluster import KMeans
+
+class METRIC(Metric):
     def __init__(self):
         self.reset()
 
@@ -235,17 +240,21 @@ class MAE(Metric):
         self.x,self.y = [],[]
 
     def accumulate(self, learn):
-        x = learn.pred[learn.y['mask'][:,:learn.pred.shape[1]]]
-        y = learn.y['react'][learn.y['mask']].clip(0,1)
+        breakpoint()
+        x = learn.pred
+        y = learn.y['label']
         self.x.append(x)
         self.y.append(y)
 
     @property
     def value(self):
         x,y = torch.cat(self.x,0),torch.cat(self.y,0)
-        loss = F.l1_loss(x, y, reduction='none')
-        loss = loss[~torch.isnan(loss)].mean()
-        return loss
+        silhou = silhouette_score(test_embeddings,  test_labels)
+        # print(f"{silhou= }")
+        # ari = adjusted_rand_score( KMeans(n_clusters=len(np.unique(test_labels))).fit_predict(test_embeddings), test_labels)
+        # print(f"{ ari=}")
+        # return silhou, ari
+        return silhou
 
 
 fname = 'example0'
@@ -275,12 +284,11 @@ for fold in [0]: # running multiple folds at kaggle may cause OOM
 
     gc.collect()
     data = DataLoaders(dl_train, dl_val)
-
-
     model = RNA_Model()
     model = model.to(device)
-    learn = Learner(data, model, loss_func=loss,cbs=[GradientClip(3.0)], metrics=[MAE()]).to_fp16()
-    learn.fit_one_cycle(32, lr_max=5e-4, wd=0.05, pct_start=0.02)
+    # learn = Learner(data, model, loss_func=loss,cbs=[GradientClip(3.0)], metrics=[METRIC()]).to_fp16()
+    learn = Learner(data, model, loss_func=loss,cbs=[], metrics=[]).to_fp16()
+    learn.fit_one_cycle(320, lr_max=5e-4, wd=0.05, pct_start=0.02)
 
     # later ....
     # torch.save(learn.model.state_dict(),os.path.join(OUT,f'{fname}_{fold}.pth'))
@@ -291,3 +299,15 @@ for fold in [0]: # running multiple folds at kaggle may cause OOM
 
 
 
+# vi /home/stefan/.myconda/miniconda3/envs/rnafenv/lib/python3.10/site-packages/fastai/learner.py
+  # 8 class AvgSmoothLoss(Metric):
+  # 7     "Smooth average of the losses (exponentially weighted with `beta`)"
+  # 6     def __init__(self, beta=0.98): self.beta = beta
+  # 5     def reset(self):               self.count,self.val = 0,tensor(0.)
+  # 4     def accumulate(self, learn):
+  # 3         self.count += 1
+  # 2         # self.val = torch.lerp(to_detach(learn.loss.mean()), self.val, self.beta)
+  # 1         start = to_detach(learn.loss.mean())
+# 511         end = self.val
+  # 1         weight = self.beta
+  # 2         self.val = start + weight* (end - start)
