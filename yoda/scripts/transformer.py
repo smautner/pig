@@ -162,15 +162,25 @@ class RNA_Dataset(Dataset):
         seq = self.seq[idx]
         seq = [self.seq_map[s] for s in seq]
         seq = np.array(seq)
+        n_nuc = len(seq)
         seq = np.pad(seq, (0,self.Lmax-len(seq)))
         label = np.array(self.labels[idx])
-        p1 =  np.array(self.p1[idx])
-        p2 =  np.array(self.p2[idx])
-        p1 = np.hstack((p1,[-1]*(self.Lmax-len(p1))), dtype = np.int32, casting = 'unsafe')
-        p2 = np.hstack((p2,[-1]*(self.Lmax-len(p2))), dtype = np.int32, casting = 'unsafe')
 
-        return {'seq':torch.from_numpy(seq), 'label':label, 'p1':p1, 'p2':p2}, {'label':label}
+        # p1 =  np.array(self.p1[idx])
+        # p2 =  np.array(self.p2[idx])
+        # p1 = np.hstack((p1,[-1]*(self.Lmax-len(p1))), dtype = np.int32, casting = 'unsafe')
+        # p2 = np.hstack((p2,[-1]*(self.Lmax-len(p2))), dtype = np.int32, casting = 'unsafe')
+        po1 = np.full(self.Lmax, False)
+        po1[list(self.p1[idx])] = True
+        po2 = np.full(self.Lmax, False)
+        po2[list(self.p2[idx])] = True
 
+        return {'seq':torch.from_numpy(seq),'len':n_nuc ,'label':label, 'p1':po1, 'p2':po2}, {'label':label}
+
+import structout as so
+def hm(mat, **kw):
+    print(mat.shape)
+    so.heatmap(mat.cpu().numpy(),**kw)
 
 
 class RNA_Model(nn.Module):
@@ -190,17 +200,18 @@ class RNA_Model(nn.Module):
         # note i removed the masking maybe that was too much cleaning
         x = x0['seq']
         p1,p2 = x0['p1'], x0['p2']
-
-
-        pos = torch.arange(x.shape[1], device=x.device)
+        pos = torch.arange(x0['len'], device=x.device)
         pos= pos.unsqueeze(0)
         pos = self.pos_enc(pos) # bsx400
         num_instances = p1.shape[0]
         pos = torch.repeat_interleave(pos, num_instances, dim=0 )
         struct = torch.zeros((num_instances,400,32), device = pos.device)
 
-        struct[p1!=-1] = pos[p2!=-1]
-        struct[p2!=-1] = pos[p1!=-1]
+        # p1i = p1[p1!=-1].to(torch.long)
+        # p2i = p2[p2!=-1].to(torch.long)
+        struct[p1] = pos[p2]
+        struct[p2] = pos[p1]
+        breakpoint()
 
         x = self.emb(x) # bs 400 dim
         x = torch.cat((x,pos,struct),2)
