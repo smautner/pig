@@ -222,12 +222,34 @@ class RNA_Model(nn.Module):
         x = self.fc2(x)
         return x
 
+
+from pytorch_metric_learning.miners import BaseMiner
+from pytorch_metric_learning.utils import loss_and_miner_utils as lmu
+
+class semisupertripletminer(BaseMiner):
+    def __init__(self, margin=0.1, **kwargs):
+        super().__init__(**kwargs)
+        self.margin = margin
+
+    def mine(self, embeddings, labels, ref_emb, ref_labels):
+        mat = self.distance(embeddings, ref_emb)
+        a, p, n = lmu.get_all_triplets_indices(labels, ref_labels)
+        breakpoint()
+        pos_pairs = mat[a, p]
+        neg_pairs = mat[a, n]
+        triplet_margin = pos_pairs - neg_pairs if self.distance.is_inverted else neg_pairs - pos_pairs
+        triplet_mask = triplet_margin <= self.margin
+        return a[triplet_mask], p[triplet_mask], n[triplet_mask]
+
+
+
 from pytorch_metric_learning import distances, losses, miners, reducers, testers
 from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
 distance = distances.CosineSimilarity()
 reducer = reducers.ThresholdReducer(low=0)
 loss_func = losses.TripletMarginLoss(margin=0.2, distance=distance, reducer=reducer)
-mining_func = miners.TripletMarginMiner( margin=0.2, distance=distance, type_of_triplets="semihard")
+# mining_func = miners.TripletMarginMiner( margin=0.2, distance=distance, type_of_triplets="semihard")
+mining_func = semisupertripletminer(distance=distance)
 accuracy_calculator = AccuracyCalculator(include=("precision_at_1",), k=1)
 
 def loss(pred,target):
