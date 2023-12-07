@@ -65,14 +65,14 @@ def seed_everything(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
 
-def dict_to(x, device='cuda'):
+def dict_to(x, device):
     return {k:x[k].to(device) for k in x}
 
-def to_device(x, device='cuda'):
+def to_device(x, device):
     return tuple(dict_to(e,device) for e in x)
 
 class DeviceDataLoader:
-    def __init__(self, dataloader, device='cuda'):
+    def __init__(self, dataloader, device):
         self.dataloader = dataloader
         self.device = device
 
@@ -174,15 +174,16 @@ class RNA_Dataset(Dataset):
 
 
 class RNA_Model(nn.Module):
-    def __init__(self, dim=128, depth=12, head_size=32, **kwargs):
+    def __init__(self, dim=128, depth=6, head_size=32, **kwargs): # depth was 12 and headsize was 32
         super().__init__()
-        self.emb = nn.Embedding(4,64)
+        self.emb = nn.Embedding(4,dim-64)
         self.pos_enc = SinusoidalPosEmb(32)
 
         self.transformer = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=dim, nhead=dim//head_size, dim_feedforward=4*dim,
-                dropout=0.1, activation=nn.GELU(), batch_first=True, norm_first=True), depth)
-        self.fc1 = nn.Linear(51200, 1024)
+                dropout=0.15, activation=nn.GELU(), batch_first=True, norm_first=True), depth) # dropput was .1
+
+        self.fc1 = nn.Linear(400*dim, 1024)
         self.fc2 = nn.Linear(1024, 8)
 
     def forward(self, x0):
@@ -197,13 +198,7 @@ class RNA_Model(nn.Module):
         num_instances = p1.shape[0]
         pos = torch.repeat_interleave(pos, num_instances, dim=0 )
         struct = torch.zeros((num_instances,400,32), device = pos.device)
-        # for i,(pp1,pp2) in enumerate(zip(p1,p2)):
-        #     # pp1 = pp1[pp1!=-1]
-        #     # pp2 = pp2[pp2!=-1]
-        #     pp1 = pp1!=-1
-        #     pp2 = pp2!=-1
-        #     struct[i,pp1] = pos[i,pp2]
-        #     struct[i,pp2] = pos[i,pp1 ]
+
         struct[p1!=-1] = pos[p2!=-1]
         struct[p2!=-1] = pos[p1!=-1]
 
@@ -231,21 +226,17 @@ def loss(pred,target):
 
 from sklearn.metrics import silhouette_score, adjusted_rand_score
 from sklearn.cluster import KMeans
-
 class METRIC(Metric):
     def __init__(self):
         self.reset()
-
     def reset(self):
         self.x,self.y = [],[]
-
     def accumulate(self, learn):
         breakpoint()
         x = learn.pred
         y = learn.y['label']
         self.x.append(x)
         self.y.append(y)
-
     @property
     def value(self):
         x,y = torch.cat(self.x,0),torch.cat(self.y,0)
@@ -257,14 +248,22 @@ class METRIC(Metric):
         return silhou
 
 
+import dirtyopts
+docs = '''
+--dev int 0    # cuda device id
+--batchsize int 256  #batchsize
+--dim int 128  #embedding dimension (64 are reserved for structure)
+'''
+args = dirtyopts.parse(docs)
+
 fname = 'example0'
 PATH = '../rnaformer_rfam.plk'
 OUT = './'
-bs = 128
+bs = args.batchsize
 num_workers = 2
 SEED = 2023
 nfolds = 4
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = f'cuda:{args.dev}'
 
 
 
@@ -273,7 +272,7 @@ os.makedirs(OUT, exist_ok=True)
 df = pd.read_pickle(PATH)
 from fastai.learner import Learner
 
-for fold in [0]: # running multiple folds at kaggle may cause OOM
+for fold in [0]:
 
     # DATA LOADING
     ds_train = RNA_Dataset(df, mode='train', fold=fold, nfolds=nfolds)
@@ -284,7 +283,7 @@ for fold in [0]: # running multiple folds at kaggle may cause OOM
 
     gc.collect()
     data = DataLoaders(dl_train, dl_val)
-    model = RNA_Model()
+    model = RNA_Model(dim=args.dim)
     model = model.to(device)
     # learn = Learner(data, model, loss_func=loss,cbs=[GradientClip(3.0)], metrics=[METRIC()]).to_fp16()
     learn = Learner(data, model, loss_func=loss,cbs=[], metrics=[]).to_fp16()
@@ -293,10 +292,6 @@ for fold in [0]: # running multiple folds at kaggle may cause OOM
     # later ....
     # torch.save(learn.model.state_dict(),os.path.join(OUT,f'{fname}_{fold}.pth'))
     # gc.collect()
-
-
-
-
 
 
 # vi /home/stefan/.myconda/miniconda3/envs/rnafenv/lib/python3.10/site-packages/fastai/learner.py
