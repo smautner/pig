@@ -184,7 +184,7 @@ def hm(mat, **kw):
 
 
 class RNA_Model(nn.Module):
-    def __init__(self, dim=128, depth=6, head_size=32, **kwargs): # depth was 12 and headsize was 32
+    def __init__(self, dim=128, depth=1, head_size=32, **kwargs): # depth was 12 and headsize was 32
         super().__init__()
         self.emb = nn.Embedding(4,dim-64)
         self.pos_enc = SinusoidalPosEmb(32)
@@ -200,7 +200,7 @@ class RNA_Model(nn.Module):
         # note i removed the masking maybe that was too much cleaning
         x = x0['seq']
         p1,p2 = x0['p1'], x0['p2']
-        pos = torch.arange(x0['len'], device=x.device)
+        pos = torch.arange(400, device=x.device)
         pos= pos.unsqueeze(0)
         pos = self.pos_enc(pos) # bsx400
         num_instances = p1.shape[0]
@@ -211,7 +211,6 @@ class RNA_Model(nn.Module):
         # p2i = p2[p2!=-1].to(torch.long)
         struct[p1] = pos[p2]
         struct[p2] = pos[p1]
-        breakpoint()
 
         x = self.emb(x) # bs 400 dim
         x = torch.cat((x,pos,struct),2)
@@ -227,14 +226,20 @@ from pytorch_metric_learning.miners import BaseMiner
 from pytorch_metric_learning.utils import loss_and_miner_utils as lmu
 
 class semisupertripletminer(BaseMiner):
+    '''
+    we try to build a tripplet loss minder that can handle -1 classes
+    those are supposed to be far fom what we know
+    '''
     def __init__(self, margin=0.1, **kwargs):
         super().__init__(**kwargs)
         self.margin = margin
 
     def mine(self, embeddings, labels, ref_emb, ref_labels):
         mat = self.distance(embeddings, ref_emb)
-        a, p, n = lmu.get_all_triplets_indices(labels, ref_labels)
-        breakpoint()
+        a,p,n = lmu.get_all_triplets_indices(labels, ref_labels)
+        # ok here i should remove some things, where aaa is of class -1; i remove the entry.
+        triplet_mask = labels[a] != -1
+        a,p,n =  a[triplet_mask], p[triplet_mask], n[triplet_mask]
         pos_pairs = mat[a, p]
         neg_pairs = mat[a, n]
         triplet_margin = pos_pairs - neg_pairs if self.distance.is_inverted else neg_pairs - pos_pairs

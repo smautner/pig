@@ -15,8 +15,8 @@ def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/tes
         labels = labels[oklabel]
     if add_cov:
         alignments = filein.addcov_rfam(alignments, add_cov)
-    alignments = ut.xmap(ali2graph.rfam_clean, alignments)
 
+    alignments = ut.xmap(ali2graph.rfam_clean, alignments)
     #check_labels(alignments,labels)
     for a,label in zip(alignments, labels):
         a.clusterlabel = label
@@ -117,14 +117,25 @@ def ali_to_rnaformerlinedict(id:int, thing):
 
 
 import pandas as pd
-def make_rnaformerdata():
-    a,l = load_rfam(add_cov='')
-    a,l = size_filter(a,l,400)
-    a,l = manifest_sequences(a,l,instances=100000, mp=True)
-    dict_dat = Map(ali_to_rnaformerlinedict, *Transpose(enumerate(zip(a,l))))
+def make_rnaformerdata(numneg = 0):
+    ali,labels = load_rfam(add_cov='', full = numneg>0)
+    ali,labels = size_filter(ali,labels,400)
+
+    if numneg > 0:
+        labels = np.array(labels)
+        loc_pos = np.where(labels == 0)
+        loc_neg = np.where(labels != 0)
+        np.random.shuffle(loc_neg)
+        loc_neg = loc_neg[:numneg]
+        loc = np.hstack((loc_pos, loc_neg))
+        ali, labels = Transpose([(ali[z], labels[z]) for z in loc.flatten() ])
+
+
+    ali,labels = manifest_sequences(ali,labels,instances=100000, mp=True)
+    dict_dat = Map(ali_to_rnaformerlinedict, *Transpose(enumerate(zip(ali,labels))))
     df = pd.DataFrame(dict_dat)
     print(df)
-    df.to_pickle('rnaformer_rfam.plk')
+    df.to_pickle('rnaformer_rfam_100neg.plk')
     return df
 
 
