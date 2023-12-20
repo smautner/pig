@@ -140,18 +140,29 @@ class SinusoidalPosEmb(nn.Module):
 from ubergauss.optimization import groupedCV
 class RNA_Dataset(Dataset):
     def __init__(self, df, mode='train', seed=2023, fold=0, nfolds=4, **kwargs):
-        self.seq_map = {'A':0,'C':1,'G':2,'U':3}
+        self.seq_map = {'A':0,'C':1,'G':2,'U':3} # TODO consider '-' gap encoding
         self.Lmax = 400
 
+        '''
+        there is no train test split anymore.
+        for the test set we just censor the set labels
+        '''
         labels = df['set'].values
-        split = list(groupedCV(n_splits=nfolds, randseed=seed).split(df,labels, groups=labels))[fold][0 if mode=='train' else 1]
 
-        df = df.iloc[split].sample(frac=1).reset_index(drop=True)
-        # df = df.iloc[split].reset_index(drop=True)
+        # split = list(groupedCV(n_splits=nfolds, randseed=seed).split(df,labels, groups=labels))[fold][0 if mode=='train' else 1]
+        train_set, test_set = list(groupedCV(n_splits=nfolds, randseed=seed).split(df,labels, groups=labels))[fold]
+
+        self.trainlabels = df['set'].values
+        self.trainlabels[train_set] = -1
+        # df = df.iloc[split].sample(frac=1).reset_index(drop=True)
+
+        if mode == 'eval':
+            df = df.iloc[test_set].reset_index(drop=True)
 
         # our df has 'set' (labels), sequence, pos1id, pos2id
+
         self.seq = df['sequence'].values
-        self.labels = df['set'].values
+        self.testlabels = df['set'].values
         self.p1 = df['pos1id'].values
         self.p2 = df['pos2id'].values
 
@@ -164,7 +175,7 @@ class RNA_Dataset(Dataset):
         seq = np.array(seq)
         n_nuc = len(seq)
         seq = np.pad(seq, (0,self.Lmax-len(seq)))
-        label = np.array(self.labels[idx])
+        # label = np.array(self.trainlabels[idx])
 
         # p1 =  np.array(self.p1[idx])
         # p2 =  np.array(self.p2[idx])
@@ -175,7 +186,8 @@ class RNA_Dataset(Dataset):
         po2 = np.full(self.Lmax, False)
         po2[list(self.p2[idx])] = True
 
-        return {'seq':torch.from_numpy(seq),'len':n_nuc ,'label':label, 'p1':po1, 'p2':po2}, {'label':label}
+        return {'seq':torch.from_numpy(seq),'len':n_nuc , 'p1':po1, 'p2':po2},\
+                    {'testlabel':self.testlabels[idx], 'trainlabel':self.trainlabels[idx]}
 
 import structout as so
 def hm(mat, **kw):
@@ -188,11 +200,9 @@ class RNA_Model(nn.Module):
         super().__init__()
         self.emb = nn.Embedding(4,dim-64)
         self.pos_enc = SinusoidalPosEmb(32)
-
         self.transformer = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=dim, nhead=dim//head_size, dim_feedforward=4*dim,
                 dropout=0.15, activation=nn.GELU(), batch_first=True, norm_first=True), depth) # dropput was .1
-
         self.fc1 = nn.Linear(400*dim, 1024)
         self.fc2 = nn.Linear(1024, 8)
 
@@ -258,32 +268,44 @@ mining_func = semisupertripletminer(distance=distance)
 accuracy_calculator = AccuracyCalculator(include=("precision_at_1",), k=1)
 
 def loss(pred,target):
-    indices_tuple = mining_func(pred, target['label'])
-    loss = loss_func(pred, target['label'], indices_tuple)
+    indices_tuple = mining_func(pred, target['trainlabel'])
+    loss = loss_func(pred, target['testlabel'], indices_tuple)
     return loss
 
 from sklearn.metrics import silhouette_score, adjusted_rand_score
 from sklearn.cluster import KMeans
+import matplotlib
+matplotlib.use('module://matplotlib-backend-sixel')
+import umap
+from sklearn.decomposition import PCA
 class METRIC(Metric):
     def __init__(self):
         self.reset()
     def reset(self):
         self.x,self.y = [],[]
     def accumulate(self, learn):
-        breakpoint()
         x = learn.pred
-        y = learn.y['label']
+        y = learn.y['testlabel']
         self.x.append(x)
         self.y.append(y)
+
     @property
     def value(self):
+
         x,y = torch.cat(self.x,0),torch.cat(self.y,0)
-        silhou = silhouette_score(test_embeddings,  test_labels)
+        x = x.cpu().numpy()
+        y = y.cpu().numpy()
+        pca = PCA(n_components = 2).fit_transform(x)
+        plt.scatter(*pca.T, c=y)
+        plt.show()
+        plt.close()
+
+        # silhou = silhouette_score(test_embeddings,  test_labels)
         # print(f"{silhou= }")
         # ari = adjusted_rand_score( KMeans(n_clusters=len(np.unique(test_labels))).fit_predict(test_embeddings), test_labels)
         # print(f"{ ari=}")
         # return silhou, ari
-        return silhou
+        return 0 #silhou
 
 
 import dirtyopts
@@ -314,7 +336,7 @@ for fold in [0]:
 
     # DATA LOADING
     ds_train = RNA_Dataset(df, mode='train', fold=fold, nfolds=nfolds)
-    dl_train = DeviceDataLoader(torch.utils.data.DataLoader(ds_train, batch_size= bs, num_workers=num_workers, persistent_workers=True), device)
+    dl_train = DeviceDataLoader(torch.utils.data.DataLoader(ds_train, batch_size= bs,shuffle = True, num_workers=num_workers, persistent_workers=True), device)
 
     ds_val = RNA_Dataset(df, mode='eval', fold=fold, nfolds=nfolds)
     dl_val= DeviceDataLoader(torch.utils.data.DataLoader(ds_val, batch_size=bs, num_workers=num_workers), device)
@@ -324,7 +346,8 @@ for fold in [0]:
     model = RNA_Model(dim=args.dim)
     model = model.to(device)
     # learn = Learner(data, model, loss_func=loss,cbs=[GradientClip(3.0)], metrics=[METRIC()]).to_fp16()
-    learn = Learner(data, model, loss_func=loss,cbs=[], metrics=[]).to_fp16()
+    learn = Learner(data, model, loss_func=loss,cbs=[], metrics=[METRIC()]).to_fp16()
+    # learn = Learner(data, model, loss_func=loss,cbs=[], metrics=[]).to_fp16()
     learn.fit_one_cycle(320, lr_max=5e-4, wd=0.05, pct_start=0.02)
 
     # later ....
