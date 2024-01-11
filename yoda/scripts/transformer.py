@@ -165,28 +165,43 @@ class RNA_Dataset(Dataset):
         self.testlabels = df['set'].values
         self.p1 = df['pos1id'].values
         self.p2 = df['pos2id'].values
+        self[0]
 
     def __len__(self):
         return len(self.seq)
 
-    def __getitem__(self, idx):
+
+    def getseq(self, idx):
         seq = self.seq[idx]
         seq = [self.seq_map[s] for s in seq]
-        seq = np.array(seq)
         n_nuc = len(seq)
-        seq = np.pad(seq, (0,self.Lmax-len(seq)))
+        seq = np.eye(4)[seq]
+        seq = np.hstack((seq.T, np.zeros((4,self.Lmax-n_nuc))))
+        return n_nuc, seq.T
+
+    def __getitem__(self, idx):
         # label = np.array(self.trainlabels[idx])
 
-        # p1 =  np.array(self.p1[idx])
-        # p2 =  np.array(self.p2[idx])
-        # p1 = np.hstack((p1,[-1]*(self.Lmax-len(p1))), dtype = np.int32, casting = 'unsafe')
-        # p2 = np.hstack((p2,[-1]*(self.Lmax-len(p2))), dtype = np.int32, casting = 'unsafe')
-        po1 = np.full(self.Lmax, False)
-        po1[list(self.p1[idx])] = True
-        po2 = np.full(self.Lmax, False)
-        po2[list(self.p2[idx])] = True
+        n_nuc, seq = self.getseq(idx)
 
-        return {'seq':torch.from_numpy(seq),'len':n_nuc , 'p1':po1, 'p2':po2},\
+        # po1 = np.full(self.Lmax, False)
+        # po1[list(self.p1[idx])] = True
+        # po2 = np.full(self.Lmax, False)
+        # po2[list(self.p2[idx])] = True
+
+        po1 = self.p1[idx]
+        po2 = self.p2[idx]
+
+        p1 = torch.full((self.Lmax,),-1, dtype=torch.long)
+        p2 = torch.full((self.Lmax,),-1, dtype = torch.long)
+
+        # p1 = torch.zeros(self.Lmax, dtype=torch.long)
+        # p2 = torch.zeros(self.Lmax, dtype=torch.long)
+
+
+        p1[:len(po1)] = torch.tensor(po1)
+        p2[:len(po2)] = torch.tensor(po2)
+        return {'seq':torch.from_numpy(seq),'len':n_nuc , 'p1':p1, 'p2':p2},\
                     {'testlabel':self.testlabels[idx], 'trainlabel':self.trainlabels[idx]}
 
 import structout as so
@@ -198,7 +213,7 @@ def hm(mat, **kw):
 class RNA_Model(nn.Module):
     def __init__(self, dim=128, depth=1, head_size=32, **kwargs): # depth was 12 and headsize was 32
         super().__init__()
-        self.emb = nn.Embedding(4,dim-64)
+        # self.emb = nn.Embedding(4,dim-64)
         self.pos_enc = SinusoidalPosEmb(32)
         self.transformer = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=dim, nhead=dim//head_size, dim_feedforward=4*dim,
@@ -208,22 +223,30 @@ class RNA_Model(nn.Module):
 
     def forward(self, x0):
         # note i removed the masking maybe that was too much cleaning
-        x = x0['seq']
+        seq = x0['seq']
         p1,p2 = x0['p1'], x0['p2']
-        pos = torch.arange(400, device=x.device)
+        batch_size = seq.shape[0]
+
+        pos = torch.arange(400, device=seq.device)
         pos= pos.unsqueeze(0)
         pos = self.pos_enc(pos) # bsx400
-        num_instances = p1.shape[0]
-        pos = torch.repeat_interleave(pos, num_instances, dim=0 )
-        struct = torch.zeros((num_instances,400,32), device = pos.device)
+        pos = torch.repeat_interleave(pos, batch_size, dim=0 )
 
-        # p1i = p1[p1!=-1].to(torch.long)
-        # p2i = p2[p2!=-1].to(torch.long)
+        struct = torch.zeros((batch_size,400,32), device = pos.device)
+
+        p1 = torch.where(p1>=  0)
+        p2 = torch.where(p2>=  0)
+        breakpoint()
         struct[p1] = pos[p2]
         struct[p2] = pos[p1]
 
-        x = self.emb(x) # bs 400 dim
-        x = torch.cat((x,pos,struct),2)
+        # indi = p1.unsqueeze(-1)
+        # struct.scatter_(2, indi, pos.gather(2, indi))
+        # indi = p2.unsqueeze(-1)
+        # struct.scatter_(2, indi, pos.gather(2, indi))
+
+
+        x = torch.cat((seq,pos,struct),dim=2)
         x = self.transformer(x)
 
         x = torch.flatten(x, 1)
