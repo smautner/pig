@@ -138,6 +138,7 @@ class SinusoidalPosEmb(nn.Module):
 #################################
 
 from ubergauss.optimization import groupedCV
+from ubergauss.tools import labelsToIntList
 class RNA_Dataset(Dataset):
     def __init__(self, df, mode='train', seed=2023, fold=0, nfolds=4, **kwargs):
         self.seq_map = {'A':0,'C':1,'G':2,'U':3} # TODO consider '-' gap encoding
@@ -148,6 +149,9 @@ class RNA_Dataset(Dataset):
         for the test set we just censor the set labels
         '''
         labels = df['set'].values
+
+        fam = df['family'].values
+        self.fam = labelsToIntList(fam)
 
         # split = list(groupedCV(n_splits=nfolds, randseed=seed).split(df,labels, groups=labels))[fold][0 if mode=='train' else 1]
         train_set, test_set = list(groupedCV(n_splits=nfolds, randseed=seed).split(df,labels, groups=labels))[fold]
@@ -165,6 +169,7 @@ class RNA_Dataset(Dataset):
         self.testlabels = df['set'].values
         self.p1 = df['pos1id'].values
         self.p2 = df['pos2id'].values
+
         self[0]
 
     def __len__(self):
@@ -192,17 +197,22 @@ class RNA_Dataset(Dataset):
         po1 = self.p1[idx]
         po2 = self.p2[idx]
 
-        p1 = torch.full((self.Lmax,),-1, dtype=torch.long)
-        p2 = torch.full((self.Lmax,),-1, dtype = torch.long)
+        # breakpoint()
+        # p1 = torch.full((self.Lmax,),po1[0], dtype=torch.long)
+        # p2 = torch.full((self.Lmax,),po2[0], dtype = torch.long)
+        p1 = torch.full((self.Lmax,),po1[0] if len(po1) > 0 else 0)
+        p2 = torch.full((self.Lmax,),po2[0] if len(po2) > 0 else 0)
 
         # p1 = torch.zeros(self.Lmax, dtype=torch.long)
         # p2 = torch.zeros(self.Lmax, dtype=torch.long)
 
-
         p1[:len(po1)] = torch.tensor(po1)
         p2[:len(po2)] = torch.tensor(po2)
+
         return {'seq':torch.from_numpy(seq),'len':n_nuc , 'p1':p1, 'p2':p2},\
-                    {'testlabel':self.testlabels[idx], 'trainlabel':self.trainlabels[idx]}
+                    {'testlabel':self.testlabels[idx],
+                     'trainlabel':self.trainlabels[idx],
+                     'fam_id': self.fam[idx]} #TEST
 
 import structout as so
 def hm(mat, **kw):
@@ -233,17 +243,9 @@ class RNA_Model(nn.Module):
         pos = torch.repeat_interleave(pos, batch_size, dim=0 )
 
         struct = torch.zeros((batch_size,400,32), device = pos.device)
-
-        p1 = torch.where(p1>=  0)
-        p2 = torch.where(p2>=  0)
-        breakpoint()
         struct[p1] = pos[p2]
         struct[p2] = pos[p1]
 
-        # indi = p1.unsqueeze(-1)
-        # struct.scatter_(2, indi, pos.gather(2, indi))
-        # indi = p2.unsqueeze(-1)
-        # struct.scatter_(2, indi, pos.gather(2, indi))
 
 
         x = torch.cat((seq,pos,struct),dim=2)
@@ -305,20 +307,25 @@ class METRIC(Metric):
     def __init__(self):
         self.reset()
     def reset(self):
-        self.x,self.y = [],[]
+        self.x,self.y, self.fam = [],[],[]
+
     def accumulate(self, learn):
         x = learn.pred
         y = learn.y['testlabel']
+        fam = learn.y['fam_id']
         self.x.append(x)
         self.y.append(y)
+        self.fam.append(fam)
 
     @property
     def value(self):
-
         x,y = torch.cat(self.x,0),torch.cat(self.y,0)
         x = x.cpu().numpy()
         y = y.cpu().numpy()
-        pca = PCA(n_components = 2).fit_transform(x)
+        fam = fam.cpu().numpy()
+
+        x = [ x[fam == yy].mean(axis =0) for yy in np.unique(fam)]
+        pca = umap.UMAP(n_components = 2).fit_transform(x)
         plt.scatter(*pca.T, c=y)
         plt.show()
         plt.close()
