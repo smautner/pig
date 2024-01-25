@@ -7,12 +7,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+from matplotlib import pyplot as plt
 
 ##############################################################
 # Fix fastai bug to enable fp16 training with dictionaries
 ##############################################################
 import torch
 from fastai.vision.all import *
+
 def flatten(o):
     "Concatenate all collections and items as a generator"
     for item in o:
@@ -145,32 +147,31 @@ class RNA_Dataset(Dataset):
         self.Lmax = 400
 
         '''
-        there is no train test split anymore.
-        for the test set we just censor the set labels
+        we train with the test masked with -1
+        for eval we drop the train set
         '''
-        labels = df['set'].values
+        clanIds = np.array(df['set'].values)
+        train_set, test_set = list(groupedCV(n_splits=nfolds, randseed=seed).split(df,clanIds, groups=clanIds))[fold]
 
-        fam = df['family'].values
-        self.fam = labelsToIntList(fam)
+        print(f"{train_set.shape=} {test_set.shape=}")
 
-        # split = list(groupedCV(n_splits=nfolds, randseed=seed).split(df,labels, groups=labels))[fold][0 if mode=='train' else 1]
-        train_set, test_set = list(groupedCV(n_splits=nfolds, randseed=seed).split(df,labels, groups=labels))[fold]
-
-        self.trainlabels = df['set'].values
-        self.trainlabels[train_set] = -1
-        # df = df.iloc[split].sample(frac=1).reset_index(drop=True)
+        self.trainlabels = clanIds
+        if mode == 'train':
+            self.trainlabels[test_set] = -1
 
         if mode == 'eval':
+            # this only keeps the test set
             df = df.iloc[test_set].reset_index(drop=True)
 
-        # our df has 'set' (labels), sequence, pos1id, pos2id
 
+        self.fam, _ = labelsToIntList(df['family'].values)
+        self.fam = np.array(self.fam)
+        self.clanIds = np.array(df['set'].values)
         self.seq = df['sequence'].values
-        self.testlabels = df['set'].values
         self.p1 = df['pos1id'].values
         self.p2 = df['pos2id'].values
 
-        self[0]
+        self[0] # put this here so i can trigger breakpoints
 
     def __len__(self):
         return len(self.seq)
@@ -185,32 +186,18 @@ class RNA_Dataset(Dataset):
         return n_nuc, seq.T
 
     def __getitem__(self, idx):
-        # label = np.array(self.trainlabels[idx])
 
         n_nuc, seq = self.getseq(idx)
-
-        # po1 = np.full(self.Lmax, False)
-        # po1[list(self.p1[idx])] = True
-        # po2 = np.full(self.Lmax, False)
-        # po2[list(self.p2[idx])] = True
-
         po1 = self.p1[idx]
         po2 = self.p2[idx]
-
-        # breakpoint()
-        # p1 = torch.full((self.Lmax,),po1[0], dtype=torch.long)
-        # p2 = torch.full((self.Lmax,),po2[0], dtype = torch.long)
-        p1 = torch.full((self.Lmax,),po1[0] if len(po1) > 0 else 0)
-        p2 = torch.full((self.Lmax,),po2[0] if len(po2) > 0 else 0)
-
-        # p1 = torch.zeros(self.Lmax, dtype=torch.long)
-        # p2 = torch.zeros(self.Lmax, dtype=torch.long)
-
+        p1 = torch.full((self.Lmax,), 99999)
+        p2 = torch.full((self.Lmax,),99999)
         p1[:len(po1)] = torch.tensor(po1)
         p2[:len(po2)] = torch.tensor(po2)
-
-        return {'seq':torch.from_numpy(seq),'len':n_nuc , 'p1':p1, 'p2':p2},\
-                    {'testlabel':self.testlabels[idx],
+        rawseq = np.array([self.seq_map[s] for s in self.seq[idx]])
+        rawseq = np.pad(rawseq,(0,self.Lmax-len(rawseq)))
+        return {'onehotseq':torch.from_numpy(seq),'seq':torch.from_numpy(rawseq),'len':n_nuc , 'p1':p1, 'p2':p2},\
+                    {'testlabel':self.clanIds[idx],
                      'trainlabel':self.trainlabels[idx],
                      'fam_id': self.fam[idx]} #TEST
 
@@ -221,19 +208,27 @@ def hm(mat, **kw):
 
 
 class RNA_Model(nn.Module):
-    def __init__(self, dim=128, depth=1, head_size=32, **kwargs): # depth was 12 and headsize was 32
+    def __init__(self, dim=68, depth=1, nhead=17, dimFF = 4, **kwargs): # depth was 12 and headsize was 32
         super().__init__()
-        # self.emb = nn.Embedding(4,dim-64)
+        self.emb = nn.Embedding(4,64)
         self.pos_enc = SinusoidalPosEmb(32)
         self.transformer = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=dim, nhead=dim//head_size, dim_feedforward=4*dim,
-                dropout=0.15, activation=nn.GELU(), batch_first=True, norm_first=True), depth) # dropput was .1
+            nn.TransformerEncoderLayer(d_model=dim, nhead=nhead, dim_feedforward=dimFF*dim,
+                dropout=0.1, activation=nn.GELU(), batch_first=True, norm_first=True), depth) # dropput was .1
         self.fc1 = nn.Linear(400*dim, 1024)
-        self.fc2 = nn.Linear(1024, 8)
+        self.fc2 = nn.Linear(1024, 6)
+
+    def mk_accesstuple(self,p):
+        r = torch.arange(p.shape[0], device=p.device)
+        b_index = torch.repeat_interleave(r,p.shape[1])
+        allindex = torch.vstack((b_index,p.view(-1)))
+        r =  allindex.T[p.view(-1)!= 99999]
+        return r
 
     def forward(self, x0):
         # note i removed the masking maybe that was too much cleaning
-        seq = x0['seq']
+        # seq = x0['seq']
+        seq = x0['onehotseq']
         p1,p2 = x0['p1'], x0['p2']
         batch_size = seq.shape[0]
 
@@ -243,14 +238,14 @@ class RNA_Model(nn.Module):
         pos = torch.repeat_interleave(pos, batch_size, dim=0 )
 
         struct = torch.zeros((batch_size,400,32), device = pos.device)
-        struct[p1] = pos[p2]
-        struct[p2] = pos[p1]
 
+        p1i = self.mk_accesstuple(p1)
+        p2i = self.mk_accesstuple(p2)
+        struct[p1i[:,0],p1i[:,1]] = pos[p2i[:,0],p2i[:,1]]
+        struct[p2i[:,0],p2i[:,1]] = pos[p1i[:,0],p1i[:,1]]
+        x = torch.cat((seq,pos,struct),dim=2).type(torch.float)  # no idea why type float works
 
-
-        x = torch.cat((seq,pos,struct),dim=2)
         x = self.transformer(x)
-
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = self.fc2(x)
@@ -303,6 +298,7 @@ import matplotlib
 matplotlib.use('module://matplotlib-backend-sixel')
 import umap
 from sklearn.decomposition import PCA
+from yoda.ml import simpleMl as sml
 class METRIC(Metric):
     def __init__(self):
         self.reset()
@@ -322,11 +318,20 @@ class METRIC(Metric):
         x,y = torch.cat(self.x,0),torch.cat(self.y,0)
         x = x.cpu().numpy()
         y = y.cpu().numpy()
-        fam = fam.cpu().numpy()
+        fam = torch.cat(self.fam,0).cpu().numpy()
+        # fam = self.fam.cpu().numpy()
+        unifam = np.unique(fam)
+        get_clan = dict(zip(fam,y))
+        x_fam = np.array([ x[fam == yy].mean(axis =0) for yy in unifam])
+        pca = umap.UMAP(n_components = 2, n_neighbors = 10).fit_transform(x_fam)
+        clans = [get_clan[i] for i in unifam]
+        plt.scatter(*pca.T, c = clans, cmap = 'tab20')
 
-        x = [ x[fam == yy].mean(axis =0) for yy in np.unique(fam)]
-        pca = umap.UMAP(n_components = 2).fit_transform(x)
-        plt.scatter(*pca.T, c=y)
+
+        # pca = PCA(n_components = 2).fit_transform(x)
+        # plt.scatter(*pca.T, c = y)
+        print(f"{sml.knn_accuracy(x_fam,clans)=}")
+        print(f"{sml.kmeans_ari(x_fam,clans)=}")
         plt.show()
         plt.close()
 
@@ -335,14 +340,15 @@ class METRIC(Metric):
         # ari = adjusted_rand_score( KMeans(n_clusters=len(np.unique(test_labels))).fit_predict(test_embeddings), test_labels)
         # print(f"{ ari=}")
         # return silhou, ari
+
         return 0 #silhou
 
 
 import dirtyopts
 docs = '''
---dev int 0    # cuda device id
+--dev int 1    # cuda device id
 --batchsize int 256  #batchsize
---dim int 128  #embedding dimension (64 are reserved for structure)
+--dim int 128  # unused,,,
 '''
 args = dirtyopts.parse(docs)
 
@@ -369,11 +375,11 @@ for fold in [0]:
     dl_train = DeviceDataLoader(torch.utils.data.DataLoader(ds_train, batch_size= bs,shuffle = True, num_workers=num_workers, persistent_workers=True), device)
 
     ds_val = RNA_Dataset(df, mode='eval', fold=fold, nfolds=nfolds)
-    dl_val= DeviceDataLoader(torch.utils.data.DataLoader(ds_val, batch_size=bs, num_workers=num_workers), device)
+    dl_val= DeviceDataLoader(torch.utils.data.DataLoader(ds_val, batch_size=bs,shuffle=True, num_workers=num_workers), device)
 
-    gc.collect()
+    gc.collect()# 0 is train 1 is validation according to documentation https://github.com/fastai/fastai/blob/master/fastai/data/core.py#L275
     data = DataLoaders(dl_train, dl_val)
-    model = RNA_Model(dim=args.dim)
+    model = RNA_Model()
     model = model.to(device)
     # learn = Learner(data, model, loss_func=loss,cbs=[GradientClip(3.0)], metrics=[METRIC()]).to_fp16()
     learn = Learner(data, model, loss_func=loss,cbs=[], metrics=[METRIC()]).to_fp16()
@@ -385,15 +391,3 @@ for fold in [0]:
     # gc.collect()
 
 
-# vi /home/stefan/.myconda/miniconda3/envs/rnafenv/lib/python3.10/site-packages/fastai/learner.py
-  # 8 class AvgSmoothLoss(Metric):
-  # 7     "Smooth average of the losses (exponentially weighted with `beta`)"
-  # 6     def __init__(self, beta=0.98): self.beta = beta
-  # 5     def reset(self):               self.count,self.val = 0,tensor(0.)
-  # 4     def accumulate(self, learn):
-  # 3         self.count += 1
-  # 2         # self.val = torch.lerp(to_detach(learn.loss.mean()), self.val, self.beta)
-  # 1         start = to_detach(learn.loss.mean())
-# 511         end = self.val
-  # 1         weight = self.beta
-  # 2         self.val = start + weight* (end - start)

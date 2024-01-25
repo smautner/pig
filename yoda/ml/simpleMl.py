@@ -13,7 +13,7 @@ import ubergauss.tools as ut
 def _repeat_as_column(a,n):
     return np.tile(a,(n,1)).T
 
-def knn_accuracy(X, y,n_neighbors):
+def knn_accuracy(X, y,n_neighbors=1):
     knn = KNeighborsClassifier(n_neighbors=n_neighbors+1)
 
     y_train= np.array(y)
