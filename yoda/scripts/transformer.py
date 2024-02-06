@@ -142,7 +142,11 @@ class SinusoidalPosEmb(nn.Module):
 from ubergauss.optimization import groupedCV
 from ubergauss.tools import labelsToIntList
 class RNA_Dataset(Dataset):
-    def __init__(self, df, mode='train', seed=2023, fold=0, nfolds=4, **kwargs):
+    def __init__(self, df, mode='train',
+                           seed=2023,
+                           fold=0,
+                           push_test_away = True,
+                           nfolds=4, **kwargs):
         self.seq_map = {'A':0,'C':1,'G':2,'U':3} # TODO consider '-' gap encoding
         self.Lmax = 400
 
@@ -155,15 +159,19 @@ class RNA_Dataset(Dataset):
 
         print(f"{train_set.shape=} {test_set.shape=}")
 
-        self.trainlabels = clanIds
+
+        df['trainlabels'] = clanIds
         if mode == 'train':
-            self.trainlabels[test_set] = -1
+            df.loc[test_set, 'trainlabels'] = -1  # if we dont drop the test instances, we give them a label
+            if push_test_away:
+                # this line removes the test instances
+                df = df.iloc[train_set].reset_index(drop=True)
 
         if mode == 'eval':
             # this only keeps the test set
             df = df.iloc[test_set].reset_index(drop=True)
 
-
+        self.trainlabels = df['trainlabels'].values
         self.fam, _ = labelsToIntList(df['family'].values)
         self.fam = np.array(self.fam)
         self.clanIds = np.array(df['set'].values)
@@ -208,7 +216,7 @@ def hm(mat, **kw):
 
 
 class RNA_Model(nn.Module):
-    def __init__(self, dim=68, depth=1, nhead=17, dimFF = 4, **kwargs): # depth was 12 and headsize was 32
+    def __init__(self, dim=404, depth=1, nhead=4, dimFF = 4, **kwargs): # depth was 12 and headsize was 32
         super().__init__()
         self.emb = nn.Embedding(4,64)
         self.pos_enc = SinusoidalPosEmb(32)
@@ -219,11 +227,25 @@ class RNA_Model(nn.Module):
         self.fc2 = nn.Linear(1024, 6)
 
     def mk_accesstuple(self,p):
+        # i use this when i copy the sincosin coordinates.
         r = torch.arange(p.shape[0], device=p.device)
         b_index = torch.repeat_interleave(r,p.shape[1])
         allindex = torch.vstack((b_index,p.view(-1)))
         r =  allindex.T[p.view(-1)!= 99999]
         return r
+
+    def mk_dot(self,p1,p2):
+        # this is to make the bsX400X400 coordiantes
+        mat = torch.zeros((p1.shape[0],400,400), device = p1.device)
+        # batch index
+        r = torch.arange(p1.shape[0], device=p1.device)
+        b_index = torch.repeat_interleave(r,p1.shape[1])
+        # p1 and p2
+        allindex = torch.vstack((b_index,p1.view(-1), p2.view(-1)))
+        # clean unused
+        r =  allindex.T[p1.view(-1)!= 99999].T
+        mat[r[0],r[1],r[2]] = 1
+        return mat
 
     def forward(self, x0):
         # note i removed the masking maybe that was too much cleaning
@@ -232,18 +254,19 @@ class RNA_Model(nn.Module):
         p1,p2 = x0['p1'], x0['p2']
         batch_size = seq.shape[0]
 
-        pos = torch.arange(400, device=seq.device)
-        pos= pos.unsqueeze(0)
-        pos = self.pos_enc(pos) # bsx400
-        pos = torch.repeat_interleave(pos, batch_size, dim=0 )
+        # pos = torch.arange(400, device=seq.device)
+        # pos= pos.unsqueeze(0)
+        # pos = self.pos_enc(pos) # bsx400
+        # pos = torch.repeat_interleave(pos, batch_size, dim=0 )
+        # struct = torch.zeros((batch_size,400,32), device = pos.device)
+        # p1i = self.mk_accesstuple(p1)
+        # p2i = self.mk_accesstuple(p2)
+        # struct[p1i[:,0],p1i[:,1]] = pos[p2i[:,0],p2i[:,1]]
+        # struct[p2i[:,0],p2i[:,1]] = pos[p1i[:,0],p1i[:,1]]
+        # x = torch.cat((seq,pos,struct),dim=2).type(torch.float)  # no idea why type float works
 
-        struct = torch.zeros((batch_size,400,32), device = pos.device)
-
-        p1i = self.mk_accesstuple(p1)
-        p2i = self.mk_accesstuple(p2)
-        struct[p1i[:,0],p1i[:,1]] = pos[p2i[:,0],p2i[:,1]]
-        struct[p2i[:,0],p2i[:,1]] = pos[p1i[:,0],p1i[:,1]]
-        x = torch.cat((seq,pos,struct),dim=2).type(torch.float)  # no idea why type float works
+        pos = self.mk_dot(p1,p2)
+        x = torch.cat((seq,pos),dim=2).type(torch.float)  # no idea why type float works
 
         x = self.transformer(x)
         x = torch.flatten(x, 1)
@@ -347,7 +370,7 @@ class METRIC(Metric):
 import dirtyopts
 docs = '''
 --dev int 1    # cuda device id
---batchsize int 256  #batchsize
+--batchsize int 64  #batchsize
 --dim int 128  # unused,,,
 '''
 args = dirtyopts.parse(docs)
@@ -384,7 +407,7 @@ for fold in [0]:
     # learn = Learner(data, model, loss_func=loss,cbs=[GradientClip(3.0)], metrics=[METRIC()]).to_fp16()
     learn = Learner(data, model, loss_func=loss,cbs=[], metrics=[METRIC()]).to_fp16()
     # learn = Learner(data, model, loss_func=loss,cbs=[], metrics=[]).to_fp16()
-    learn.fit_one_cycle(320, lr_max=5e-4, wd=0.05, pct_start=0.02)
+    learn.fit_one_cycle(50, lr_max=5e-4, wd=0.05, pct_start=0.02)
 
     # later ....
     # torch.save(learn.model.state_dict(),os.path.join(OUT,f'{fname}_{fold}.pth'))
