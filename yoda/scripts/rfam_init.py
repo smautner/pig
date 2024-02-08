@@ -11,7 +11,7 @@ from yoda import draw
 # from yoda.graphs import vectorize_alignments, grakel_vectorize
 import yoda.graphs as graphs
 from yoda.ml import embed, get_distance_method
-matplotlib.use('module://matplotlib-sixel')
+# matplotlib.use('module://matplotlib-backend-sixel')
 import ubergauss.optimization as uo
 from yoda import alignments
 

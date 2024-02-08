@@ -506,3 +506,113 @@ def manifest_sequences(alignments, labels, instances = 10, mp = False):
     return a, labels
 
 
+##################################
+# abstract graph
+###################################
+
+
+
+def countlabel(a,v):
+    count = len(v)
+    if count < a[0]:
+        return f"s"
+    if count < a[1]:
+        return f"m"
+    return 'l'
+from collections import Counter
+
+def avgcons(a):
+
+    def cons(nucs):
+        c = Counter(nucs.reshape(-1).tolist())
+        all = sum([c.get(x,0) for x in f"AUCG-"])
+        return max([c.get(x,0)/all for x in 'AUCG'])
+    return np.mean([cons(colu) for colu in a.T])
+
+def decorateAbstractgraph(ali, len_single =[2,4],len_double =[6,10]):
+    gr = abstractgraph(ali)
+    for n in gr:
+        d = gr.nodes[n]
+        if d['label']== 'S':
+            d['label'] +=  countlabel(len_single,d['columns'])
+        elif d['label']== 'D':
+            d['label'] +=  countlabel(len_double,d['columns'])
+
+        if not d['columns']:
+            d['vec'] =  [0]
+        else:
+            d['vec'] = [avgcons(ali.alignment[:,d['columns']])]
+    return gr
+
+def abstractgraph(ali):
+    g = nx.Graph()
+
+    singleslabel = 'S'
+    doublelabel = 'D'
+    gid = 0
+    g.add_node(gid, label = singleslabel, columns = []) # empty ss node
+
+    col_to_gid  = {}
+
+    for colid in ali.graph:
+        # we might have visited the node before:
+        get_hbond = lambda x:  [(u, v) for u, v, attr in ali.graph.edges(x, data=True) if attr['label'] == '=']
+        hbond = get_hbond(colid)
+        cnode = g.nodes[gid]
+
+        # lets deal with the cases one by one:
+        # 1. we are in single mode and continue
+        if len(hbond) == 0 and cnode['label'] == singleslabel:
+            cnode['columns'].append(colid)
+
+        # 2. we are in singlemode and switch to double node
+        elif len(hbond) > 0 and cnode['label'] == singleslabel:
+            newid = len(g)
+            g.add_node(newid, label = doublelabel, columns = [colid])
+            g.add_edge(gid, newid,label = '-')
+            gid = newid
+
+        # 3. we are in double and switch to single
+        elif len(hbond) == 0 and cnode['label'] == doublelabel:
+            newid = len(g)
+            g.add_node(newid, label = singleslabel, columns = [colid])
+            g.add_edge(gid, newid,label = '-')
+            gid = newid
+
+        # 4. we are in double and stay double
+        elif len(hbond) > 0 and cnode['label'] == doublelabel:
+            # there are many cases here i think ...
+            # 4.1: the stacking case should be easy:
+            def part(pair,cid):
+                pair = pair[0]
+                assert cid in pair
+                return pair[0] if cid == pair[1] else pair[1]
+
+            def check_stack(hbond, code):
+                lastcid = max(cnode['columns'])
+                lasthbond = get_hbond(lastcid)
+                lastpartner = part(lasthbond, lastcid)
+                cpartner = part(hbond, colid)
+                return ali.graph.has_edge(cpartner,lastpartner)
+
+            if check_stack(hbond, cnode):
+                cnode['columns'].append(colid)
+            else:
+                # 4.2 there is no stacking
+                newid = len(g)
+                g.add_node(newid, label = singleslabel, columns = [])
+                g.add_node(newid+1, label = doublelabel, columns = [colid])
+                g.add_edge(gid, newid,label = '-')
+                g.add_edge(newid+1, newid,label = '-')
+                gid = newid+1
+
+        if len(hbond) >0:
+            col_to_gid[colid] = gid
+
+    # now we need to connect the doubles to each other..
+
+    hbonds = [(u, v) for u, v, attr in ali.graph.edges(data=True) if attr['label'] == '=']
+    for a,b in hbonds:
+        g.add_edge(col_to_gid[a],col_to_gid[b] , label = '-' )
+
+    return g
