@@ -7,7 +7,7 @@ from structout.rnagraph import RNAprint
 import yoda.alignments
 
 def scatter(X, y):
-    plt.scatter(*X.T, c = y)
+    plt.scatter(*X.T, c = y, cmap = 'tab20')
     plt.show()
     plt.close()
 

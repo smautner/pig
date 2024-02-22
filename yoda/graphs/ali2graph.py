@@ -511,18 +511,17 @@ def manifest_sequences(alignments, labels, instances = 10, mp = False):
 ###################################
 
 
-
-def countlabel(a,v):
-    count = len(v)
-    if count < a[0]:
+def discretize_nodecount(cutoff_a_b,node_ids):
+    count = len(node_ids)
+    if count < cutoff_a_b[0]:
         return f"s"
-    if count < a[1]:
+    if count < cutoff_a_b[1]:
         return f"m"
     return 'l'
+
 from collections import Counter
 
 def avgcons(a):
-
     def cons(nucs):
         c = Counter(nucs.reshape(-1).tolist())
         all = sum([c.get(x,0) for x in f"AUCG-"])
@@ -534,9 +533,9 @@ def decorateAbstractgraph(ali, len_single =[2,4],len_double =[6,10]):
     for n in gr:
         d = gr.nodes[n]
         if d['label']== 'S':
-            d['label'] +=  countlabel(len_single,d['columns'])
+            d['label'] +=  discretize_nodecount(len_single,d['columns'])
         elif d['label']== 'D':
-            d['label'] +=  countlabel(len_double,d['columns'])
+            d['label'] +=  discretize_nodecount(len_double,d['columns'])
 
         if not d['columns']:
             d['vec'] =  [0]
@@ -615,4 +614,124 @@ def abstractgraph(ali):
     for a,b in hbonds:
         g.add_edge(col_to_gid[a],col_to_gid[b] , label = '-' )
 
+    return g
+
+
+#############
+# new abstract graph
+############
+
+def get_nuc_cons(nucdic, RYT):
+    nucdic.pop('-',0)
+    allnuc  = sum(nucdic.values())
+    RYT_real  = allnuc*RYT
+    char,cnt = nucdic.most_common(1)[0]
+    if cnt > RYT_real:
+        return char, cnt/allnuc
+    rcnt = sum([nucdic.get(x,0) for x in 'AG'])
+    if rcnt > RYT_real:
+        return 'R', rcnt/allnuc
+    rcnt = sum([nucdic.get(x,0) for x in 'CU'])
+    if rcnt > RYT_real:
+        return 'Y', rcnt/allnuc
+    return char, cnt/allnuc
+
+def dillute_cons(g, nuc_cons, dillution_fac1, dillution_fac2):
+    for n in g.nodes:
+        n_dist = nx.single_source_shortest_path_length(g,n, cutoff=2)
+        at0 = nuc_cons[n][1]
+        at1 = np.mean([nuc_cons[k][1] for k,v in n_dist.items() if v == 1])
+        at2 = np.mean([nuc_cons[k][1] for k,v in n_dist.items() if v == 2])
+        newcons  = (at0 + at1*dillution_fac1+ at2*dillution_fac2) / (1+dillution_fac1+dillution_fac2)
+        nuc_cons[n] = (nuc_cons[n][0],newcons)
+    return nuc_cons
+
+def relabel(g,nuc_cons, cons_thresh):
+    '''
+    put either a letter, d or s
+    '''
+    isbound = lambda x:  len([(u, v) for u, v, attr in g.edges(x, data=True) if attr['label'] == '=']) > 0
+
+    for n in g.nodes:
+        if nuc_cons[n][1] > cons_thresh:
+            label = nuc_cons[n][0]
+        elif isbound(n):
+            label = 'D'
+        else:
+            label = "S"
+        g.nodes[n]['label'] =  label
+    return g
+
+def contract(g):
+    nodes = list(g.nodes())
+    for i,n in enumerate(nodes[:-1]):
+        next_node = g.nodes[nodes[i+1]]
+        if g.nodes[n]['label'] == 'S' == next_node['label'] or g.nodes[n]['label'] == 'D' == next_node['label']:
+            se = g.nodes[n].get('cols',[])
+            se.append(n)
+            g = nx.contracted_nodes(g,nodes[i+1],n, self_loops= False)
+            g.nodes[nodes[i+1]]['cols'] = se
+    return g
+
+def relabel_nonpreserved(g, cutS, cutD):
+    for n in g.nodes:
+        label = g.nodes[n]['label']
+        if   label in 'SD':
+             g.nodes[n]['label'] += discretize_nodecount(cutS if label =='S' else cutD , g.nodes[n].get('cols',[n]))
+    return g
+
+def get_coarse(ali, RY_thresh=.93 , dillution_fac1=.4, dillution_fac2=.2,
+               cons_thresh=.8, cutS1 = 2, cutS2 =5, cutD1 =5, cutD2 = 10, **kwargs):
+    nucleotide_dict = {n:Counter(ali.alignment[:,n].tolist()) for n in ali.graph.nodes}
+    nuc_cons  = {k:get_nuc_cons(v, RY_thresh) for k,v in nucleotide_dict.items()}
+    nuc_cons = dillute_cons(ali.graph.copy(), nuc_cons, dillution_fac1, dillution_fac2)
+    g = relabel(ali.graph,nuc_cons, cons_thresh)
+    g = contract(g)
+    g = relabel_nonpreserved(g, (cutS1, cutS1), (cutD1, cutD2))
+
+    for n,d in g.nodes(data=True):
+        d.pop('contraction','')
+    for a,b,d in g.edges(data=True):
+        d.pop('contraction','')
+    return g
+
+
+########################################
+# just cons
+#################################
+
+def writecons(ali):
+    nucleotide_dict = {n:Counter(ali.alignment[:,n].tolist()) for n in ali.graph.nodes}
+
+def justcons(ali, consThresh= .7, replacelabel= False):
+    nucleotide_dict = {n:Counter(ali.alignment[:,n].tolist()) for n in ali.graph.nodes}
+
+    for node in ali.graph.nodes():
+        mynd = nucleotide_dict[node]
+        mynd.pop('-',0)
+        allnuc  = sum(mynd.values())
+        char,cnt = mynd.most_common(1)[0]
+        # full = ali.alignment.shape[0]/10
+        if (cnt/allnuc) < consThresh:
+            if replacelabel:
+                ali.graph.nodes[node]['label'] = 'N'
+            ali.graph.nodes[node]['weight'] = .05
+        else:
+            ali.graph.nodes[node]['weight'] = 1 #cnt/allnuc
+
+    return ali.graph
+
+
+def dillute(g, dillution_fac1, dillution_fac2):
+    d = {}
+    for n in g.nodes:
+        n_dist = nx.single_source_shortest_path_length(g,n, cutoff=2)
+        at0 = g.nodes[n]['weight']
+        at1 = np.mean([g.nodes[k]['weight'] for k,v in n_dist.items() if v == 1])
+        at2 = np.mean([g.nodes[k]['weight'] for k,v in n_dist.items() if v == 2])
+        newcons  = (at0 + at1*dillution_fac1+ at2*dillution_fac2) / (1+dillution_fac1+dillution_fac2)
+        d[n]= newcons
+
+    for n in g.nodes:
+        g.nodes[n]['weight'] = d[n]
     return g
