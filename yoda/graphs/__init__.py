@@ -7,13 +7,12 @@ from eden import graph as eg
 import grakel
 import time
 
-def vectorize_alignments(alignments,min_rd = 1, ignorevectorlabels = False, mp = False):
+def vectorize_alignments(alignments,min_rd = 1, ignorevectorlabels = False):
     vectorizer = lambda x: eg.vectorize([x.graph],
                                         discrete = ignorevectorlabels,
                                         min_r = min_rd,
                                         min_d = min_rd) # normalization=False, inner_normalization=False)
-    mapper = ut.xmap if mp else Map
-    vectors = mapper(vectorizer, alignments)
+    vectors = ut.xxmap(vectorizer, alignments)
     vectors = sparse.vstack(vectors)
     return vectors
 

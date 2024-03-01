@@ -702,36 +702,41 @@ def get_coarse(ali, RY_thresh=.93 , dillution_fac1=.4, dillution_fac2=.2,
 
 def writecons(ali):
     nucleotide_dict = {n:Counter(ali.alignment[:,n].tolist()) for n in ali.graph.nodes}
-
-def justcons(ali, consThresh= .7, replacelabel= False):
-    nucleotide_dict = {n:Counter(ali.alignment[:,n].tolist()) for n in ali.graph.nodes}
-
     for node in ali.graph.nodes():
         mynd = nucleotide_dict[node]
         mynd.pop('-',0)
         allnuc  = sum(mynd.values())
         char,cnt = mynd.most_common(1)[0]
-        # full = ali.alignment.shape[0]/10
-        if (cnt/allnuc) < consThresh:
-            if replacelabel:
-                ali.graph.nodes[node]['label'] = 'N'
-            ali.graph.nodes[node]['weight'] = .05
-        else:
-            ali.graph.nodes[node]['weight'] = 1 #cnt/allnuc
-
+        ali.graph.nodes[node]['weight'] = cnt/allnuc
     return ali.graph
 
+def conscut(g, consThresh= .7, replacelabel= False, bad_weight = 0.05):
+    for node in g.nodes:
+        if g.nodes[node]['weight'] < consThresh:
+            if replacelabel:
+                g.nodes[node]['label'] = 'N'
+            g.nodes[node]['weight'] = bad_weight
+        else:
+            g.nodes[node]['weight'] = 1 #cnt/allnuc
 
-def dillute(g, dillution_fac1, dillution_fac2):
+    return g
+
+
+def dillute(g, dilute1, dilute2, fix_edges = True):
     d = {}
     for n in g.nodes:
         n_dist = nx.single_source_shortest_path_length(g,n, cutoff=2)
         at0 = g.nodes[n]['weight']
         at1 = np.mean([g.nodes[k]['weight'] for k,v in n_dist.items() if v == 1])
         at2 = np.mean([g.nodes[k]['weight'] for k,v in n_dist.items() if v == 2])
-        newcons  = (at0 + at1*dillution_fac1+ at2*dillution_fac2) / (1+dillution_fac1+dillution_fac2)
+        newcons  = (at0 + at1*dilute1+ at2*dilute2) / (1+dilute1+dilute2)
         d[n]= newcons
 
     for n in g.nodes:
         g.nodes[n]['weight'] = d[n]
+
+    if fix_edges:
+        for a,b in g.edges():
+            neighweight = g.nodes[a]['weight'] + g.nodes[b]['weight']
+            g[a][b]['weight'] = neighweight/2
     return g

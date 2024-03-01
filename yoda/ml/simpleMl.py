@@ -102,3 +102,19 @@ def permutation_score(X,y):
     estimator = sklearn.cluster.KMeans(n_clusters = len(np.unique(y)))
     score = sklearn.model_selection.permutation_test_score(estimator, X, y, cv = 2)
     return score[2] # this is the pvalue
+
+
+def clan_in_x(X, y,n_neighbors=10):
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors+1)
+    y_train= np.array(y)
+    knn.fit(X,y)
+    # Get the labels of the nearest neighbors for each training point
+    _, indices = knn.kneighbors(X)
+    # instances -> labels
+    neighbor_labels = y_train[indices]
+    # Exclude the label of the training point itself
+    neighbor_labels = neighbor_labels[:, 1:]
+    # Compute the training error
+    # agreement = (_repeat_as_column(y_train,n_neighbors) == neighbor_labels).mean()
+
+    return np.mean([y in row for y,row in zip(y_train,neighbor_labels)  ])
