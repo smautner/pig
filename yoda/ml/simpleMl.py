@@ -13,9 +13,8 @@ import ubergauss.tools as ut
 def _repeat_as_column(a,n):
     return np.tile(a,(n,1)).T
 
-def knn_accuracy(X, y,n_neighbors=1):
-    knn = KNeighborsClassifier(n_neighbors=n_neighbors+1)
-
+def knn_accuracy(X, y,n_neighbors=1, select_labels=[]):
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors+1, n_jobs = 1)
     y_train= np.array(y)
     knn.fit(X,y)
     # Get the labels of the nearest neighbors for each training point
@@ -25,9 +24,12 @@ def knn_accuracy(X, y,n_neighbors=1):
     # Exclude the label of the training point itself
     neighbor_labels = neighbor_labels[:, 1:]
     # Compute the training error
+    if select_labels:
+        mask = [y in select_labels for y in y_train]
+        y_train = y_train[mask]
+        neighbor_labels = neighbor_labels[mask]
     agreement = (_repeat_as_column(y_train,n_neighbors) == neighbor_labels).mean()
     return agreement
-
 
 def kmeans_ari(X,y,k=0):
     if k == 0:

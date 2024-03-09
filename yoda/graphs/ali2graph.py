@@ -708,9 +708,9 @@ def writecons(ali):
         allnuc  = sum(mynd.values())
         char,cnt = mynd.most_common(1)[0]
         ali.graph.nodes[node]['weight'] = cnt/allnuc
-    return ali.graph
+    return ali.graph.copy()
 
-def conscut(g, consThresh= .7, replacelabel= False, bad_weight = 0.05):
+def conscut(g, consThresh= .95, replacelabel= False, bad_weight = 0.1):
     for node in g.nodes:
         if g.nodes[node]['weight'] < consThresh:
             if replacelabel:
@@ -720,6 +720,22 @@ def conscut(g, consThresh= .7, replacelabel= False, bad_weight = 0.05):
             g.nodes[node]['weight'] = 1 #cnt/allnuc
 
     return g
+
+def nearstem(g, boost_range = 1, boost_thresh = .5, boost_weight = 1):
+    isbound = lambda x:  len([(u, v) for u, v, attr in g.edges(x, data=True) if attr['label'] == '=']) > 0
+    if boost_range:
+        weights = [g.nodes[n]['weight'] for n in g.nodes]
+        if np.mean(weights) > boost_thresh:
+            bound = set([n for n in g.nodes if isbound(n)])
+            for n in g.nodes:
+                if n not in bound and g.nodes[n]['weight'] > .9:
+                    neighs = set( nx.single_source_shortest_path_length(g,n,
+                                                    cutoff=boost_range).keys())
+                    # print(f"{neighs=}")
+                    if neighs & bound:
+                        g.nodes[n]['weight']+= boost_weight
+    return g
+
 
 
 def dillute(g, dilute1, dilute2, fix_edges = True):

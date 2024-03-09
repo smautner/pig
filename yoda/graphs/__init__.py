@@ -7,15 +7,14 @@ from eden import graph as eg
 import grakel
 import time
 
-def vectorize_alignments(alignments,min_rd = 1, ignorevectorlabels = False):
-    vectorizer = lambda x: eg.vectorize([x.graph],
-                                        discrete = ignorevectorlabels,
-                                        min_r = min_rd,
-                                        min_d = min_rd) # normalization=False, inner_normalization=False)
-    vectors = ut.xxmap(vectorizer, alignments)
+def vectorize_alignments(alignments,**kwargs):
+    return vectorize_graphs([x.graph for x in alignments], **kwargs)
+
+def vectorize_graphs(graphs,**kwargs):
+
+    vectors = ut.xxmap(eg.vectorize, [[g] for g in graphs], **kwargs)
     vectors = sparse.vstack(vectors)
     return vectors
-
 
 def convert_to_grakel_graph(alignment) -> grakel.Graph:
 

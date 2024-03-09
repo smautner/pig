@@ -1,6 +1,7 @@
 from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 from ubergauss import tools as ut
 from yoda.graphs import ali2graph
+from collections import defaultdict
 from yoda.graphs.ali2graph import manifest_sequences
 from yoda.alignments import filein, clans, alignment
 import numpy as np
@@ -33,6 +34,17 @@ def size_filter(alis, labels, cutoff):
     alis, labels = Transpose([(ali,l) for ali,l in
                               zip(alis, labels) if l not in badones])
     return alis, labels
+
+
+def filter_by_seqcount(alis):
+    d = defaultdict(list)
+    for  a in alis:
+        if a.clusterlabel > 0:
+            d[a.clusterlabel].append(a.alignment.shape[0])
+    bad = [ k for k,v in d.items() if any([vv < 10 for vv in v])]
+    ok = [ k for k,v in d.items() if all([vv > 9 for vv in v])]
+    return ok,bad
+
 
 
 def check_labels(alignments, labels):
