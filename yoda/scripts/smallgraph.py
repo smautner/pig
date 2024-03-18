@@ -46,6 +46,8 @@ cutD2 1 40 1'''.split('\n')
 space = ho.spaceship(space)
 
 
+
+
 def string_to_space(space):
     space = space.split('\n')
     return ho.spaceship(space)

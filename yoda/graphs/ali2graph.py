@@ -738,6 +738,12 @@ def nearstem(g, boost_range = 1, boost_thresh = .5, boost_weight = 1):
 
 
 
+def donest(g):
+    for a, b, data in g.edges(data=True):
+        if data['label'] == '=':
+            data['nesting'] = True
+    return g
+
 def dillute(g, dilute1, dilute2, fix_edges = True):
     d = {}
     for n in g.nodes:
