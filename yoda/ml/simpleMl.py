@@ -8,7 +8,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import cross_val_score
 import logging
 import ubergauss.tools as ut
-
+from scipy.sparse import csr_matrix
 
 def _repeat_as_column(a,n):
     return np.tile(a,(n,1)).T
@@ -16,13 +16,16 @@ def _repeat_as_column(a,n):
 def knn_accuracy(X, y,n_neighbors=1, select_labels=[]):
     knn = KNeighborsClassifier(n_neighbors=n_neighbors+1, n_jobs = 1)
     y_train= np.array(y)
+
+    # X -= X.min()
+    # np.fill_diagonal(X,0)
     knn.fit(X,y)
     # Get the labels of the nearest neighbors for each training point
     _, indices = knn.kneighbors(X)
     # instances -> labels
     neighbor_labels = y_train[indices]
     # Exclude the label of the training point itself
-    neighbor_labels = neighbor_labels[:, 1:]
+    neighbor_labels = neighbor_labels[:, 1:]  #!!!!!!!!!!!!!!!!!!!!!!!!!11
     # Compute the training error
     if select_labels:
         mask = [y in select_labels for y in y_train]
@@ -106,8 +109,24 @@ def permutation_score(X,y):
     return score[2] # this is the pvalue
 
 
-def clan_in_x(X, y,n_neighbors=10):
+def clan_in_x_OLD(X, y,n_neighbors=10):
     knn = KNeighborsClassifier(n_neighbors=n_neighbors+1)
+    y_train= np.array(y)
+    knn.fit(X,y)
+    # Get the labels of the nearest neighbors for each training point
+    _, indices = knn.kneighbors(X)
+    # instances -> labels
+    neighbor_labels = y_train[indices]
+    # Exclude the label of the training point itself
+    neighbor_labels = neighbor_labels[:, 1:]
+    # Compute the training error
+    # agreement = (_repeat_as_column(y_train,n_neighbors) == neighbor_labels).mean()
+    return np.mean([y in row for y,row in zip(y_train,neighbor_labels)  ])
+
+
+def clan_in_x(X, y,n_neighbors=10):
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors+1, metric = 'precomputed')
+
     y_train= np.array(y)
     knn.fit(X,y)
     # Get the labels of the nearest neighbors for each training point

@@ -42,14 +42,13 @@ cutS1 0 20 1
 cutS2 1 40 1
 cutD1 0 20 1
 norm 0 1 1
-cutD2 1 40 1'''.split('\n')
+cutD2 1 40 1'''
 space = ho.spaceship(space)
 
 
 
 
 def string_to_space(space):
-    space = space.split('\n')
     return ho.spaceship(space)
 
 taskfilter=lambda x: x['cutS2'] > x['cutS1'] and x['cutD2'] > x['cutD1'] and x['dillution_fac1'] > x['dillution_fac2']
