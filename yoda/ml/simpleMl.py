@@ -1,3 +1,4 @@
+from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 from  sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier as RF
 import sklearn
@@ -126,7 +127,6 @@ def clan_in_x_OLD(X, y,n_neighbors=10):
 
 def clan_in_x(X, y,n_neighbors=10):
     knn = KNeighborsClassifier(n_neighbors=n_neighbors+1, metric = 'precomputed')
-
     y_train= np.array(y)
     knn.fit(X,y)
     # Get the labels of the nearest neighbors for each training point
@@ -137,5 +137,44 @@ def clan_in_x(X, y,n_neighbors=10):
     neighbor_labels = neighbor_labels[:, 1:]
     # Compute the training error
     # agreement = (_repeat_as_column(y_train,n_neighbors) == neighbor_labels).mean()
-
     return np.mean([y in row for y,row in zip(y_train,neighbor_labels)  ])
+
+def accs(ind,y):
+    '''
+    neigbor indices and y -> list of contains neigh for 1..ind.shape[1]
+    '''
+    neighbor_labels = y[ind]
+    return [ np.mean([yy in row for yy,row in zip(y,neighbor_labels[:,1:n])  ]) for n in range(1,ind.shape[1])]
+
+def clan_in_x_corrected(X,y,n_neighbors=10):
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors+1, metric = 'precomputed')
+    y_train= np.array(y)
+    knn.fit(X,y)
+    # Get the labels of the nearest neighbors for each training point
+    _, indices = knn.kneighbors(X)
+    # instances -> labels
+    neighbor_labels = y_train[indices]
+    # Exclude the label of the training point itself
+    neighbor_labels = neighbor_labels[:, 1:]
+    # Compute the training error
+    # agreement = (_repeat_as_column(y_train,n_neighbors) == neighbor_labels).mean()
+    return np.mean([y in row for y,row in zip(y_train,neighbor_labels)  ])
+
+from sklearn.metrics import average_precision_score
+
+def average_precision(distances,y):
+
+    def score(i):
+        y_true = y == y[i]
+        return average_precision_score(y_true,-distances[i])
+
+    return np.mean(Map(score, Range(y)))
+
+
+def average_precision_srt(distances,y):
+
+    def score(i):
+        y_true = y == y[i]
+        return average_precision_score(y_true,-distances[i])
+
+    return np.sort(Map(score, Range(y)))

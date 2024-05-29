@@ -710,15 +710,40 @@ def writecons(ali):
         ali.graph.nodes[node]['weight'] = cnt/allnuc
     return ali.graph.copy()
 
-def conscut(g, consThresh= .95, replacelabel= False, bad_weight = 0.1):
+def set_weight_label(ali, RYthresh=0):
+    '''
+    sets weight and label
+    '''
+    nucleotide_dict = {n:Counter(ali.alignment[:,n].tolist()) for n in ali.graph.nodes}
+
+    for node in ali.graph.nodes():
+        mynd = nucleotide_dict[node]
+        mynd.pop('-',0)
+        allnuc  = sum(mynd.values())
+        char,cnt = mynd.most_common(1)[0]
+        conservation = cnt/allnuc
+        if conservation > RYthresh:
+            # we can use the label and all is ok
+            ali.graph.nodes[node]['weight'] = conservation
+        else:
+            # we need to relabel
+            R = sum([mynd.get(x,0) for x in 'A G'.split()])
+            Y = sum([mynd.get(x,0) for x in 'C U'.split()])
+            cnt,nuc = (R,'R') if  R > Y else (Y,'Y')
+            ali.graph.nodes[node]['weight'] = cnt/allnuc
+            ali.graph.nodes[node]['label'] = nuc
+
+
+    return ali.graph.copy()
+
+
+
+def set_weight(g, consThresh= .95,  bad_weight = 0.1):
     for node in g.nodes:
         if g.nodes[node]['weight'] < consThresh:
-            if replacelabel:
-                g.nodes[node]['label'] = 'N'
             g.nodes[node]['weight'] = bad_weight
         else:
             g.nodes[node]['weight'] = 1 #cnt/allnuc
-
     return g
 
 def nearstem(g, boost_range = 1, boost_thresh = .5, boost_weight = 1):
@@ -762,3 +787,21 @@ def dillute(g, dilute1, dilute2, fix_edges = True):
             neighweight = g.nodes[a]['weight'] + g.nodes[b]['weight']
             g[a][b]['weight'] = neighweight/2
     return g
+
+
+
+
+
+
+
+
+def get_histograms(ali):
+    nucleotide_dict = {n:Counter(ali.alignment[:,n].tolist()) for n in ali.graph.nodes}
+
+    def hist(node):
+        mynd = nucleotide_dict[node]
+        mynd.pop('-',0)
+        allnuc  = sum(mynd.values())
+        return [ mynd.get(nuc,0)/allnuc  for nuc in 'AUGC']
+
+    return Map(hist,ali.graph.nodes())
