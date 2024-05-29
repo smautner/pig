@@ -42,7 +42,7 @@ def readCmscanAndMakeTable(data):
     l = len(refdict)
     distmtx= np.ones((l,l))
     distmtx*=0
-    for  line in open(f'delme.tbl',f'r').readlines():
+    for  line in open(f'infernal.tbl',f'r').readlines():
         if not line.startswith(f"#"):
             line = line.split()
             if line[1] not in refdict:
@@ -60,7 +60,7 @@ from yoda import ml, draw
 
 
 import matplotlib
-matplotlib.use('module://matplotlib-backend-sixel')
+#matplotlib.use('module://matplotlib-backend-sixel')
 from matplotlib import pyplot as plt
 import seaborn as sns
 
