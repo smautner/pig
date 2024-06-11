@@ -9,7 +9,6 @@ import numpy as np
 def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/test2'):
     alignments = filein.readseedfile(ut.fixpath( seedpath))
     labels = clans.getlabels(alignments)
-
     if not full:
         oklabel = labels != 0
         alignments = [a for a,ok in zip(alignments,oklabel) if ok > 0]

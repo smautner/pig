@@ -24,7 +24,10 @@ def getlabels(alignments):
     # print(f"{ label_dict=}")
     y = np.zeros(len(alignments),dtype=int)
     for j,a in enumerate( alignments):
-        label = label_dict.get( a.gf[f'ID'][3:] ,  0 )
+        ali_label = a.gf[f'ID'][3:]
+        label = label_dict.get( ali_label ,  0 )
+        if 'snR56' in ali_label:
+            print(f"{ali_label=}")
         y[j] = label
     return y
 
@@ -160,4 +163,4 @@ CL00042	SNORA65	snR34	snoR2
 CL00043	SNORA74	snR191
 CL00119	S4-Fusobacteriales	S4-Bacteroidia	S4-Clostridia	S4-Flavobacteria
 CL00048	SNORD19	SNORD19B
-CL00049	SNORD25	snR56f'''
+CL00049	SNORD25	snR56'''
