@@ -33,16 +33,16 @@ def data_to_fasta(data):
 
     with open(f'fasta.delme',f'w') as f:
         f.write(f'\n'.join(lines))
-    return lines
+    # return lines
 
 from ubergauss import tools as ut
-def readCmscanAndMakeTable(data):
+def readCmscanAndMakeTable(data, path = 'inftools/infernal.tbl'):
     reflist = data_to_reffile(data)
     refdict = {nr:idx for idx,nr in enumerate(reflist)}
     l = len(refdict)
     distmtx= np.ones((l,l))
     distmtx*=0
-    for  line in open(f'infernal.tbl',f'r').readlines():
+    for  line in open(path,f'r').readlines():
         if not line.startswith(f"#"):
             line = line.split()
             if line[1] not in refdict:
@@ -89,10 +89,25 @@ def eval_agglo_ari(dist,labels, linkage = 'single'):
 
 
 
+def make_the_infernal_table():
+    '''
+    1. we need to download infernal (with linux binaries) and rfam.cm
+    2. make reffile.delme
+        python -c 'import inferencemodel as l;data = l.alignments.load_rfam();l.data_to_reffile(data);'
+        python -c 'import inferencemodel as l;data = l.alignments.load_rfam();l.data_to_fasta(data);'
+
+    goto infernaltoolfolder
+    cmfetch --index Rfam.cm
+    ./cmfetch -f Rfam.cm ../reffile.delme > reffile.delme.cm
+    ./cmpress reffile.delme.cm
+    # ./cmcalibrate --cpu 16 reffile.delme.cm we dont need to calibrate, i tested it
+    ./cmscan  -E 10000 --noali --acc --tblout=delme.tbl  reffile.delme.cm fasta.delme
+    '''
+    pass
+
 
 if __name__ == f"__main__":
     data = alignments.load_rfam()
-
 
     # data_to_fasta(data)
     # data_to_reffile(data)
@@ -103,23 +118,23 @@ if __name__ == f"__main__":
     cmfetch -f Rfam.cm reffile.delme > reffile.delme.cm
     cmpress reffile.delme.cm
     cmcalibrate reffile.delme.cm
-    cmscan -g -E 10000 --noali --acc --tblout=delme.tbl  reffile.delme.cm fasta.delme
+    cmscan -g -E 10000 --noali --acc --tblout=delme.tbl  reffile.delme.cm fasta.delme # i should not use -g :)
+    cmscan  -E 10000 --noali --acc --tblout=delme.tbl  reffile.delme.cm fasta.delme
     '''
+
+
+
     dist = readCmscanAndMakeTable(data)
     for linkage in 'average complete single'.split():
         print(f"{linkage=}")
         eval_agglo_ari(dist,data[1],linkage=linkage)
     exit()
-
     import structout as so
     from scipy import sparse
     import seaborn as sns
-
     sns.clustermap(dist)
     plt.show()
-
     so.heatmap(sparse.csr_matrix(dist))
-
     em = ml.embed(dist)
     draw.scatter(em, data[1])
 
