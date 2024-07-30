@@ -26,8 +26,7 @@ def getlabels(alignments):
     for j,a in enumerate( alignments):
         ali_label = a.gf[f'ID'][3:]
         label = label_dict.get( ali_label ,  0 )
-        if 'snR56' in ali_label:
-            print(f"{ali_label=}")
+        # if 'snR56' in ali_label: print(f"{ali_label=}")
         y[j] = label
     return y
 

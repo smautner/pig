@@ -20,8 +20,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import umap
 
-def makedata(splits = 3):
-    alis, labels = alignments.load_rfam()
+def makedata(splits = 3,add_cov=''):
+    alis, labels = alignments.load_rfam(add_cov='')
     # 3 way split
     train, test = next( uo.groupedCV(n_splits = splits).split(alis,labels,labels))
     te = [alis[x] for x in test], [labels[x] for x in test]

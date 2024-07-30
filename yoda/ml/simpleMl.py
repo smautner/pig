@@ -163,13 +163,19 @@ def clan_in_x_corrected(X,y,n_neighbors=10):
 from sklearn.metrics import average_precision_score
 
 def average_precision(distances,y):
-
     def score(i):
         y_true = y == y[i]
         return average_precision_score(y_true,-distances[i])
-
     return np.mean(Map(score, Range(y)))
 
+def average_precision_limited(distances,indices, labels):
+    labels = np.array(labels)
+    def score(i):
+        nn_labels = labels[indices[i]]
+        y_true = nn_labels == labels[i]
+        return average_precision_score(y_true,-distances[i])
+
+    return np.mean(Map(score, Range(labels)))
 
 def average_precision_srt(distances,y):
 
