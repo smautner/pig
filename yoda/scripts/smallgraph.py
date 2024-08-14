@@ -22,6 +22,8 @@ import umap
 
 def makedata(splits = 3,add_cov=''):
     alis, labels = alignments.load_rfam(add_cov='')
+    if splits <= 2:
+        return alis, labels
     # 3 way split
     train, test = next( uo.groupedCV(n_splits = splits).split(alis,labels,labels))
     te = [alis[x] for x in test], [labels[x] for x in test]

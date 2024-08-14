@@ -738,7 +738,7 @@ def set_weight_label(ali, RYthresh=0):
 
 
 
-def set_weight(g, consThresh= .95,  bad_weight = 0.1):
+def set_weight(g, consThresh= .97,  bad_weight = 0.15):
     for node in g.nodes:
         if g.nodes[node]['weight'] < consThresh:
             g.nodes[node]['weight'] = bad_weight
@@ -769,7 +769,7 @@ def donest(g):
             data['nesting'] = True
     return g
 
-def dillute(g, dilute1, dilute2, fix_edges = True):
+def dillute(g, dilute1=.5, dilute2=.75, fix_edges = True):
     d = {}
     for n in g.nodes:
         n_dist = nx.single_source_shortest_path_length(g,n, cutoff=2)
