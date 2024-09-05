@@ -769,7 +769,7 @@ def donest(g):
             data['nesting'] = True
     return g
 
-def dillute(g, dilute1=.5, dilute2=.75, fix_edges = True):
+def dillute(g, dilute1=.25, dilute2=.75, fix_edges = True):
     d = {}
     for n in g.nodes:
         n_dist = nx.single_source_shortest_path_length(g,n, cutoff=2)

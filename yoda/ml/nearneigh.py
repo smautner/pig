@@ -34,6 +34,19 @@ def neighbors(vecz, k = 100):
     return d,i
 
 
+from kiez import Kiez
+def normalize_csls(di):
+    k_inst = Kiez(algorithm='SklearnNN', hubness='csls',  n_candidates = di.shape[0]-1,
+              algorithm_kwargs= {'metric' : 'precomputed'})
+    k_inst.fit(di)
+    dist2, indices2 = k_inst.kneighbors(di.shape[0]-1)
+    dist2+= abs(dist2.min())+1
+    n = dist2.shape[0]
+    complete_distance_matrix = np.zeros((n, n))
+    # Fill the known distances
+    for i, neighbors in enumerate(indices2):
+        complete_distance_matrix[i, neighbors] = dist2[i]
+    return complete_distance_matrix
 
 
 
