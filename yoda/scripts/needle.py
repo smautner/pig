@@ -1,9 +1,6 @@
 from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 from collections import Counter
 import numpy as np
-
-
-
 from kiez import Kiez
 
 def kiez_neighs(matrix, limit = 100):
@@ -146,5 +143,17 @@ def getrank(sli,matrix):
     return 99999999
 
 
-def getranks(sli, matrix):
+def getranks_mix(sli, matrix):
     return np.array(Map( getrank,sli, matrix = matrix))
+
+
+
+import random
+def randomhalf(lst):
+    unique_values = list(set(lst))
+    num_to_select = len(unique_values) // 2
+    selected_values = random.sample(unique_values, num_to_select)
+    return selected_values
+
+
+
