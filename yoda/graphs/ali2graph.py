@@ -710,6 +710,85 @@ def writecons(ali):
         ali.graph.nodes[node]['weight'] = cnt/allnuc
     return ali.graph.copy()
 
+
+def multiGraph(ali, clusterSize = 15):
+    '''
+    make sure weight annotations are there, i.e. run this after writeocons
+
+    for each sequence in the alignment:
+    - materialize a graph where the nodes are labeled according to the sequence
+
+    vectorize graphs via the kernel, using the weight attribute for weighting the nodes
+    make a distance matrix of the vectors
+    cluster via scikit-learn affinity propagation
+
+    for each cluster materialize a graph, where the labels correspond to the most frequent entry in the respective sequence column
+    merge all these networkx graphs
+
+    print the sequences of new graphs
+    '''
+    # assert 'weight' in ali.graph.nodes[0]
+
+
+    # cluster on the sequences
+    def seq2graph(seq):
+        g = ali.graph.copy()
+        for n in g.nodes:
+            g.nodes[n]['label'] = seq[n]
+        return g
+    graphs = [seq2graph(s) for s in ali.alignment]
+    vectors = eg.vectorize(graphs)
+    from sklearn.cluster import KMeans
+    clusterLabels = KMeans(n_clusters = int(ali.alignment.shape[0]/clusterSize)+1).fit_predict(vectors)
+
+    # deal with the clusters
+    g = nx.Graph()
+    for clusterId in np.unique(clusterLabels):
+        # find the most common labels
+        g2 = ali.graph.copy()
+        sequences = ali.alignment[clusterLabels==clusterId]
+        def get_col(n):
+            z= Counter(sequences[:,n])
+            z.pop('-',None)
+            return z.most_common(1)[0][0] if z else '-'
+        labels = [ get_col(n) for n in ali.graph.nodes]
+
+        # if its blank we better remove the node
+        rmlist = [n for n,l in zip(g2.nodes, labels) if l == '-']
+        for n in rmlist:
+            rmnode(g2,n)
+        # relabel the thing
+        for n,l in zip(g2.nodes, labels):
+            if l != '-':
+                g2.nodes[n]['label'] = l
+
+        # merge the graphs
+        newGraph = nx.convert_node_labels_to_integers(g2, first_label=len(g))
+        g = nx.compose(g, newGraph)
+    return g
+
+
+def rmnode(G,v):
+    '''
+    1. find the neighbors of v
+    2. if there are 2 neighbors, delete v and connect the neighbors
+    '''
+    neighs = list(G.neighbors(v))
+
+    # assert len(neighs) < 3
+        #nucleotide_dict = {n:Counter(ali.alignment[:,n].tolist()) for n in ali.graph.nodes}
+
+    neighs = [n for n in neighs if G[v][n]['label'] != '=']
+
+
+    if len(neighs) == 2:
+        a,b = neighs
+        G.add_edge(a,b, label = '-')
+
+    # else we have a dangling end
+    G.remove_node(v)
+    return G
+
 def set_weight_label(ali, RYthresh=0):
     '''
     sets weight and label
