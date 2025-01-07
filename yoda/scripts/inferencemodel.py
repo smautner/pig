@@ -39,6 +39,7 @@ from ubergauss import tools as ut
 def readCmscanAndMakeTable(data, path = 'inftools/infernal.tbl'):
     reflist = data_to_reffile(data)
     refdict = {nr:idx for idx,nr in enumerate(reflist)}
+    print(reflist)
     l = len(refdict)
     distmtx= np.ones((l,l))
     distmtx*=0
@@ -56,8 +57,9 @@ def readCmscanAndMakeTable(data, path = 'inftools/infernal.tbl'):
             # print(f"{ evalue=}")
     np.fill_diagonal(distmtx,0)
     return distmtx
-from yoda import ml, draw
 
+
+from yoda import ml, draw
 
 import matplotlib
 #matplotlib.use('module://matplotlib-backend-sixel')

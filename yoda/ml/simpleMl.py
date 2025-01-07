@@ -184,3 +184,11 @@ def average_precision_srt(distances,y):
         return average_precision_score(y_true,-distances[i])
 
     return np.sort(Map(score, Range(y)))
+
+
+def average_precision_nozero(distances,y):
+    nonzero = y != 0
+    def score(dist, currentlabel):
+        y_true = y == currentlabel
+        return average_precision_score(y_true,-dist)
+    return np.mean(Map(score, distances[nonzero], y[nonzero]))

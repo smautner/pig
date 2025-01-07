@@ -4,7 +4,7 @@ import numpy as np
 
 
 
-def get_label_dictionary():
+def get_label_dictionary(clans):
     '''
     produces a dictionary {rna_name -> clusterlabel}
     '''
@@ -20,7 +20,7 @@ def getlabels(alignments):
     matches the ID field in the alignments with the "clans"-cluster-list
     returns cluster-labels
     '''
-    label_dict = get_label_dictionary()
+    label_dict = get_label_dictionary(clans)
     # print(f"{ label_dict=}")
     y = np.zeros(len(alignments),dtype=int)
     for j,a in enumerate( alignments):
@@ -31,26 +31,41 @@ def getlabels(alignments):
     return y
 
 def get_labels_dict_rfam15():
-    oldLabels = get_label_dictionary()
+    '''
+    returns a dictionary {rna_name -> clusterlabel} for the clans from rfam15
+    that are not in rf14 (or had been previously removed, see data annotation
+    below)
+    '''
+
+    oldLabels = get_label_dictionary(clans)
     id = max(oldLabels.values()) +1
-    d= {}
+    rf15Data= {}
     j=0
+
+    # each row contains one clain with name and a list of rna_ids
     for i,e in enumerate(clans_rfam15.split(f'\n')):
         rna_ids = e.split()[1:]
 
-        # if all the rnas are already in oldlabels, skip this
+
+        # we want to compare this list with the already known clans in rfam version 14...
         contained =[rna_id in oldLabels for rna_id in rna_ids]
+
+        # if all the new labels are already in an old clan, we can ignore it
         if all(contained):
             continue
+        # completely new clan
         elif not any(contained):
             for rna_id in rna_ids:
-                d[rna_id] = id+j
+                rf15Data[rna_id] = id+j
             j=j+1
+        # in this case a known clan is being extended:
         else :
             print(f"changed_clan: {rna_ids} ")
-    print(d.values())
-    print(d.keys())
-    return d
+        # we dont catch the case where families where removed from rf14 clans, but that should be fine
+
+    print(rf15Data.values())
+    print(rf15Data.keys())
+    return rf15Data
 
 def getlabels_rfam15(alignments):
     '''
