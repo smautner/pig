@@ -711,8 +711,60 @@ def writecons(ali):
     return ali.graph.copy()
 
 
+
+
+from sklearn.metrics import pairwise_distances
+from ubergauss import tools as ut
+import os
+from sklearn.cluster import KMeans
+from sklearn.cluster import AgglomerativeClustering
+def multiGraphCache(alis, c = 0):
+    mkMultiGraphCache(alis,c = c)
+    return readMultiGraphCache(alis)
+
+def mkMultiGraphCache(alis,c=0):
+    # check if file exists
+    if os.path.exists('MGCache'):
+        return
+    print('doing the cache')
+    dists = ut.xxmap(multiGraphDistances,alis, cluster=c)
+    dists = {a.label: d for a,d in zip(alis, dists)}
+    if not c:
+        ut.dumpfile({'MGDIST':dists}, 'MGCache')
+    else:
+        ut.dumpfile({'MGClusterlabels':dists}, 'MGCache')
+
+
+def readMultiGraphCache(alis):
+    cache = ut.loadfile('MGCache')
+
+    for k in cache.keys():
+        for a in alis:
+            a.__dict__[k] = cache[k][a.label]
+
+    return alis
+
+def multiGraphDistances(ali, cluster = 0):
+    def seq2graph(seq):
+        g = ali.graph.copy()
+        for n in g.nodes:
+            g.nodes[n]['label'] = seq[n]
+        return g
+    graphs = [seq2graph(s) for s in ali.alignment]
+    vectors = eg.vectorize(graphs)
+    if cluster:
+        n_clusters = min(int(ali.alignment.shape[0]/cluster)+1, 10)
+        return KMeans(n_clusters = n_clusters ).fit_predict(vectors)
+    return vectors
+
 def multiGraph(ali, clusterSize = 15):
     '''
+    some alignments are too large, i.e. contain many sequences
+    since we choose only one representative, it can not catch all the variance of those many sequences
+    therefore we build one representative per CLUSTERSIZE sequences.
+
+
+
     make sure weight annotations are there, i.e. run this after writeocons
 
     for each sequence in the alignment:
@@ -731,22 +783,21 @@ def multiGraph(ali, clusterSize = 15):
 
 
     # cluster on the sequences
-    def seq2graph(seq):
-        g = ali.graph.copy()
-        for n in g.nodes:
-            g.nodes[n]['label'] = seq[n]
-        return g
-    graphs = [seq2graph(s) for s in ali.alignment]
-    vectors = eg.vectorize(graphs)
-    from sklearn.cluster import KMeans
-    clusterLabels = KMeans(n_clusters = int(ali.alignment.shape[0]/clusterSize)+1).fit_predict(vectors)
+
+    if not 'MGClusterlabels' in ali.__dict__:
+        n_clusters = min(int(ali.alignment.shape[0]/clusterSize)+1, 10)
+        ali.MGClusterlabels = KMeans(n_clusters = n_clusters ).fit_predict(ali.MGDIST)
+
+
+    # clusterLabels = AgglomerativeClustering(n_clusters = int(ali.alignment.shape[0]/clusterSize)+1).fit_predict(ali.MGDIST)
 
     # deal with the clusters
     g = nx.Graph()
-    for clusterId in np.unique(clusterLabels):
+    # print(f"{ Counter(clusterLabels)=}")
+    for clusterId in np.unique(ali.MGClusterlabels):
         # find the most common labels
         g2 = ali.graph.copy()
-        sequences = ali.alignment[clusterLabels==clusterId]
+        sequences = ali.alignment[ali.MGClusterlabels==clusterId]
         def get_col(n):
             z= Counter(sequences[:,n])
             z.pop('-',None)
