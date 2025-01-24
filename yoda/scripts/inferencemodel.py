@@ -39,14 +39,14 @@ from ubergauss import tools as ut
 def readCmscanAndMakeTable(data, path = 'inftools/infernal.tbl'):
     reflist = data_to_reffile(data)
     refdict = {nr:idx for idx,nr in enumerate(reflist)}
-    print(reflist)
     l = len(refdict)
     distmtx= np.ones((l,l))
     distmtx*=0
+
     for  line in open(path,f'r').readlines():
         if not line.startswith(f"#"):
             line = line.split()
-            if line[1] not in refdict:
+            if line[1] not in refdict or line[2] not in refdict:
                 continue
             x = refdict[line[1]]
             #y = int(line[2])

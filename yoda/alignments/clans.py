@@ -13,6 +13,13 @@ def get_label_dictionary(clans):
         rna_ids = e.split()[1:]
         for rna_id in rna_ids:
             d[rna_id] = i+1
+
+
+    # since we use the clan list from rf14 but the rfam15 seed file, we need to apply some corrections:
+    old_names = ['SAM-I-IV-variant', 'MFR', 'AdoCbl_riboswitch','AdoCbl-variant']
+    new_names = ['SAM-I-IV',         '2dG-I', 'AdoCbl','AdoCbl-II']
+    for old,new in zip(old_names,new_names):
+        d[new] = d.pop(old)
     return d
 
 def getlabels(alignments):
@@ -25,9 +32,11 @@ def getlabels(alignments):
     y = np.zeros(len(alignments),dtype=int)
     for j,a in enumerate( alignments):
         ali_label = a.gf[f'ID'][3:]
-        label = label_dict.get( ali_label ,  0 )
+        label = label_dict.pop( ali_label ,  0 )
         # if 'snR56' in ali_label: print(f"{ali_label=}")
         y[j] = label
+    if label_dict:
+        print(f"i expected these to be in the seedfile, as they are in the class list: {label_dict=}")
     return y
 
 def get_labels_dict_rfam15():
@@ -92,7 +101,6 @@ def getlabels_rfam15(alignments):
 #CL00112	5_8S_rRNA	LSU_rRNA_archaea	LSU_rRNA_bacteria	LSU_rRNA_eukarya	LSU_trypano_mito
 #CL00111	SSU_rRNA_bacteria	SSU_rRNA_archaea	SSU_rRNA_eukarya	SSU_rRNA_microsporidia	SSU_trypano_mito
 #CL00004	Telomerase-vert	Telomerase-cil	Sacc_telomerase	Telomerase_Asco
-
 
 clans = '''CL00110	mir-19	mir-363
 CL00071	SNORD88	snR76	snoR118

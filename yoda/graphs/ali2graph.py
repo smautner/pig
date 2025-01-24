@@ -288,6 +288,68 @@ def  rfam_clean(ali):
     return ali
 
 
+
+def mkGraphSmart(sequences, structure, weights):
+    """like rfam clean, but we dont rely on the dot in the structure and assume a dot if > 50% are '-'
+    we will use this in multigraph when we have the clusters
+    sequences: alignment
+    structure: consensus structure
+    weights: weights to carry over .. as the others this has the complete length
+    """
+
+    # first we get the structure and the sequence...
+    numseqs = len(sequences)
+    isactive = lambda x: sum(x=='-') < numseqs/2
+    active = [isactive(z) for z in sequences.T]
+    myali = sequences[:,active]
+    mystruct = ''.join([s for s,a in zip(structure, active) if a])
+    mystuct = clean_structure(mystruct)
+    mysequence = []
+    for col in myali.T:
+        ctr = Counter(col)
+        ctr.pop('-',0)
+        mysequence.append(ctr.most_common(1)[0][0])
+    myweights = [s for s,a in zip(weights, active) if a]
+
+    # then we build a graph, same as rfan_clean
+    graph = nx.Graph()
+    lifo = []
+    lifo_pseudoknots = defaultdict(list)
+    HASpseudoknot = any([a in letterpairs.keys() for a in structure])
+    for i, (struct,nuc, weight) in enumerate(zip(mystruct,mysequence, myweights)):
+        try:
+            graph.add_node(i, label=nuc, vec=[], weight = weight)
+            # handle hydrogen bonds
+            if struct  == '(':
+                lifo.append(i)
+            if struct == ')':
+                j = lifo.pop()
+                graph.add_edge(i, j, label='=', type='basepair', len=1)
+
+            if HASpseudoknot:
+                    if struct in letterpairs.values():
+                        lifo_pseudoknots[struct].append(i)
+                    if struct in letterpairs.keys():
+                        j = lifo_pseudoknots[letterpairs[struct]].pop()
+                        graph.add_edge(i, j, label='=', type='basepair', len=1)
+        except:
+            return 0
+
+
+
+    # ADD BACKBONE
+    nodes = list(graph)
+    nodes.sort()
+    for i in Range(len(nodes)-1):
+            a,b = nodes[i], nodes[i+1]
+            graph.add_edge(a,b, label='-', type='backbone', len=1)
+
+    return graph
+
+
+
+
+
 def normalize(ctr):
     ctr.pop('-',None)
     su = sum(ctr.values())
@@ -718,75 +780,66 @@ from ubergauss import tools as ut
 import os
 from sklearn.cluster import KMeans
 from sklearn.cluster import AgglomerativeClustering
-def multiGraphCache(alis, c = 0):
-    mkMultiGraphCache(alis,c = c)
-    return readMultiGraphCache(alis)
-
-def mkMultiGraphCache(alis,c=0):
-    # check if file exists
-    if os.path.exists('MGCache'):
-        return
-    print('doing the cache')
-    dists = ut.xxmap(multiGraphDistances,alis, cluster=c)
-    dists = {a.label: d for a,d in zip(alis, dists)}
-    if not c:
-        ut.dumpfile({'MGDIST':dists}, 'MGCache')
-    else:
-        ut.dumpfile({'MGClusterlabels':dists}, 'MGCache')
-
-
-def readMultiGraphCache(alis):
-    cache = ut.loadfile('MGCache')
-
-    for k in cache.keys():
-        for a in alis:
-            a.__dict__[k] = cache[k][a.label]
-
-    return alis
+import time
+import sklearn
+import structout as so
+from eden import sequence as es
 
 def multiGraphDistances(ali, cluster = 0):
-    def seq2graph(seq):
-        g = ali.graph.copy()
-        for n in g.nodes:
-            g.nodes[n]['label'] = seq[n]
-        return g
-    graphs = [seq2graph(s) for s in ali.alignment]
-    vectors = eg.vectorize(graphs)
-    if cluster:
-        n_clusters = min(int(ali.alignment.shape[0]/cluster)+1, 10)
-        return KMeans(n_clusters = n_clusters ).fit_predict(vectors)
-    return vectors
 
-def multiGraph(ali, clusterSize = 15):
+
+    # def seq2graph(seq):
+    #     g = ali.graph.copy()
+    #     for n in g.nodes:
+    #         g.nodes[n]['label'] = seq[n]
+    #     return g
+    # graphs = [seq2graph(s) for s in ali.alignment]
+    # vectors = eg.vectorize(graphs)
+
+    # string
+    seq2str = lambda seq: ''.join([s for s in seq if s != '-'])
+    graphs = [seq2str(s) for s in ali.alignment]
+    vectors = es.vectorize(graphs, r = 2,min_r =1)
+
+    if cluster:
+        # so.heatmap((vectors @ vectors.T).todense())
+        n_clusters = min(int(ali.alignment.shape[0]/cluster)+1, 8)
+        # sklearn.cluster.affinity_propagation((vectors @ vectors.T).toarray())
+        zz=  sklearn.cluster.KMeans(n_clusters = n_clusters).fit_predict(vectors)
+        return zz
+
+        # return KMeans(n_clusters = n_clusters ).fit_predict(vectors)
+    return pairwise_distances(vectors)
+
+def multiGraph(ali, clusterSize = 20, maxclust =8, simplegraph = False):
     '''
     some alignments are too large, i.e. contain many sequences
     since we choose only one representative, it can not catch all the variance of those many sequences
     therefore we build one representative per CLUSTERSIZE sequences.
 
+    seems like its just important to have a few representatives, the exact number doesnt matter that much
 
-
-    make sure weight annotations are there, i.e. run this after writeocons
-
-    for each sequence in the alignment:
-    - materialize a graph where the nodes are labeled according to the sequence
-
-    vectorize graphs via the kernel, using the weight attribute for weighting the nodes
-    make a distance matrix of the vectors
-    cluster via scikit-learn affinity propagation
-
-    for each cluster materialize a graph, where the labels correspond to the most frequent entry in the respective sequence column
-    merge all these networkx graphs
-
-    print the sequences of new graphs
+    simplegraph will keep the old graph structure, while the new style determins the structure for each cluster
     '''
     # assert 'weight' in ali.graph.nodes[0]
 
 
-    # cluster on the sequences
+    # # cluster on the sequences
+    n_clusters = min(int(ali.alignment.shape[0]/clusterSize)+1, maxclust)
 
-    if not 'MGClusterlabels' in ali.__dict__:
-        n_clusters = min(int(ali.alignment.shape[0]/clusterSize)+1, 10)
-        ali.MGClusterlabels = KMeans(n_clusters = n_clusters ).fit_predict(ali.MGDIST)
+    # if 'MGClusterlabels' in ali.__dict__:
+    #     pass
+    # elif 'MDIST' in ali.__dict__:
+    #     # ali.MGClusterlabels = KMeans(n_clusters = n_clusters ).fit_predict(ali.MGDIST)
+    #     ali.MGClusterlabels = AgglomerativeClustering(n_clusters = n_clusters ,metric='precomputed',linkage='average').fit_predict(ali.MGDIST)
+    # else:
+    #     # we never want this becasue its too slow..
+    #     ali.MGClusterlabels = multiGraphDistances(ali, cluster = clusterSize)
+
+
+    if not hasattr(ali, 'MDIST'):
+        ali.MGDIST = multiGraphDistances(ali, cluster = 0)
+        ali.MGClusterlabels = AgglomerativeClustering(n_clusters = n_clusters ,metric='precomputed',linkage='average').fit_predict(ali.MGDIST)
 
 
     # clusterLabels = AgglomerativeClustering(n_clusters = int(ali.alignment.shape[0]/clusterSize)+1).fit_predict(ali.MGDIST)
@@ -794,28 +847,39 @@ def multiGraph(ali, clusterSize = 15):
     # deal with the clusters
     g = nx.Graph()
     # print(f"{ Counter(clusterLabels)=}")
+    fail = 0
     for clusterId in np.unique(ali.MGClusterlabels):
-        # find the most common labels
-        g2 = ali.graph.copy()
         sequences = ali.alignment[ali.MGClusterlabels==clusterId]
-        def get_col(n):
-            z= Counter(sequences[:,n])
-            z.pop('-',None)
-            return z.most_common(1)[0][0] if z else '-'
-        labels = [ get_col(n) for n in ali.graph.nodes]
+        if simplegraph: # this is the old way, where i copy the graph
+            g2 = ali.graph.copy()
+            def get_col(n):
+                z= Counter(sequences[:,n])
+                z.pop('-',None)
+                return z.most_common(1)[0][0] if z else '-'
+            labels = [ get_col(n) for n in ali.graph.nodes]
 
-        # if its blank we better remove the node
-        rmlist = [n for n,l in zip(g2.nodes, labels) if l == '-']
-        for n in rmlist:
-            rmnode(g2,n)
-        # relabel the thing
-        for n,l in zip(g2.nodes, labels):
-            if l != '-':
-                g2.nodes[n]['label'] = l
+            # if its blank we better remove the node
+            rmlist = [n for n,l in zip(g2.nodes, labels) if l == '-']
+            for n in rmlist:
+                rmnode(g2,n)
+            # relabel the thing
+            for n,l in zip(g2.nodes, labels):
+                if l != '-':
+                    g2.nodes[n]['label'] = l
+        else:
+            #extract the weights from the graph, fill gaps with zero
+            weights = [ali.graph.nodes[n].get('weight',0.1) if n in ali.graph.nodes else 0 for n in range(ali.alignment.shape[1])]
+            struct = ali.gc['SS_cons']
+            g2 = mkGraphSmart(sequences,struct,weights)
+            if not g2:
+                fail +=1
+                continue
 
         # merge the graphs
         newGraph = nx.convert_node_labels_to_integers(g2, first_label=len(g))
         g = nx.compose(g, newGraph)
+
+    # print(f'{fail}/{len(np.unique(ali.MGClusterlabels))} failed' )
     return g
 
 
@@ -917,10 +981,6 @@ def dillute(g, dilute1=.25, dilute2=.75, fix_edges = True):
             neighweight = g.nodes[a]['weight'] + g.nodes[b]['weight']
             g[a][b]['weight'] = neighweight/2
     return g
-
-
-
-
 
 
 
