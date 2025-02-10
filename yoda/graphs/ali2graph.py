@@ -303,7 +303,7 @@ def mkGraphSmart(sequences, structure, weights):
     active = [isactive(z) for z in sequences.T]
     myali = sequences[:,active]
     mystruct = ''.join([s for s,a in zip(structure, active) if a])
-    mystuct = clean_structure(mystruct)
+    mystruct = clean_structure(mystruct)
     mysequence = []
     for col in myali.T:
         ctr = Counter(col)
@@ -325,7 +325,6 @@ def mkGraphSmart(sequences, structure, weights):
             if struct == ')':
                 j = lifo.pop()
                 graph.add_edge(i, j, label='=', type='basepair', len=1)
-
             if HASpseudoknot:
                     if struct in letterpairs.values():
                         lifo_pseudoknots[struct].append(i)
@@ -333,7 +332,9 @@ def mkGraphSmart(sequences, structure, weights):
                         j = lifo_pseudoknots[letterpairs[struct]].pop()
                         graph.add_edge(i, j, label='=', type='basepair', len=1)
         except:
+            # breakpoint()
             return 0
+
 
 
 
@@ -826,6 +827,7 @@ def multiGraph(ali, clusterSize = 20, maxclust =8, simplegraph = False):
 
     # # cluster on the sequences
     n_clusters = min(int(ali.alignment.shape[0]/clusterSize)+1, maxclust)
+
 
     # if 'MGClusterlabels' in ali.__dict__:
     #     pass
