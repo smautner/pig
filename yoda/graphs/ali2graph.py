@@ -5,20 +5,23 @@ import eden.graph as eg # eden-kernel in pip
 from collections import defaultdict, Counter
 import ubergauss.tools as ut
 
+import warnings
+warnings.filterwarnings("ignore")
+
 open_brace_string={")":"(",
                 "]":"[",
                 ">":"<","}":"{"}
 
 
-
+'''
 def nested_frag_encoder(ali):
-    '''
+    """
     - adds entropy info to into vectorlabels
     - builds backbone along the main structure,
             if there are side-structures (indicated by dots in ss_cons)
             they get connected via darkedges
     -> hence the name nested fragment encoder
-    '''
+    """
     graph = nx.Graph()
     lifo = defaultdict(list)
 
@@ -59,28 +62,14 @@ def nested_frag_encoder(ali):
 
 
 
-
-def _most_common_nucs(ali):
-    ''' goes through the alignments columnwise and finds the most common ACGU'''
-    def getch(x):
-        col = ali.alignment[:,x].tolist()
-        counts = Counter( col )
-        for k,v in counts.most_common():
-            if k in "ACGU":
-                return k
-    return Map(getch, Range(ali.alignment.shape[1]))
-
-
-
-
 def mainchainentropy(ali, structure  = 'SS_cons'):
-    '''
+    """
         ATTENTION: . is sometimes in preserved columns so this is  bad-ish
         cleaning up the graph generation a bit,
         will keep a main alignment and just encode that together with the entropy...
         hopefully will keep a consensus to use for printing later..
         maybe i can also use sscons as vec-features
-    '''
+    """
     graph = nx.Graph()
     lifo = defaultdict(list)
     nucs = _most_common_nucs(ali)
@@ -123,13 +112,11 @@ def mainchainentropy(ali, structure  = 'SS_cons'):
 
 import structout as so
 
-import warnings
-warnings.filterwarnings("ignore")
 
 def scclust(ali):
-    '''
+    """
     we try to recreate rna sc clust
-    '''
+    """
     graph = nx.Graph()
 
 
@@ -172,7 +159,6 @@ def scclust(ali):
 
 
 
-'''
 def rfamseedfilebasic(ali, structure  = 'SS_cons'):
 
     graph = nx.Graph()
@@ -217,6 +203,41 @@ def rfamseedfilebasic(ali, structure  = 'SS_cons'):
     graph.graph['structure'] = conSS
     graph.graph['sequence'] = sequence
     return graph
+
+
+def rfam_graph_structure_deco(ali):
+    nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
+
+    def dist2vec(nudi):
+        nudi = dict(nudi)
+        nudi['R'] = sum([nudi.get(x,0) for x in 'A G'.split()])
+        nudi['Y'] = sum([nudi.get(x,0) for x in 'C U'.split()])
+        levels =  np.array([nudi.get(x,0) for x in f"A G C U Y R".split()])
+        thresh = [.25,.5,.75,.95]
+        print(f"{nudi=}")
+        return np.array([ e > t for e in levels for t in thresh])
+
+    for n in ali.graph:
+        ali.graph.nodes[n]['label'] = '1'
+        ali.graph.nodes[n]['vec'] = dist2vec(nuc_distribution[n])
+
+    return ali
+
+
+
+
+def _most_common_nucs(ali):
+    """
+    goes through the alignments columnwise and finds the most common ACGU
+    """
+    def getch(x):
+        col = ali.alignment[:,x].tolist()
+        counts = Counter( col )
+        for k,v in counts.most_common():
+            if k in "ACGU":
+                return k
+    return Map(getch, Range(ali.alignment.shape[1]))
+
 '''
 
 
@@ -260,13 +281,13 @@ def  rfam_clean(ali):
                     lifo.append(i)
                 if struct == ')':
                     j = lifo.pop()
-                    graph.add_edge(i, j, label='=', type='basepair', len=1)
+                    graph.add_edge(i, j, label='=', len=1)
                 if ali.pseudoknot:
                     if struct in letterpairs.values():
                         lifo_pseudoknots[struct].append(i)
                     if struct in letterpairs.keys():
                         j = lifo_pseudoknots[letterpairs[struct]].pop()
-                        graph.add_edge(i, j, label='=', type='basepair', len=1)
+                        graph.add_edge(i, j, label='=', len=1)
 
             except Exception as e:
                 print("ERROR IN FILE", ali.fname,e)
@@ -277,7 +298,7 @@ def  rfam_clean(ali):
     nodes.sort()
     for i in Range(len(nodes)-1):
             a,b = nodes[i], nodes[i+1]
-            graph.add_edge(a,b, label='-', type='backbone', len=1)
+            graph.add_edge(a,b, label='-', len=1)
     graph.graph = {}
     graph.graph['structure'] = conSS
     graph.graph['sequence'] = sequence
@@ -374,14 +395,14 @@ def mkGraphSmart(sequences, structure, weights):
             graph.add_node(i, label=nuc, vec=[], weight = weight)
 
     for a,b in mypairs:
-        graph.add_edge(a,b, label='=', len=1,type='basepair')
+        graph.add_edge(a,b, label='=', len=1)
 
     # ADD BACKBONE
     nodes = list(graph)
     nodes.sort()
     for i in Range(len(nodes)-1):
             a,b = nodes[i], nodes[i+1]
-            graph.add_edge(a,b, label='-', len=1,type='backbone')
+            graph.add_edge(a,b, label='-', len=1)
 
     return graph
 
@@ -394,27 +415,6 @@ def normalize(ctr):
     su = sum(ctr.values())
     return [(k, v/su) for k,v in ctr.most_common()]
 
-
-'''
-def rfam_graph_structure_deco(ali):
-    nuc_distribution = {i:normalize(Counter(ali.alignment[:,i])) for i in list(ali.graph)}
-
-    def dist2vec(nudi):
-        nudi = dict(nudi)
-        nudi['R'] = sum([nudi.get(x,0) for x in 'A G'.split()])
-        nudi['Y'] = sum([nudi.get(x,0) for x in 'C U'.split()])
-        levels =  np.array([nudi.get(x,0) for x in f"A G C U Y R".split()])
-        thresh = [.25,.5,.75,.95]
-        print(f"{nudi=}")
-        return np.array([ e > t for e in levels for t in thresh])
-
-    for n in ali.graph:
-        ali.graph.nodes[n]['label'] = '1'
-        ali.graph.nodes[n]['vec'] = dist2vec(nuc_distribution[n])
-
-    return ali
-
-'''
 
 def rfam_graph_decoration(ali, RY_thresh = .6, nuc_thresh = .85,
                           conservation = [.50,.75,.90,.95],
