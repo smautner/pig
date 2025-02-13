@@ -287,6 +287,75 @@ def  rfam_clean(ali):
 
     return ali
 
+def printSeqs(alignment):
+    for row in alignment:
+        print(''.join(row))
+
+def _subgraphHeuristic(sequences, structure, weights):
+
+    # which nucleotides to delete?
+    numseqs = len(sequences)
+    isactive = lambda x: sum(x=='-') < numseqs/2
+    active = [isactive(z) for z in sequences.T]
+    myali = sequences[:,active]
+    # so we know the sequence and weights now
+    myweights = [s for s,a in zip(weights, active) if a]
+    mysequence = []
+    for col in myali.T:
+        ctr = Counter(col)
+        ctr.pop('-',0)
+        mysequence.append(ctr.most_common(1)[0][0])
+
+    # the structure is more difficult
+    pairs = parse_dot_bracket(structure)
+    # now the pairs have 2 problems, some are impossible and we should adjust the indices.
+
+    indices = list(range(len(structure)))
+    legal_indices = [i for i, a in zip(indices, active) if a ]
+    legal_to_new = dict(zip(legal_indices, range(len(legal_indices))))
+
+    pairs = [(legal_to_new[a],legal_to_new[b]) for (a,b) in pairs if a in legal_to_new and b in legal_to_new]
+
+    if False:
+        r = ['.']*len(mysequence)
+        for a,b in pairs:
+            r[a] = '('
+            r[b] = ')'
+
+        print(''.join(r))
+        printSeqs(myali)
+
+    return pairs, mysequence, myweights
+
+
+def parse_dot_bracket(dot_bracket):
+    allowed_pairs = ['()', '[]', '{}', '<>']
+    open = dict(allowed_pairs)
+    reverse_letterpairs = { chr(65+i):chr(97+i) for i in range(26) }
+    open.update(reverse_letterpairs)
+    close = dict(zip(open.values(), open.keys()))
+
+    # Use a defaultdict to manage stacks for each type of bracket/pseudo-knot
+    stacks = defaultdict(list)
+    pairs = []
+    for i, char in enumerate(dot_bracket):
+        if char in open:
+            stacks[char].append(i)
+        elif char in close:
+            other  = stacks[close[char]].pop()
+            pairs.append((other, i))
+
+
+    # Check if any stacks are not empty (unmatched opening characters)
+    for char, stack in stacks.items():
+        if stack:
+            raise ValueError(f"Invalid dot-bracket string: unmatched opening character '{char}' at position {stack[-1] + 1}.")
+
+
+
+    return pairs
+
+
 
 
 def mkGraphSmart(sequences, structure, weights):
@@ -297,53 +366,22 @@ def mkGraphSmart(sequences, structure, weights):
     weights: weights to carry over .. as the others this has the complete length
     """
 
-    # first we get the structure and the sequence...
-    numseqs = len(sequences)
-    isactive = lambda x: sum(x=='-') < numseqs/2
-    active = [isactive(z) for z in sequences.T]
-    myali = sequences[:,active]
-    mystruct = ''.join([s for s,a in zip(structure, active) if a])
-    mystruct = clean_structure(mystruct)
-    mysequence = []
-    for col in myali.T:
-        ctr = Counter(col)
-        ctr.pop('-',0)
-        mysequence.append(ctr.most_common(1)[0][0])
-    myweights = [s for s,a in zip(weights, active) if a]
+    mypairs, mysequence, myweights = _subgraphHeuristic(sequences, structure, weights)
 
     # then we build a graph, same as rfan_clean
     graph = nx.Graph()
-    lifo = []
-    lifo_pseudoknots = defaultdict(list)
-    HASpseudoknot = any([a in letterpairs.keys() for a in structure])
-    for i, (struct,nuc, weight) in enumerate(zip(mystruct,mysequence, myweights)):
-        try:
+    for i, (nuc, weight) in enumerate(zip(mysequence, myweights)):
             graph.add_node(i, label=nuc, vec=[], weight = weight)
-            # handle hydrogen bonds
-            if struct  == '(':
-                lifo.append(i)
-            if struct == ')':
-                j = lifo.pop()
-                graph.add_edge(i, j, label='=', type='basepair', len=1)
-            if HASpseudoknot:
-                    if struct in letterpairs.values():
-                        lifo_pseudoknots[struct].append(i)
-                    if struct in letterpairs.keys():
-                        j = lifo_pseudoknots[letterpairs[struct]].pop()
-                        graph.add_edge(i, j, label='=', type='basepair', len=1)
-        except:
-            # breakpoint()
-            return 0
 
-
-
+    for a,b in mypairs:
+        graph.add_edge(a,b, label='=', len=1,type='basepair')
 
     # ADD BACKBONE
     nodes = list(graph)
     nodes.sort()
     for i in Range(len(nodes)-1):
             a,b = nodes[i], nodes[i+1]
-            graph.add_edge(a,b, label='-', type='backbone', len=1)
+            graph.add_edge(a,b, label='-', len=1,type='backbone')
 
     return graph
 
@@ -786,32 +824,29 @@ import sklearn
 import structout as so
 from eden import sequence as es
 
-def multiGraphDistances(ali, cluster = 0):
+def multiGraphVectors(ali, fast = 1):
 
 
-    # def seq2graph(seq):
-    #     g = ali.graph.copy()
-    #     for n in g.nodes:
-    #         g.nodes[n]['label'] = seq[n]
-    #     return g
-    # graphs = [seq2graph(s) for s in ali.alignment]
-    # vectors = eg.vectorize(graphs)
+    if fast ==1:
+        # seq2str = lambda seq: ''.join([s for s in seq if s != '-'])
+        seq2str = lambda seq: ''.join([s for s in seq ]) # its better to keep the gaps...
+        graphs = [seq2str(s) for s in ali.alignment]
+        # vectors = es.vectorize(graphs, r = 1,min_r =1, d=5, normalization=True, inner_normalization=True)
+        vectors = es.vectorize(graphs, r = 2,min_r =1, d=3, normalization=True, inner_normalization=True)
+        return vectors
 
-    # string
-    seq2str = lambda seq: ''.join([s for s in seq if s != '-'])
-    graphs = [seq2str(s) for s in ali.alignment]
-    vectors = es.vectorize(graphs, r = 2,min_r =1)
 
-    if cluster:
-        # so.heatmap((vectors @ vectors.T).todense())
-        n_clusters = min(int(ali.alignment.shape[0]/cluster)+1, 8)
-        # sklearn.cluster.affinity_propagation((vectors @ vectors.T).toarray())
-        zz=  sklearn.cluster.KMeans(n_clusters = n_clusters).fit_predict(vectors)
-        return zz
+    def seq2graph(seq):
+        g = ali.graph.copy()
+        for n in g.nodes:
+            g.nodes[n]['label'] = seq[n]
+        return g
+    graphs = [seq2graph(s) for s in ali.alignment]
+    return eg.vectorize(graphs)
 
-        # return KMeans(n_clusters = n_clusters ).fit_predict(vectors)
-    return pairwise_distances(vectors)
-
+import matplotlib.pyplot as plt
+import umap
+from sklearn.cluster import SpectralClustering
 def multiGraph(ali, clusterSize = 20, maxclust =8, simplegraph = False):
     '''
     some alignments are too large, i.e. contain many sequences
@@ -839,9 +874,49 @@ def multiGraph(ali, clusterSize = 20, maxclust =8, simplegraph = False):
     #     ali.MGClusterlabels = multiGraphDistances(ali, cluster = clusterSize)
 
 
-    if not hasattr(ali, 'MDIST'):
-        ali.MGDIST = multiGraphDistances(ali, cluster = 0)
-        ali.MGClusterlabels = AgglomerativeClustering(n_clusters = n_clusters ,metric='precomputed',linkage='average').fit_predict(ali.MGDIST)
+    alignment=ali.alignment
+
+    if n_clusters > 1:
+
+        # downsampled = np.linspace(start=0, stop=len(ali.alignment)-1, num=300, dtype=int)
+        # ali.alignment = ali.alignment[downsampled]
+        if False:
+            vectors  = multiGraphVectors(ali, fast = 1)
+            # dist =  pairwise_distances(vectors)
+            # ali.MGClusterlabels = AgglomerativeClustering(n_clusters = n_clusters ,metric='precomputed', linkage='complete').fit_predict(dist)
+            labels  = KMeans(n_clusters=n_clusters ).fit_predict(vectors)
+
+        if True:
+            l = len(alignment)
+            similarity_matrix = np.zeros((l,l), dtype=int)
+            # Compare each pair of columns
+            for i in range(l):
+                for j in range(l):
+                    # Count overlapping letters between column i and column j
+                    similarity_matrix[i, j] = np.sum(alignment[ i] == alignment[j])/l
+
+            labels  = KMeans(n_clusters=n_clusters ).fit_predict(1-similarity_matrix)
+            #labels = SpectralClustering(affinity='precomputed', n_clusters=n_clusters).fit_predict(similarity_matrix)
+        # x = umap.UMAP().fit_transform(vectors)
+        # # ali.MGClusterlabels = AgglomerativeClustering(n_clusters = n_clusters , linkage='average').fit_predict(x)
+        # ali.MGClusterlabels = KMeans(n_clusters=n_clusters ).fit_predict(x)
+        # plt.scatter(x[:,0],x[:,1],c=ali.MGClusterlabels)
+        # plt.colorbar()
+        # plt.show()
+        # u,c = np.unique(labels, return_counts=True)
+
+
+        counter = Counter(labels)
+        filter = np.array([ counter[l] > 1 for l in labels])
+        labels= labels[filter]
+        alignment = ali.alignment[filter]
+
+        ali.MGClusterlabels = labels
+
+
+    else:
+
+        ali.MGClusterlabels = np.zeros(len(alignment))
 
 
     # clusterLabels = AgglomerativeClustering(n_clusters = int(ali.alignment.shape[0]/clusterSize)+1).fit_predict(ali.MGDIST)
@@ -851,7 +926,7 @@ def multiGraph(ali, clusterSize = 20, maxclust =8, simplegraph = False):
     # print(f"{ Counter(clusterLabels)=}")
     fail = 0
     for clusterId in np.unique(ali.MGClusterlabels):
-        sequences = ali.alignment[ali.MGClusterlabels==clusterId]
+        sequences = alignment[ali.MGClusterlabels==clusterId]
         if simplegraph: # this is the old way, where i copy the graph
             g2 = ali.graph.copy()
             def get_col(n):
@@ -870,9 +945,14 @@ def multiGraph(ali, clusterSize = 20, maxclust =8, simplegraph = False):
                     g2.nodes[n]['label'] = l
         else:
             #extract the weights from the graph, fill gaps with zero
-            weights = [ali.graph.nodes[n].get('weight',0.1) if n in ali.graph.nodes else 0 for n in range(ali.alignment.shape[1])]
+            weights = [ali.graph.nodes[n].get('weight',0.15) if n in ali.graph.nodes else 0.15 for n in range(ali.alignment.shape[1])]
             struct = ali.gc['SS_cons']
             g2 = mkGraphSmart(sequences,struct,weights)
+
+            # for e in sequences:
+            #     print(''.join(e))
+            # print()
+
             if not g2:
                 fail +=1
                 continue
