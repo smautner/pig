@@ -893,9 +893,15 @@ def multiGraph(ali, clusterSize = 20, maxclust =8, simplegraph = False):
             for i in range(l):
                 for j in range(l):
                     # Count overlapping letters between column i and column j
-                    similarity_matrix[i, j] = np.sum(alignment[ i] == alignment[j])/l
+                    similarity_matrix[i, j] = np.sum(alignment[ i] == alignment[j]) -np.sum((alignment[i] == '-') & (alignment[j] == '-'))
+            # divide by lendth to get a similarity score
+            similarity_matrix = similarity_matrix / alignment.shape[1]
 
+            plt.imshow(similarity_matrix)
+            plt.colorbar()
+            plt.show()
             labels  = KMeans(n_clusters=n_clusters ).fit_predict(1-similarity_matrix)
+
             #labels = SpectralClustering(affinity='precomputed', n_clusters=n_clusters).fit_predict(similarity_matrix)
         # x = umap.UMAP().fit_transform(vectors)
         # # ali.MGClusterlabels = AgglomerativeClustering(n_clusters = n_clusters , linkage='average').fit_predict(x)
