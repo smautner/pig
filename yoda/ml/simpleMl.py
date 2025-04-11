@@ -197,8 +197,43 @@ def average_precision_srt(distances,y):
 
 
 def average_precision_nozero(distances,y):
-    nonzero = y != 0
-    def score(dist, currentlabel):
-        y_true = y == currentlabel
-        return average_precision_score(y_true,-dist)
-    return np.mean(Map(score, distances[nonzero], y[nonzero]))
+	nonzero = y != 0
+	def score(dist, currentlabel):
+		y_true = y == currentlabel
+
+		return average_precision_score(y_true,-dist)
+	return np.mean(Map(score, distances[nonzero], y[nonzero]))
+
+
+def average_precision_labelsubset(distances, allLabels, labelSubset):
+
+	# make a copy of alllabels, then set everything to 0 that is not in labelSubset
+
+	labels = np.array(allLabels)
+	labels = np.where(np.isin(labels, labelSubset), labels, 0)
+	return average_precision_nozero(distances,labels)
+
+	labels = np.array(allLabels)
+	def score(i):
+		y_true = labels == labels[i]
+		return average_precision_score(y_true,-distances[i])
+	okrows = np.where(np.isin(labels, labelSubset))[0]
+	return np.mean(Map(score, okrows ))
+
+
+
+
+
+def CSLS(csr_matrix, k=10):
+	n = csr_matrix.shape[0]
+	D = (csr_matrix @ csr_matrix.T).toarray()
+	# Find k-nearest neighbors for each point (excluding self)
+	knn = np.argpartition(-D, k+1, axis=1)[:, :k+1]  # +1 to account for self
+	knn = np.array([row[row != i] for i, row in enumerate(knn)])  # remove self
+	# Compute mean similarity of each point's neighborhood r(x_i)
+	r = np.array([D[i, knn[i]].mean() for i in range(n)])
+	# Symmetric CSLS adjustment
+	csls = 2 * D - r[:, None] - r[None, :]
+	return csls
+
+
