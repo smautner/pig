@@ -1,7 +1,14 @@
+import lmz
+import pandas as pd
+import seaborn as sns
 from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 from collections import Counter
 import numpy as np
 from kiez import Kiez
+from matplotlib import pyplot as plt
+
+from scripts.colormap import gethue
+
 
 def kiez_neighs(matrix, limit = 100):
 
@@ -254,3 +261,85 @@ def pair_rank_average(matrix, labels, oklabels, maxrank=100, rank = True):
     return np.array(Map(get_rank, target_lines))
 
 
+def plotHits(kraidmatrix, edenmatrix,l):
+    ranks = getranks(kraidmatrix,l)
+    ranks2 = getranks(edenmatrix,l)
+    sns.set_theme()
+    sns.set_context("talk")
+
+    #plt.plot([sum(ranks < x)/sum(l != 0) for x in range(1,50)])
+    #plt.plot([sum(ranks2 < x)/sum(l2 != 0) for x in range(1,50)])
+    y_label = 'Label Hit Rate'
+
+    meins = [sum(ranks < x)/sum(l != 0) for x in range(1,50)]
+    data = {y_label: meins, 'neighbors':lmz.Range(1,50), 'method' : 'KRAID'}
+
+    eden = [sum(ranks2 < x)/sum(l != 0) for x in range(1,50)]
+    data2 = {y_label: eden, 'neighbors':lmz.Range(1,50),'method' : 'NSPDK'}
+
+    df= pd.concat([pd.DataFrame(data),pd.DataFrame(data2)])
+    hue = 'method'
+    ax= sns.lineplot(df, x= 'neighbors', y= y_label, hue = hue, **gethue(df,hue))
+    plt.xlabel('neighbors')
+    # plt.title('Hit Rate with full Rfam backdrop')
+
+
+def plotSubsetScores(matrix, l, manyseq, fewseq, rf15Labels):
+    def pl(x,l):
+        x.append(0)
+        mask = [ ll in x for ll in l ]
+        ranks = getranks(matrix[mask], l[mask])
+
+        # ranks = calcranks(mat[mask], l[mask])
+        data = [sum(ranks < xx)/sum(l[mask] != 0) for xx in range(1,21)]
+        # plt.plot(data)
+        return data
+
+
+    many =  pl(manyseq,l) #[sum(ranks < x)/sum(l != 0) for x in range(1,50)]
+    few = pl(fewseq,l) # [sum(ranks2 < x)/sum(l2 != 0) for x in range(1,50)]
+
+    y_label = 'Label Hit Rate'
+    set_label = 'Alignments'
+    repeats = 10
+    rand = [pl(randomhalf(l),l) for x in range (repeats)]
+    randnei = lmz.Range(1,21)*repeats
+
+    data = {y_label: many, 'neighbors':lmz.Range(1,21), set_label  : '>9 Sequences'}
+    data2 = {y_label: few, 'neighbors':lmz.Range(1,21),set_label : '<10 Sequences'}
+    data3 = {y_label: lmz.Flatten(rand), 'neighbors':randnei,set_label : f'{repeats} random splits ±σ'} ## !!!!
+    data4 = {y_label: pl(list(np.unique(rf15Labels)), rf15Labels), 'neighbors':lmz.Range(1,21),set_label : 'test set (RFam 15)'}
+
+    df= pd.concat([pd.DataFrame(data),pd.DataFrame(data2), pd.DataFrame(data3), pd.DataFrame(data4)])
+    ax= sns.lineplot(df, x= 'neighbors', y= y_label, hue = set_label, errorbar='sd', style = set_label)
+    plt.xlabel('neighbors')
+
+
+def plotNeedle(matrix,l):
+    # get the labels where we have more than 2 examples
+    needlelabels = threeinstances(l)
+    # for each row (with the right label) we find the closest other instance according to the kernel
+    # sim_label_idx = needle.sim_label_idx(matrix,l,needlelabels)
+
+    sim_label_idx = sim_label_idx_limited(needlelabels, l,matrix,maxrank=50)
+    needleranks = getranks_mix(sim_label_idx,matrix)
+    rankAvg = pair_rank_average(matrix, l, needlelabels)
+    distAvg = pair_rank_average(matrix, l, needlelabels, False)
+
+    moreranks = getranks_idx3(matrix,l,set([e[-1][2] for e in sim_label_idx]))
+    one = [sum(moreranks < x)/len(moreranks) for x in range(1,50)]
+    two=  [sum(needleranks < x)/len(needleranks) for x in range(1,50)]
+    three=  [sum(rankAvg < x)/len(rankAvg) for x in range(1,50)]
+    four=  [sum(distAvg < x)/len(distAvg) for x in range(1,50)]
+
+
+    data = {'Label Hit Rate': one, 'neighbors':lmz.Range(2,len(one)+2), 'Experiment' : 'distance matrix'}
+    data2 = {'Label Hit Rate': two, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'linear combination search'}
+    data3 = {'Label Hit Rate': three, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'rank average'}
+    data4 = {'Label Hit Rate': four, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'dist average'}
+    df= pd.concat([pd.DataFrame(data),pd.DataFrame(data2), pd.DataFrame(data3), pd.DataFrame(data4)])
+    title = 'Finding additional alignments for a clan'
+
+    ax= sns.lineplot(df, x= 'neighbors', y= 'Label Hit Rate', hue = 'Experiment')
+    plt.ylabel('Label Hit Rate (≥ 2 Hits)')
+    plt.title(title)

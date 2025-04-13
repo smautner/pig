@@ -7,6 +7,94 @@ from eden import graph as eg
 import grakel
 import time
 
+
+from yoda.graphs import ali2graph
+
+def alignment_to_vectors(alignments,
+                         RYthresh=0,
+                         d1=0.25,
+                         d2=0.75,
+                         fix_edges=True,
+                         ct=0.97,
+                         bad_weight=0.15,
+                         min_r=2,
+                         min_d=1,
+                         normalization=True,
+                         inner_normalization=True,
+                         clusterSize=0,
+                         maxclust=10,
+                         simplegraph=False,
+                         nest=True):
+    """
+    Process RNA alignments into feature vectors.
+
+    This function performs the following steps:
+    1. Preprocess alignments into graphs
+    2. Vectorize the graphs
+
+    Parameters:
+    -----------
+    alignments : list
+        List of alignment objects
+    RYthresh : float, default=0
+        Threshold used for R/Y base pairing in the set_weight_label function
+    ct : float, default=0.97
+        Conservation threshold for set_weight function
+    d1 : float, default=0.25
+        First dillution parameter for dillute function
+    d2 : float, default=0.75
+        Second dillution parameter for dillute function
+    bad_weight : float, default=0.15
+        Weight for bad edges in set_weight function
+    fix_edges : bool, default=True
+        Whether to fix edges in dillute function
+    min_r : int, default=2
+        Minimum radius parameter for vectorization
+    min_d : int, default=1
+        Minimum distance parameter for vectorization
+    normalization : bool, default=True
+        Whether to apply normalization during vectorization
+    inner_normalization : bool, default=True
+        Whether to apply inner normalization during vectorization
+    clusterSize : int, default=0
+        Size of clusters for multiGraph function. If 0, multiGraph is not used
+    maxclust : int, default=10
+        Maximum number of clusters for multiGraph function
+    simplegraph : bool, default=False
+        Whether to use simplegraph option in multiGraph
+    nest : bool, default=True
+        Whether to apply donest function
+
+    Returns:
+    --------
+    matrix : sparse matrix
+        Feature vectors representing the alignments
+    """
+
+
+    def preprocess(ali):
+        graph = ali2graph.set_weight_label(ali, RYthresh=RYthresh)
+        graph = ali2graph.dillute(graph, dilute1=d1, dilute2=d2, fix_edges=fix_edges)
+        graph = ali2graph.set_weight(graph, bad_weight=bad_weight, consThresh=ct)
+        if clusterSize:
+            graph = ali2graph.multiGraph(ali, clusterSize=clusterSize, maxclust=maxclust, simplegraph=simplegraph)
+        if nest:
+            graph = ali2graph.donest(graph)
+        return graph
+
+    # Process all alignments in parallel
+    graphs = ut.xxmap(preprocess, alignments)
+
+    # Vectorize the graphs
+    # matrix = eg.vectorize(graphs, normalization=normalization,) THIS IS MEGA SLOW oO
+    matrix = vectorize_graphs(graphs, normalization=normalization,
+                          min_r=min_r, min_d=min_d,
+                          inner_normalization=inner_normalization)
+
+    return matrix
+
+
+
 def vectorize_alignments(alignments,**kwargs):
     return vectorize_graphs([x.graph for x in alignments], **kwargs)
 
