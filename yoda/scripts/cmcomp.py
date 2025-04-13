@@ -15,6 +15,8 @@ from umap import UMAP
 from yoda import draw
 import ubergauss.optimization as uo 
 import pandas as pd
+from yoda.ml import nearneigh
+
 import smallgraph as sg
 import networkx as nx
 from matplotlib import pyplot as plt
@@ -27,6 +29,9 @@ import eden.display as ed
 from yoda.alignments import load_rfam, filter_by_seqcount
 import ubergauss.tools as ut
 from yoda import graphs as ygraphs
+
+
+from yoda.scripts.colormap import gethue
 
 
 #########################
@@ -129,7 +134,44 @@ def k_clan_discovery(X,l,k):
     return [sml.clan_in_x(X,l,n) for n in range(k)]
 
 
+def mkHitRateData(data):
+    r = []
+    ylabel = 'Label Hit Rate'
+    for k,dist in data.items():
+        for i,val in enumerate( cmcomp.k_clan_discovery(dist,l,50)[1:]):
+            r+=[{'Distances':'unmodified','Method':k,'neighbors':i+1,ylabel:val}]
+
+        # dist_norm = normalize(dist, axis=0)
+        dist_norm = nearneigh.normalize_csls(dist)
+        dist_norm += np.abs(dist_norm.min())
+
+        for i,val in enumerate( cmcomp.k_clan_discovery(dist_norm,l,50)[1:]):
+            r+=[{'Distances':'normalized','Method':k,'neighbors':i+1,ylabel:val}]
+
+    df = pd.DataFrame(r)
+    return df
 
 
+def plot_hitrate_plusCSLS(df):
+    ylabel= 'Label Hit Rate'
+    sns.set_theme()
+    sns.set_context("talk")
+    ax= sns.lineplot(df, x= 'neighbors', y= ylabel,hue='Method', style='Distances', **gethue(df))
+    # ax= sns.lineplot(df, x= 'neighbors', y= ylabel,hue='Method', style='Distances', palette ='bright')
+    sns.move_legend( ax,"center left", bbox_to_anchor=(1, 0.5))
+    #plt.title('Hit Rate of RNA alignments\nwith respect to their clan')
+    plt.show()
+    plt.close()
 
 
+def plot_hitrate_noCSLS(df):
+    ylabel= 'Label Hit Rate'
+    df = df[df.Distances == 'normalized']
+    df = df[df.Method != 'Infernal_global']
+    sns.set_theme()
+    sns.set_context("talk")
+    ax= sns.lineplot(df, x= 'neighbors', y= ylabel,hue='Method', **gethue(df))
+    sns.move_legend( ax,"center left", bbox_to_anchor=(1, 0.5))
+    #plt.title('Hit Rate of RNA alignments\nwith respect to their clan')
+    plt.show()
+    plt.close()
