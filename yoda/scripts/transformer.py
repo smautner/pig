@@ -15,6 +15,9 @@ from matplotlib import pyplot as plt
 import torch
 from fastai.vision.all import *
 
+import scripts.cmcomp
+
+
 def flatten(o):
     "Concatenate all collections and items as a generator"
     for item in o:
@@ -395,10 +398,12 @@ for fold in [0]:
 
     # DATA LOADING
     ds_train = RNA_Dataset(df, mode='train', fold=fold, nfolds=nfolds)
-    dl_train = DeviceDataLoader(torch.utils.data.DataLoader(ds_train, batch_size= bs,shuffle = True, num_workers=num_workers, persistent_workers=True), device)
+    dl_train = DeviceDataLoader(
+        scripts.cmcomp.data.DataLoader(ds_train, batch_size= bs, shuffle = True, num_workers=num_workers, persistent_workers=True), device)
 
     ds_val = RNA_Dataset(df, mode='eval', fold=fold, nfolds=nfolds)
-    dl_val= DeviceDataLoader(torch.utils.data.DataLoader(ds_val, batch_size=bs,shuffle=True, num_workers=num_workers), device)
+    dl_val= DeviceDataLoader(
+        scripts.cmcomp.data.DataLoader(ds_val, batch_size=bs, shuffle=True, num_workers=num_workers), device)
 
     gc.collect()# 0 is train 1 is validation according to documentation https://github.com/fastai/fastai/blob/master/fastai/data/core.py#L275
     data = DataLoaders(dl_train, dl_val)

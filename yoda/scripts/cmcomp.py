@@ -1,14 +1,17 @@
 import networkx as nx
+import structout as so
 from matplotlib import pyplot as plt
 import lmz
 import eden.graph as eg
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics import silhouette_score, adjusted_rand_score, rand_score, precision_recall_curve, auc
 from yoda.graphs import ali2graph
 import numpy as np
 import yoda.ml.simpleMl as sml
 import eden.display as ed
 from yoda.alignments import load_rfam, filter_by_seqcount
 import ubergauss.tools as ut
-from yoda import graphs as ygraphs
+from yoda import graphs as ygraphs, alignments, ml
 import subprocess
 import seaborn as sns
 from umap import UMAP
@@ -32,6 +35,8 @@ from yoda import graphs as ygraphs
 
 
 from yoda.scripts.colormap import gethue
+
+from scripts.colormap import gethue
 
 
 #########################
@@ -63,7 +68,7 @@ def dumpcm(family_id1):
     return True
     
 # RUN CMCOMPARE 
-def compare_cm(_,cm1=None, cm2=None):
+def compare_cm(_, names, cm1=None, cm2=None):
     cm1 = names[cm1]
     cm2 = names[cm2]
     compare_cmd = f'/home/ikea/Downloads/hsCMCompare-archlinux-x64 {cm1}.cm {cm2}.cm'
@@ -74,20 +79,119 @@ def compare_cm(_,cm1=None, cm2=None):
     #score = float(score_line.split()[2]) 
     return {'score':float(score),'score2': float(score2)}
 
-def run_cmcompare_pairwise():
+def run_cmcompare_pairwise(names):
     num_cm = len(names) # or just use 10 for debugging :) 
     return uo.gridsearch(compare_cm,
                     param_dict = {'cm1':lmz.Range(num_cm), 'cm2':lmz.Range(num_cm)},
                     data = [False], 
-                    taskfilter = lambda x: x['cm1'] <= x['cm2']) 
+                    taskfilter = lambda x: x['cm1'] <= x['cm2'])
+
+
+
+def loadcmcomp(csvpath = 'cmcompare_full_run_2024_06_27'):
+    cmcompare_data = pd.read_csv(csvpath)
+    cmcompare_data  = cmcompare_data.fillna(500)
+    cmcompare_data['score1'] = cmcompare_data[['score', 'score2']].min(axis=1)
+    cmcompare_data['score3'] = cmcompare_data[['score', 'score2']].max(axis=1)
+    cmcompare_dist = to_dist(pivot_numpy(cmcompare_data))
+    return cmcompare_dist
+
+
+
+
+#####################
+# stuff from the inference model
+##################
+
+
+
+
+def score(mtx,data):
+    labels = data[1]
+    return silhouette_score(mtx, labels, metric='precomputed')
+
+
+def data_to_reffile(data):
+    alis,_ = data
+    reflist = [ ali.gf[f'AC'].split()[1] for ali in alis]
+    with open(f'reffile.delme',f'w') as f:
+        f.write(f'\n'.join(reflist))
+    return reflist
+
+
+def data_to_fasta(data):
+    alis,_ = data
+    lines = []
+
+    # sequences = [ ali.graph.graph['sequence'] for ali in alis]
+    # for i,s in enumerate(sequences):
+    #     lines.append( f'>{i}')
+    #     lines.append( s)
+
+    for ali in alis:
+        rfamid = ali.gf['AC'].split()[1]
+        lines.append( f'>{rfamid}')
+        lines.append( ali.graph.graph['sequence'])
+
+    with open(f'fasta.delme',f'w') as f:
+        f.write(f'\n'.join(lines))
+    # return lines
+
+
+def readCmscanAndMakeTable(data, path = 'inftools/infernal.tbl'):
+    reflist = data_to_reffile(data)
+    refdict = {nr:idx for idx,nr in enumerate(reflist)}
+    l = len(refdict)
+    distmtx= np.ones((l,l))
+    distmtx*=0
+
+    for  line in open(path,f'r').readlines():
+        if not line.startswith(f"#"):
+            line = line.split()
+            if line[1] not in refdict or line[2] not in refdict:
+                continue
+            x = refdict[line[1]]
+            #y = int(line[2])
+            y = refdict[line[2]]
+            evalue = float(line[15])
+            distmtx[x,y] = evalue
+            distmtx[y,x] = evalue
+            # print(f"{ evalue=}")
+    np.fill_diagonal(distmtx,0)
+    return distmtx
+
+
+def eval_agglo_ari(dist,labels, linkage = 'single'):
+    rand_indices = []
+    adjusted_rand_indices = []
+    for n in np.unique(dist):
+        predict = AgglomerativeClustering(n_clusters = None,
+                                          linkage=linkage,
+                                          distance_threshold=n,affinity = 'precomputed').fit_predict(dist)
+        if 1850 < n < 2100:
+            so.lprint(predict)
+            so.lprint(labels)
+        adjusted_rand_indices.append(adjusted_rand_score(predict, labels))
+        rand_indices.append(rand_score(predict, labels))
+    x = np.unique(dist)
+    plt.scatter(x,rand_indices)
+    plt.scatter(x,adjusted_rand_indices)
+    plt.show()
+    print(f"{max(rand_indices)=}")
+    print(f"{max(adjusted_rand_indices)=}")
 
 
 
 
 
 
-
-
+def infernal_tbl_to_dist(a,l,path):
+    SIM_INF =  readCmscanAndMakeTable((a, l), path)
+    infernal_dist = to_dist(SIM_INF)
+    indices = np.where(infernal_dist == SIM_INF.max())
+    noise = np.random.normal(0, 1, size=len(indices[0]))
+    infernal_dist[indices] += noise
+    return infernal_dist
 
 
 ##############
@@ -134,18 +238,18 @@ def k_clan_discovery(X,l,k):
     return [sml.clan_in_x(X,l,n) for n in range(k)]
 
 
-def mkHitRateData(data):
+def mkHitRateData(data,l):
     r = []
     ylabel = 'Label Hit Rate'
     for k,dist in data.items():
-        for i,val in enumerate( cmcomp.k_clan_discovery(dist,l,50)[1:]):
+        for i,val in enumerate( k_clan_discovery(dist,l,50)[1:]):
             r+=[{'Distances':'unmodified','Method':k,'neighbors':i+1,ylabel:val}]
 
         # dist_norm = normalize(dist, axis=0)
         dist_norm = nearneigh.normalize_csls(dist)
         dist_norm += np.abs(dist_norm.min())
 
-        for i,val in enumerate( cmcomp.k_clan_discovery(dist_norm,l,50)[1:]):
+        for i,val in enumerate(k_clan_discovery(dist_norm,l,50)[1:]):
             r+=[{'Distances':'normalized','Method':k,'neighbors':i+1,ylabel:val}]
 
     df = pd.DataFrame(r)
@@ -175,3 +279,99 @@ def plot_hitrate_noCSLS(df):
     #plt.title('Hit Rate of RNA alignments\nwith respect to their clan')
     plt.show()
     plt.close()
+
+
+def get_pairwise_distances(dist_matrix: np.ndarray, labels: np.ndarray) -> (np.ndarray, np.ndarray):
+    """
+    Compute pairwise distances and corresponding binary label comparisons.
+    Uses the upper triangle indices of the matrix.
+    """
+    n = dist_matrix.shape[0]
+    upper_indices = np.triu_indices(n, k=1)
+    pairwise_distance_values = dist_matrix[upper_indices]
+    pairwise_same_label = np.array([labels[i] == labels[j] for i, j in zip(*upper_indices)])
+    return pairwise_distance_values, pairwise_same_label
+
+
+def compute_precision_recall(distances: np.ndarray, labels: np.ndarray):
+    """
+    Compute precision and recall values based on pairwise distance comparisons.
+    """
+    pairwise_distances, pairwise_labels = get_pairwise_distances(distances, labels)
+    precision, recall, _ = precision_recall_curve(pairwise_labels, -pairwise_distances)
+    return precision, recall
+
+
+def collect_results_precrec(data: dict, labels: np.ndarray) -> list:
+    """
+    Process each distance matrix in the given data using both raw and normalized distances,
+    then collect precision-recall values with associated metadata.
+    """
+    results = []
+    for method_name, dist_matrix in data.items():
+        # Process raw distances
+        precision, recall = compute_precision_recall(dist_matrix, labels)
+        for p_val, r_val in zip(precision, recall):
+            results.append({'Distances': 'Raw', 'Method': method_name, 'precision': p_val, 'recall': r_val})
+
+        # Process normalized distances using CSLS normalization from nearneigh
+        normalized_matrix = nearneigh.normalize_csls(dist_matrix)
+        precision, recall = compute_precision_recall(normalized_matrix, labels)
+        for p_val, r_val in zip(precision, recall):
+            results.append({'Distances': 'Normalized', 'Method': method_name, 'precision': p_val, 'recall': r_val})
+    return results
+
+
+def plot_precision_recall_curve(dataframe, hue_column='Method', style_column=None):
+    """Plot the precision-recall curve with given dataframe."""
+    sns.set_theme()
+    sns.set_context("talk")
+    # If a style column is provided, include it in the lineplot
+    plot_args = dict(y='precision', x='recall', hue=hue_column, data=dataframe)
+    if style_column:
+        plot_args['style'] = style_column
+
+    # gethue must be defined elsewhere and is used to unpack additional parameters
+    plot_args.update(gethue(dataframe, hue_column))
+
+    ax = sns.lineplot(**plot_args)
+    sns.move_legend(ax, "center left", bbox_to_anchor=(1, 0.5))
+    PLOT_TITLE = 'precision-recall curves of\nRNA alignment distance measures'
+    # plt.title(PLOT_TITLE)
+    plt.show()
+    plt.close()
+
+def make_results_table(data,l):
+    AUC_label = "Precision/Recall AUC"
+    AP_label = "Average Precision"
+    results = []
+
+    def process_matrix(method, matrix, normalized):
+        """
+        Calculate and print AUC and mAP values for a given matrix,
+        then append the scores to the results list.
+
+        Args:
+            method (str): The method name.
+            matrix: The similarity/distance matrix.
+            normalized (bool): True if matrix is normalized, False otherwise.
+        """
+        p, r = compute_precision_recall(matrix, l)
+        auc_score = auc(r, p)
+        map_score =mAP(matrix, l)
+        norm_flag = "yes" if normalized else "no"
+        norm_text = "normalized" if normalized else "raw"
+        print(f"{method} {norm_text} AUC: {auc_score}")
+        print(f"{method} {norm_text} mAP: {map_score}")
+        results.append({'method': method, 'scoretype': AUC_label, 'normalized': norm_flag, 'score': auc_score})
+        results.append({'method': method, 'scoretype': AP_label, 'normalized': norm_flag, 'score': map_score})
+
+    for method, dist in data.items():
+        process_matrix(method, dist, normalized=False)
+        normalized_matrix = nearneigh.normalize_csls(dist)
+        process_matrix(method, normalized_matrix, normalized=True)
+
+    df = pd.DataFrame(results)
+    df2 = df.pivot_table(index='method', columns=['scoretype', 'normalized'], values='score', fill_value=0)
+    return df2
+
