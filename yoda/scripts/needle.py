@@ -170,10 +170,14 @@ def clanExtend(csr_matrix, l, alignments, max = 30):
     - then search for similar instances...
     '''
 
-    unique_labels = list(set(l))
 
+    '''
+    clan_averages: mean vectors for the clan
+    labels: the associated labels 
+    '''
     clan_averages = []
     labels = []
+    unique_labels = list(set(l))
     for label in unique_labels:
         if label == 0:
             continue
@@ -182,18 +186,20 @@ def clanExtend(csr_matrix, l, alignments, max = 30):
         clan_averages.append(clan_average)
         labels.append(label)
 
-    kz = Kiez(algorithm='SklearnNN', hubness='CSLS', n_candidates = max,  algorithm_kwargs= {'metric' : 'cosine'})
 
-    # kz = Kiez(n_candidates=max,hubness='CSLS')
+    '''nearest neighbor search
+    '''
+    kz = Kiez(algorithm='SklearnNN', hubness='CSLS', n_candidates = max,  algorithm_kwargs= {'metric' : 'cosine'})
     kz.fit(np.array(clan_averages), csr_matrix.toarray())
     distances, indices = kz.kneighbors(max)
 
     for i,label in enumerate(labels):
-        # print original members + distances:
+        # find the names of the original instances
         print('NEW CLAN')
         clan = [alignments[j].gf['ID'] for j in np.where(l==label)[0]]
-        # print([a.name for a in clan])
         print(clan)
+
+        # the indices tells us which is closest to each clan:
         print('----CLOSEST:----')
         closest = [ (alignments[j].gf['ID'], d) for d,j in zip(distances[i],indices[i])]
         for c in closest:
@@ -281,6 +287,7 @@ def plotHits(kraidmatrix, edenmatrix,l):
     hue = 'method'
     ax= sns.lineplot(df, x= 'neighbors', y= y_label, hue = hue, **gethue(df,hue))
     plt.xlabel('neighbors')
+    return ax
     # plt.title('Hit Rate with full Rfam backdrop')
 
 
@@ -313,6 +320,7 @@ def plotSubsetScores(matrix, l, manyseq, fewseq, rf15Labels):
     df= pd.concat([pd.DataFrame(data),pd.DataFrame(data2), pd.DataFrame(data3), pd.DataFrame(data4)])
     ax= sns.lineplot(df, x= 'neighbors', y= y_label, hue = set_label, errorbar='sd', style = set_label)
     plt.xlabel('neighbors')
+    return ax
 
 
 def plotNeedle(matrix,l):
@@ -342,4 +350,6 @@ def plotNeedle(matrix,l):
 
     ax= sns.lineplot(df, x= 'neighbors', y= 'Label Hit Rate', hue = 'Experiment')
     plt.ylabel('Label Hit Rate (≥ 2 Hits)')
-    plt.title(title)
+    sns.move_legend(ax, "center left", bbox_to_anchor=(1, 0.5))
+    # plt.title(title)
+    return ax

@@ -20,7 +20,7 @@ def getWeights(filepath):
     current_family = None
     weights = None
 
-    DEBUG = True
+    DEBUG = False
     with open(filepath, 'r') as f:
         for line in f:
             line = line.strip()

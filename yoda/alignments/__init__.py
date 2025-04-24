@@ -3,12 +3,14 @@ from ubergauss import tools as ut
 from yoda.graphs import ali2graph
 from collections import defaultdict
 from yoda.graphs.ali2graph import manifest_sequences
-from yoda.alignments import filein, clans, alignment
+from yoda.alignments import filein, clans, alignment, eslweights
 import numpy as np
 
-def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/test2'):
+def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/test2', sequenec_weights = '~/weights.rfam'):
     alignments = filein.readseedfile(ut.fixpath( seedpath))
+    weights = eslweights.getWeights(ut.fixpath(sequenec_weights)) if sequenec_weights else False
     labels = clans.getlabels(alignments)
+
     if not full:
         oklabel = labels != 0
         alignments = [a for a,ok in zip(alignments,oklabel) if ok > 0]
@@ -20,6 +22,8 @@ def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/tes
     #check_labels(alignments,labels)
     for a,label in zip(alignments, labels):
         a.clusterlabel = label
+        if weights:
+            a.eslweights = np.array(weights[a.gf[f'AC'][3:]])
     return alignments, labels
 
 

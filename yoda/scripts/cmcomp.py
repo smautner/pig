@@ -265,7 +265,7 @@ def plot_hitrate_plusCSLS(df):
     sns.move_legend( ax,"center left", bbox_to_anchor=(1, 0.5))
     #plt.title('Hit Rate of RNA alignments\nwith respect to their clan')
     plt.show()
-    plt.close()
+    return ax
 
 
 def plot_hitrate_noCSLS(df):
@@ -278,7 +278,7 @@ def plot_hitrate_noCSLS(df):
     sns.move_legend( ax,"center left", bbox_to_anchor=(1, 0.5))
     #plt.title('Hit Rate of RNA alignments\nwith respect to their clan')
     plt.show()
-    plt.close()
+    return ax
 
 
 def get_pairwise_distances(dist_matrix: np.ndarray, labels: np.ndarray) -> (np.ndarray, np.ndarray):
@@ -339,7 +339,7 @@ def plot_precision_recall_curve(dataframe, hue_column='Method', style_column=Non
     PLOT_TITLE = 'precision-recall curves of\nRNA alignment distance measures'
     # plt.title(PLOT_TITLE)
     plt.show()
-    plt.close()
+    return ax
 
 def make_results_table(data,l):
     AUC_label = "Precision/Recall AUC"

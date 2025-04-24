@@ -992,18 +992,42 @@ def rmnode(G,v):
     G.remove_node(v)
     return G
 
-def set_weight_label(ali, RYthresh=0):
+
+
+def weight_helper(arr: np.ndarray, weights: np.ndarray):
+    """
+    to get the nucleotide_dict in set_weight_label,
+    we want to consider the weights of each sequence.
+
+    """
+    W = weights[:, None]
+    letters = np.array(list("ACGU"))
+    # for each nucleotide create a matrix: if the nuc is present, replace it with the row-weight,
+    # then we can sum um the rows, as we are only interested in the sum
+    col_totals = {nuc: ((arr == nuc) * W).sum(axis=0) for nuc in letters}
+    # now make a counter for each column
+    def mkCounter(n):
+        return Counter({ nuc: col_totals[nuc][n] for nuc in letters })
+    return [ mkCounter(n) for n in range(arr.shape[1])]
+
+def set_weight_label(ali, RYthresh=0,useweights=True):
     '''
     sets weight and label
     '''
-    nucleotide_dict = {n:Counter(ali.alignment[:,n].tolist()) for n in ali.graph.nodes}
+    if useweights:
+        nucleotide_dict = weight_helper(ali.alignment, ali.eslweights)
+    else:
+        nucleotide_dict = {n:Counter(ali.alignment[:,n].tolist()) for n in ali.graph.nodes}
+
 
     for node in ali.graph.nodes():
         mynd = nucleotide_dict[node]
-        mynd.pop('-',0)
+
+        mynd.pop('-',0) # doing this before summing is slightly better. probably becasue we conserve more?
         allnuc  = sum(mynd.values())
         char,cnt = mynd.most_common(1)[0]
         conservation = cnt/allnuc
+
         if conservation > RYthresh:
             # we can use the label and all is ok
             ali.graph.nodes[node]['weight'] = conservation
