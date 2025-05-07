@@ -10,6 +10,25 @@ import time
 
 from yoda.graphs import ali2graph
 
+
+
+default_params = {
+    'RYthresh': 0,
+    'd1': 0.25,
+    'd2': 0.75,
+    'fix_edges': True,
+    'ct': 0.97,
+    'bad_weight': 0.15,
+    'min_r': 2,
+    'min_d': 1,
+    'normalization': True,
+    'inner_normalization': True,
+    'clusterSize': 0,
+    'maxclust': 10,
+    'simplegraph': False,
+    'nest': True
+}
+
 def alignment_to_vectors(alignments,
                          RYthresh=0,
                          d1=0.25,

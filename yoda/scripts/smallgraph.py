@@ -53,9 +53,33 @@ space = ho.spaceship(space)
 def string_to_space(space):
     return ho.spaceship(space)
 
+
+
+def getvalues(val):
+    if val[0].isdigit():
+        integers= Map(int, val.split())
+        return Range(*integers)
+    else:
+        return eval(val)
+
+def string_to_paramd(text):
+    result = {}
+    for line in text.strip().splitlines():
+        if not line.strip():
+            continue
+        key, *values = line.strip().split(maxsplit=1)
+        result[key] = getvalues(values[0])
+    return result
+
+
+
+
+
+
+
 taskfilter=lambda x: x['cutS2'] > x['cutS1'] and x['cutD2'] > x['cutD1'] and x['dillution_fac1'] > x['dillution_fac2']
 
-def eval(X,y, **kwargs):
+def evaleval(X, y, **kwargs):
 
     alig = Map( get_coarse, X, **kwargs)
     X = eg.vectorize(alig, discrete = True, normalization=kwargs['norm'], inner_normalization=kwargs['norm'])
@@ -66,7 +90,7 @@ def eval(X,y, **kwargs):
 import ubergauss.optimization as uo
 if __name__ == f"__main__":
     d1,d2,_ = makedata()
-    uo.gridsearch(eval, space, data=[d1,d2], taskfilter=taskfilter)
+    uo.gridsearch(evaleval, space, data=[d1, d2], taskfilter=taskfilter)
     # get besst
     # score trainset
     # score testset
