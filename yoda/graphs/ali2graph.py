@@ -1001,7 +1001,7 @@ def weight_helper(arr: np.ndarray, weights: np.ndarray):
 
     """
     W = weights[:, None]
-    letters = np.array(list("ACGU"))
+    letters = np.array(list("ACGU-"))
     # for each nucleotide create a matrix: if the nuc is present, replace it with the row-weight,
     # then we can sum um the rows, as we are only interested in the sum
     col_totals = {nuc: ((arr == nuc) * W).sum(axis=0) for nuc in letters}
@@ -1045,6 +1045,8 @@ def set_weight_label(ali, RYthresh=0,useweights=True):
 
 
 def set_weight(g, consThresh= .97,  bad_weight = 0.15):
+    if bad_weight > 1000:
+        return g
     for node in g.nodes:
         if g.nodes[node]['weight'] < consThresh:
             g.nodes[node]['weight'] = bad_weight

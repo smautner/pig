@@ -39,6 +39,7 @@ def mkdistances(csr_matrix, pca=False, metric="euclidean", kiezMethod="csls", ki
         kiezMethod = None
 
     k_inst = Kiez(algorithm='SklearnNN', hubness=kiezMethod, hubness_kwargs={'k': kiezK, 'n_candidates': kiezK}, n_candidates = 40, algorithm_kwargs= {'metric' : 'precomputed'})
+    breakpoint()
     k_inst.fit(dist)
     dist, neigh_ind = k_inst.kneighbors()
 
