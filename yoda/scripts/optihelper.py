@@ -39,8 +39,8 @@ def mkparams():
 	experiments['no nestedge'] = {'nest': False}
 	experiments['no fixedge'] =  {"fix_edges": False}
 	experiments['no kernelparamfix'] =  {"min_r": 3, "min_d": 3}
-	experiments['no weightfix'] =  {"bad_weight": 1}
-	experiments['rawweight'] =  {"bad_weight": 9999}
+	experiments['ignore weights'] =  {"bad_weight": 1}
+	experiments['raw conservation'] =  {"bad_weight": 9999}
 
 	def fix(k,v):
 		v['experiment'] = k
@@ -80,13 +80,19 @@ def plot(results):
 
 	# Create the bar plot with standard deviation error bars
 	# plt.figure(figsize=(12, 6)) # Adjust figure size as needed
-	barplot = sns.barplot(x='experiment', y='score', data=results, ci='sd', capsize=.1, palette='viridis')
+	# barplot = sns.barplot(x='experiment', y='score', data=results, ci='sd', capsize=.1, palette='viridis')
+	barplot = sns.barplot(x='experiment', y='score', ci = None,  data=results, palette='viridis')
 
 	# Overlay the stripplot to show individual data points
-	stripplot = sns.stripplot(x='experiment', y='score', data=results, color='black', size=4, jitter=True, ax=barplot.axes)
+	stripplot = sns.stripplot(x='experiment', y='score', data=results, color='black', size=4,
+						   jitter=True, ax=barplot.axes)
 
 	# Rotate x-axis labels if they are long
 	plt.xticks(rotation=45, ha='right')
+
+	plt.xlabel('')
+	plt.ylabel('relative performance degredation')
+
 
 
 def eval(alis,labels,
