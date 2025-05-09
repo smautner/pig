@@ -30,17 +30,18 @@ param = {
 def makedata(n):
 	return  [sg.makedata(splits=3)[:2] for i in range(n)]
 
+
 def mkparams():
 	experiments = {}
 	experiments['full'] = {}
-	experiments['no smoothing'] = {'d1 ': 0, 'd2': 0}
-	experiments['no euclidean'] = {'metric': 'cosine'}
-	experiments['no hubness-fix'] = {'kiezMethod': None}
-	experiments['no nestedge'] = {'nest': False}
-	experiments['no fixedge'] =  {"fix_edges": False}
-	experiments['no kernelparamfix'] =  {"min_r": 3, "min_d": 3}
-	experiments['ignore weights'] =  {"bad_weight": 1}
-	experiments['raw conservation'] =  {"bad_weight": 9999}
+	experiments['default kernel parameters'] =  {"min_r": 3, "min_d": 3}
+	experiments['cosine distance'] = {'metric': 'cosine'}
+	experiments['no hubness correction'] = {'kiezMethod': None}
+	experiments['no nesting edges'] = {'nest': False}
+	experiments['no conservation on edges'] =  {"fix_edges": False}
+	experiments['no conservation smoothing'] = {'d1 ': 0, 'd2': 0}
+	experiments['conservation ignored'] =  {"bad_weight": 1}
+	experiments['conservation unbinned'] =  {"bad_weight": 9999}
 
 	def fix(k,v):
 		v['experiment'] = k
@@ -55,6 +56,10 @@ def run(data):
 	results = pd.concat(results)
 	return results
 
+def nosamplingdata():
+	data  = [sg.makedata(splits=1)]
+	res = run(data)
+	return fixdata(res)
 
 
 def fixdata(results):
@@ -72,6 +77,8 @@ def fixdata(results):
 import seaborn as sns
 import matplotlib.pyplot as plt
 def plot(results):
+	sns.set_theme()
+	sns.set_context("talk")
 	# plot a barchart, x is the 'experiment' group, y is the 'score'
 	# i want sd error bars stripplot to show all the data
 
@@ -79,7 +86,7 @@ def plot(results):
 	# sns.set_theme(style="whitegrid")
 
 	# Create the bar plot with standard deviation error bars
-	# plt.figure(figsize=(12, 6)) # Adjust figure size as needed
+	#plt.figure(figsize=(12, 6)) # Adjust figure size as needed
 	# barplot = sns.barplot(x='experiment', y='score', data=results, ci='sd', capsize=.1, palette='viridis')
 	barplot = sns.barplot(x='experiment', y='score', ci = None,  data=results, palette='viridis')
 
@@ -91,7 +98,8 @@ def plot(results):
 	plt.xticks(rotation=45, ha='right')
 
 	plt.xlabel('')
-	plt.ylabel('relative performance degredation')
+	plt.ylabel('relative degredation')
+	return barplot
 
 
 
