@@ -28,78 +28,78 @@ param = {
 
 
 def makedata(n):
-	return  [sg.makedata(splits=3)[:2] for i in range(n)]
+    return  [sg.makedata(splits=3)[:2] for i in range(n)]
 
 
 def mkparams():
-	experiments = {}
-	experiments['full'] = {}
-	experiments['default kernel parameters'] =  {"min_r": 3, "min_d": 3}
-	experiments['cosine distance'] = {'metric': 'cosine'}
-	experiments['no hubness correction'] = {'kiezMethod': None}
-	experiments['no nesting edges'] = {'nest': False}
-	experiments['no conservation on edges'] =  {"fix_edges": False}
-	experiments['no conservation smoothing'] = {'d1 ': 0, 'd2': 0}
-	experiments['conservation ignored'] =  {"bad_weight": 1}
-	experiments['conservation unbinned'] =  {"bad_weight": 9999}
+    experiments = {}
+    experiments['full'] = {}
+    experiments['default kernel parameters'] =  {"min_r": 3, "min_d": 3}
+    experiments['cosine distance'] = {'metric': 'cosine'}
+    experiments['no hubness correction'] = {'kiezMethod': 0}
+    experiments['no nesting edges'] = {'nest': False}
+    experiments['no conservation on edges'] =  {"fix_edges": False}
+    experiments['no conservation smoothing'] = {'d1 ': 0, 'd2': 0}
+    experiments['conservation ignored'] =  {"bad_weight": 1}
+    experiments['conservation unbinned'] =  {"bad_weight": 9999}
 
-	def fix(k,v):
-		v['experiment'] = k
-		return v
-	return  [ fix(k,v) for k,v in experiments.items()  ]
+    def fix(k,v):
+        v['experiment'] = k
+        return v
+    return  [ fix(k,v) for k,v in experiments.items()  ]
 
 import pandas as pd
 def run(data):
-	params = mkparams()
-	results = [op.gridsearch(eval, tasks =  params, data=(a,l), mp=True) for (a,l) in data ]
-	# concatenate result dataframes
-	results = pd.concat(results)
-	return results
+    params = mkparams()
+    results = op.gridsearch(eval, tasks =  params, data_list=data, mp=True)
+    # concatenate result dataframes
+    # results = pd.concat(results)
+    return results
 
 def nosamplingdata():
-	data  = [sg.makedata(splits=1)]
-	res = run(data)
-	return fixdata(res)
+    data  = [sg.makedata(splits=1)]
+    res = run(data)
+    return fixdata(res)
 
 
 def fixdata(results):
-	res = []
-	for row in results.to_dict(orient='records'):
-		if row['experiment'] == 'full':
-			base_score = row['score']
-		else:
-			row['score'] = (row['score'] - base_score) / base_score
-			res.append(row)
-	return pd.DataFrame(res)
+    res = []
+    for row in results.to_dict(orient='records'):
+        if row['experiment'] == 'full':
+            base_score = row['score']
+        else:
+            row['score'] = (row['score'] - base_score) / base_score
+            res.append(row)
+    return pd.DataFrame(res)
 
 
 
 import seaborn as sns
 import matplotlib.pyplot as plt
 def plot(results):
-	sns.set_theme()
-	sns.set_context("talk")
-	# plot a barchart, x is the 'experiment' group, y is the 'score'
-	# i want sd error bars stripplot to show all the data
+    sns.set_theme()
+    sns.set_context("talk")
+    # plot a barchart, x is the 'experiment' group, y is the 'score'
+    # i want sd error bars stripplot to show all the data
 
-	# Set the style for the plot
-	# sns.set_theme(style="whitegrid")
+    # Set the style for the plot
+    # sns.set_theme(style="whitegrid")
 
-	# Create the bar plot with standard deviation error bars
-	#plt.figure(figsize=(12, 6)) # Adjust figure size as needed
-	# barplot = sns.barplot(x='experiment', y='score', data=results, ci='sd', capsize=.1, palette='viridis')
-	barplot = sns.barplot(x='experiment', y='score', ci = None,  data=results, palette='viridis')
+    # Create the bar plot with standard deviation error bars
+    #plt.figure(figsize=(12, 6)) # Adjust figure size as needed
+    # barplot = sns.barplot(x='experiment', y='score', data=results, ci='sd', capsize=.1, palette='viridis')
+    barplot = sns.barplot(x='experiment', y='score', ci = None,  data=results, palette='viridis')
 
-	# Overlay the stripplot to show individual data points
-	stripplot = sns.stripplot(x='experiment', y='score', data=results, color='black', size=4,
-						   jitter=True, ax=barplot.axes)
+    # Overlay the stripplot to show individual data points
+    stripplot = sns.stripplot(x='experiment', y='score', data=results, color='black', size=4,
+                           jitter=True, ax=barplot.axes)
 
-	# Rotate x-axis labels if they are long
-	plt.xticks(rotation=45, ha='right')
+    # Rotate x-axis labels if they are long
+    plt.xticks(rotation=45, ha='right')
 
-	plt.xlabel('')
-	plt.ylabel('relative degredation')
-	return barplot
+    plt.xlabel('')
+    plt.ylabel('relative degredation')
+    return barplot
 
 
 
@@ -119,10 +119,11 @@ def eval(alis,labels,
          clusterSize = 0,
          pca = 0,
          metric = 'euclidean',
-         kiezMethod = 'csls',
-         kiezK = 5,
+         kiezMethod = 2,
+         kiezPresort = 0,
+         kiezK = 27,
          min_d = 1,
-		 **nothingtosee):
+         **nothingtosee):
 
     if matrix is None:
         matrix = alignment_to_vectors(alis, RYthresh=RYthresh,d1=d1,d2=d2,
@@ -130,6 +131,15 @@ def eval(alis,labels,
                                   min_r=min_r, min_d= min_d,normalization=norm,
                                   inner_normalization=True,clusterSize=clusterSize,
                                   nest=nest,simplegraph=simplegraph,maxclust=maxclust )
+
+
+    if type(kiezMethod) != str:
+        dist = yodadist.mkdistances(matrix, pca, metric, kiezMethod, kiezK, kiezPresort)
+        return sml.average_precision(dist, labels)
+
+    dist, neigh_ind = yodadist.mkdistances(matrix, pca, metric, kiezMethod, kiezK)
+    return sml.average_precision_limited(dist, neigh_ind, labels)
+
     '''
     # ret= sml.knn_accuracy(matrix,labels)
     # ret = sml.knn_accuracy(matrix,labels)
@@ -153,6 +163,3 @@ def eval(alis,labels,
     # ret = {'score': ret,   'score_knn': sml.knn_accuracy(matrix,labels,4),  'score_ari': sml.kmeans_ari(matrix, labels)}
     # return ret
     '''
-    dist,neigh_ind =  yodadist.mkdistances( matrix, pca, metric, kiezMethod, kiezK)
-    return sml.average_precision_limited(dist,neigh_ind,labels)
-

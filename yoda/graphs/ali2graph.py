@@ -926,7 +926,6 @@ def multiGraph(ali, clusterSize = 20, maxclust =8, simplegraph = False):
 
 
     # clusterLabels = AgglomerativeClustering(n_clusters = int(ali.alignment.shape[0]/clusterSize)+1).fit_predict(ali.MGDIST)
-
     # deal with the clusters
     g = nx.Graph()
     # print(f"{ Counter(clusterLabels)=}")

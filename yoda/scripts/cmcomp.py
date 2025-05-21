@@ -16,7 +16,7 @@ import subprocess
 import seaborn as sns
 from umap import UMAP
 from yoda import draw
-import ubergauss.optimization as uo 
+import ubergauss.optimization as uo
 import pandas as pd
 from yoda.ml import nearneigh
 
@@ -36,11 +36,10 @@ from yoda import graphs as ygraphs
 
 from yoda.scripts.colormap import gethue
 
-from scripts.colormap import gethue
 
 
 #########################
-# RUNNING CMCOMPARE 
+# RUNNING CMCOMPARE
 #########################
 
 # GENERATE CM FILES
@@ -66,24 +65,24 @@ def dumpcm(family_id1):
     infernal_cmd1 = f'cmbuild -F --informat stockholm {cm1_path} {align1_path}'
     subprocess.run(infernal_cmd1, shell=True, check=True)
     return True
-    
-# RUN CMCOMPARE 
+
+# RUN CMCOMPARE
 def compare_cm(_, names, cm1=None, cm2=None):
     cm1 = names[cm1]
     cm2 = names[cm2]
     compare_cmd = f'/home/ikea/Downloads/hsCMCompare-archlinux-x64 {cm1}.cm {cm2}.cm'
     result = subprocess.run(compare_cmd, shell=True, check=True, capture_output=True, text=True)
     #print(result.stdout)
-    score = result.stdout.split()[3]  
-    score2 = result.stdout.split()[2]  
-    #score = float(score_line.split()[2]) 
+    score = result.stdout.split()[3]
+    score2 = result.stdout.split()[2]
+    #score = float(score_line.split()[2])
     return {'score':float(score),'score2': float(score2)}
 
 def run_cmcompare_pairwise(names):
-    num_cm = len(names) # or just use 10 for debugging :) 
+    num_cm = len(names) # or just use 10 for debugging :)
     return uo.gridsearch(compare_cm,
                     param_dict = {'cm1':lmz.Range(num_cm), 'cm2':lmz.Range(num_cm)},
-                    data = [False], 
+                    data = [False],
                     taskfilter = lambda x: x['cm1'] <= x['cm2'])
 
 
@@ -203,15 +202,15 @@ def pivot_numpy(df):
     tuns the cmcompare results into a similarity matrix
     '''
     p = df.pivot(index='cm1', columns='cm2', values='score1')
-    
+
     for i in range(p.values.shape[0]):
         for j in range(i+1,p.values.shape[0]):
             p.iloc[j,i] = p.iloc[i,j]
-            
+
     np.fill_diagonal(p.values,0)
 
 
-    
+
     p= p.values
     p+=p.min()
     return p
@@ -228,15 +227,16 @@ def to_dist(X):
     X-=X.min()
     np.fill_diagonal(X,0)
     return X
-    
+
     # print(X[:10,:10])
     # print('AVG PREC:', sml.average_precision(X,l))
 def mAP(X,l):
     return sml.average_precision(X,l)
-    
+
 def k_clan_discovery(X,l,k):
     return [sml.clan_in_x(X,l,n) for n in range(k)]
 
+import ubergauss.hubness as uh
 
 def mkHitRateData(data,l):
     r = []
@@ -247,7 +247,8 @@ def mkHitRateData(data,l):
 
         # dist_norm = normalize(dist, axis=0)
         dist_norm = nearneigh.normalize_csls(dist)
-        dist_norm += np.abs(dist_norm.min())
+        # dist_norm = uh.justtransform(dist.copy(),k=27,algo=2)
+        # dist_norm += np.abs(dist_norm.min()) + 1
 
         for i,val in enumerate(k_clan_discovery(dist_norm,l,50)[1:]):
             r+=[{'Distances':'normalized','Method':k,'neighbors':i+1,ylabel:val}]
@@ -316,6 +317,11 @@ def collect_results_precrec(data: dict, labels: np.ndarray) -> list:
 
         # Process normalized distances using CSLS normalization from nearneigh
         normalized_matrix = nearneigh.normalize_csls(dist_matrix)
+
+        # normalized_matrix = uh.justtransform(dist_matrix.copy(), k=27, algo=2)
+        # normalized_matrix += np.abs(normalized_matrix.min()) + 1
+
+
         precision, recall = compute_precision_recall(normalized_matrix, labels)
         for p_val, r_val in zip(precision, recall):
             results.append({'Distances': 'Normalized', 'Method': method_name, 'precision': p_val, 'recall': r_val})
