@@ -169,8 +169,12 @@ def average_precision(distances,y):
     this function computes the average precision of the distances
     '''
     def score(i):
-        y_true = y == y[i]
-        return average_precision_score(y_true,-distances[i])
+
+        mask = np.arange(n) != i
+        y_true = (y[mask] == y[i])
+        y_scores = -distances[i, mask]
+        return average_precision_score(y_true, y_scores)
+
     return np.mean(Map(score, Range(y)))
 
 def average_precision_limited(distances,indices, labels):

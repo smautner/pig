@@ -35,7 +35,6 @@ def mkparams():
     experiments = {}
     experiments['full'] = {}
     experiments['default kernel parameters'] =  {"min_r": 3, "min_d": 3}
-    experiments['cosine distance'] = {'metric': 'cosine'}
     experiments['no hubness correction'] = {'kiezMethod': 0}
     experiments['no nesting edges'] = {'nest': False}
     experiments['no conservation on edges'] =  {"fix_edges": False}
