@@ -1,108 +1,100 @@
 import numpy as np
 
+'''
+i need functions to
+load rf15
+load rf15 clans without rf14
+stats
+'''
 
 
-
-
-def get_label_dictionary(clans):
+def read_clans(clans, fixrf14=False):
     '''
     produces a dictionary {rna_name -> clusterlabel}
     '''
     d = {}
     for i,e in enumerate(clans.split(f'\n')):
-        rna_ids = e.split()[1:]
-        for rna_id in rna_ids:
-            d[rna_id] = i+1
-
-
-    # since we use the clan list from rf14 but the rfam15 seed file, we need to apply some corrections:
-    old_names = ['SAM-I-IV-variant', 'MFR', 'AdoCbl_riboswitch','AdoCbl-variant']
-    new_names = ['SAM-I-IV',         '2dG-I', 'AdoCbl','AdoCbl-II']
-    for old,new in zip(old_names,new_names):
-        d[new] = d.pop(old)
+        line = e.split()
+        d[line[0]] = line[1:]
     return d
 
-def getlabels(alignments):
-    '''
-    matches the ID field in the alignments with the "clans"-cluster-list
-    returns cluster-labels
-    '''
-    label_dict = get_label_dictionary(clans)
-    # print(f"{ label_dict=}")
+def fam_to_id(d):
+    r = {}
+    for i,(k,v) in enumerate(d.items()):
+        for fam in v:
+            r[fam] = i+1
+    return r
+
+def assign_labels(alignments, label_dict):
+    label_dict =  fam_to_id(label_dict)
     y = np.zeros(len(alignments),dtype=int)
-    for j,a in enumerate( alignments):
-        ali_label = a.gf[f'ID'][3:]
-        label = label_dict.pop( ali_label ,  0 )
-        # if 'snR56' in ali_label: print(f"{ali_label=}")
-        y[j] = label
-    if label_dict:
-        print(f"i expected these to be in the seedfile, as they are in the class list: {label_dict=}")
-    return y
-
-def get_labels_dict_rfam15():
-    '''
-    returns a dictionary {rna_name -> clusterlabel} for the clans from rfam15
-    that are not in rf14 (or had been previously removed, see data annotation
-    below)
-    '''
-
-    oldLabels = get_label_dictionary(clans)
-    id = max(oldLabels.values()) +1
-    rf15Data= {}
-    j=0
-
-    # each row contains one clain with name and a list of rna_ids
-    for i,e in enumerate(clans_rfam15.split(f'\n')):
-        rna_ids = e.split()[1:]
-
-
-        # we want to compare this list with the already known clans in rfam version 14...
-        contained =[rna_id in oldLabels for rna_id in rna_ids]
-
-        # if all the new labels are already in an old clan, we can ignore it
-        if all(contained):
-            continue
-        # completely new clan
-        elif not any(contained):
-            for rna_id in rna_ids:
-                rf15Data[rna_id] = id+j
-            j=j+1
-        # in this case a known clan is being extended:
-        else :
-            print(f"changed_clan: {rna_ids} ")
-        # we dont catch the case where families where removed from rf14 clans, but that should be fine
-
-    print(rf15Data.values())
-    print(rf15Data.keys())
-    return rf15Data
-
-def getlabels_rfam15(alignments):
-    '''
-    similar to get_labels but we only report new stuff
-    '''
-    label_dict = get_labels_dict_rfam15()
-    # print(f"{ label_dict=}")
-    y = np.zeros(len(alignments),dtype=int)
-
     for j,a in enumerate( alignments):
         ali_label = a.gf[f'ID'][3:]
         label = label_dict.get( ali_label ,  0 )
         # if 'snR56' in ali_label: print(f"{ali_label=}")
         y[j] = label
         label_dict.pop(ali_label, None)
-
-    print(f"labeled rna (from rfam15) that was not in the alignments (rfam14): {label_dict=}")
-
+    if label_dict:
+        print(f"i expected these to be in the seedfile, as they are in the class list: {label_dict=}")
     return y
 
 
+def getlabels_rfam15(alignments):
+    '''
+    i also rewrite this to not break things
+    '''
+    label_dict = merge_clans(mode = 'test')
+    return assign_labels(alignments,label_dict)
 
-# these clans are too long for the NEURAL NETWORK Node embedder RNA-FM
-#CL00112	5_8S_rRNA	LSU_rRNA_archaea	LSU_rRNA_bacteria	LSU_rRNA_eukarya	LSU_trypano_mito
-#CL00111	SSU_rRNA_bacteria	SSU_rRNA_archaea	SSU_rRNA_eukarya	SSU_rRNA_microsporidia	SSU_trypano_mito
-#CL00004	Telomerase-vert	Telomerase-cil	Sacc_telomerase	Telomerase_Asco
+def getlabels(alignments):
+    '''
+    matches the ID field in the alignments with the "clans"-cluster-list
+    returns cluster-labels for rf15 but only clans in rf14
+    '''
+    label_dict = merge_clans(mode = 'train')
+    return assign_labels(alignments,label_dict)
 
-clans = '''CL00110	mir-19	mir-363
+
+
+def merge_clans(mode):
+    rf15 = read_clans(clans_rfam15, fixrf14=False)
+    rf14 = read_clans(clans, fixrf14=False)
+    'basically 14 determines whats in the train and test set'
+    if mode == 'train':
+        # return cl from 14
+        for k in list(rf15.keys()):
+            if k not in rf14:
+                rf15.pop(k, None)
+    elif mode == 'test':
+        for k in list(rf14.keys()):
+            rf15.pop(k, None)
+    else:
+        assert False
+    return rf15
+
+
+def stats():
+    def show(d):
+        print(f"{len(d)=} {sum([len(v) for v in d.values()])=}")
+    rf15 = read_clans(clans_rfam15, fixrf14=False)
+    print(f"rf15 total")
+    show(rf15)
+
+    print(f"train")
+    d = merge_clans(mode='train')
+    show(d)
+
+    d = merge_clans(mode='test')
+    print(f"test")
+    show(d)
+
+
+
+# the first 3 clans are very long rnas...
+clans = '''CL00112	5_8S_rRNA	LSU_rRNA_archaea	LSU_rRNA_bacteria	LSU_rRNA_eukarya	LSU_trypano_mito
+CL00111	SSU_rRNA_bacteria	SSU_rRNA_archaea	SSU_rRNA_eukarya	SSU_rRNA_microsporidia	SSU_trypano_mito
+CL00004	Telomerase-vert	Telomerase-cil	Sacc_telomerase	Telomerase_Asco
+CL00110	mir-19	mir-363
 CL00071	SNORD88	snR76	snoR118
 CL00070	snosnR60_Z15	SNORD77	Afu_263
 CL00073	snoR30	SNORD100
@@ -390,4 +382,5 @@ CL00043	SNORA74	snR191
 CL00119	S4-Fusobacteriales	S4-Bacteroidia	S4-Clostridia	S4-Flavobacteria
 CL00048	SNORD19	SNORD19B
 CL00049	SNORD25	snR56'''
+
 
