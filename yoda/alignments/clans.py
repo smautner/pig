@@ -41,10 +41,13 @@ def assign_labels(alignments, label_dict):
 
 def getlabels_rfam15(alignments):
     '''
-    i also rewrite this to not break things
+    ...
     '''
-    label_dict = merge_clans(mode = 'test')
-    return assign_labels(alignments,label_dict)
+    label_dict, burned = merge_clans(mode = 'test')
+    labels = assign_labels(alignments,label_dict)
+    burn = [ a.gf[f'ID'][3:] in burned for a in alignments]
+    burn = {i for i, val in enumerate(burn) if val}
+    return labels, burn # this should wok...
 
 def getlabels(alignments):
     '''
@@ -58,16 +61,25 @@ def getlabels(alignments):
 
 def merge_clans(mode):
     rf15 = read_clans(clans_rfam15, fixrf14=False)
-    rf14 = read_clans(clans, fixrf14=False)
+    rf14 = read_clans(clans, fixrf14=True)
     'basically 14 determines whats in the train and test set'
     if mode == 'train':
         # return cl from 14
+        return rf14
+
+    elif mode == 'test':
+        # rf15 but we remove stuff that is already in 14...
+        burned = []
         for k in list(rf15.keys()):
             if k not in rf14:
-                rf15.pop(k, None)
-    elif mode == 'test':
-        for k in list(rf14.keys()):
-            rf15.pop(k, None)
+                continue
+            # else we need to ckeck the values...
+            for v in list(rf15[k]):
+                if v in rf14[k]:
+                    burned.append[v]
+        return rf15, set(burned)
+
+
     else:
         assert False
     return rf15
@@ -89,12 +101,12 @@ def stats():
     show(d)
 
 
-
 # the first 3 clans are very long rnas...
-clans = '''CL00112	5_8S_rRNA	LSU_rRNA_archaea	LSU_rRNA_bacteria	LSU_rRNA_eukarya	LSU_trypano_mito
-CL00111	SSU_rRNA_bacteria	SSU_rRNA_archaea	SSU_rRNA_eukarya	SSU_rRNA_microsporidia	SSU_trypano_mito
-CL00004	Telomerase-vert	Telomerase-cil	Sacc_telomerase	Telomerase_Asco
-CL00110	mir-19	mir-363
+# CL00112	5_8S_rRNA	LSU_rRNA_archaea	LSU_rRNA_bacteria	LSU_rRNA_eukarya	LSU_trypano_mito
+# CL00111	SSU_rRNA_bacteria	SSU_rRNA_archaea	SSU_rRNA_eukarya	SSU_rRNA_microsporidia	SSU_trypano_mito
+# CL00004	Telomerase-vert	Telomerase-cil	Sacc_telomerase	Telomerase_Asco
+
+clans = '''CL00110	mir-19	mir-363
 CL00071	SNORD88	snR76	snoR118
 CL00070	snosnR60_Z15	SNORD77	Afu_263
 CL00073	snoR30	SNORD100
@@ -236,8 +248,10 @@ CL00049	SNORD25	snR56'''
 # changed_clan: ['Cobalamin', 'AdoCbl', 'AdoCbl-II']
 
 
+# CL00111	SSU_rRNA_bacteria	SSU_rRNA_archaea	SSU_rRNA_eukarya	SSU_rRNA_microsporidia	SSU_trypano_mito
+# CL00112	5_8S_rRNA	LSU_rRNA_archaea	LSU_rRNA_bacteria	LSU_rRNA_eukarya	LSU_trypano_mito
+# CL00004	Telomerase-vert	Telomerase-cil	Sacc_telomerase	Telomerase_Asco
 clans_rfam15 = '''CL00110	mir-19	mir-363
-CL00111	SSU_rRNA_bacteria	SSU_rRNA_archaea	SSU_rRNA_eukarya	SSU_rRNA_microsporidia	SSU_trypano_mito
 CL00071	SNORD88	snR76	snoR118
 CL00070	snosnR60_Z15	SNORD77	Afu_263
 CL00073	snoR30	SNORD100
@@ -311,7 +325,6 @@ CL00120	Twister-P5	twister-P3	twister-P1
 CL00001	tRNA	tmRNA	alpha_tmRNA	beta_tmRNA	cyano_tmRNA	tRNA-Sec	mt-tmRNA
 CL00002	RNaseP_nuc	RNaseP_bact_a	RNaseP_bact_b	RNase_MRP	RNaseP_arch	RNase_P	RNaseP-T
 CL00003	Metazoa_SRP	Bacteria_small_SRP	Fungi_SRP	Dictyostelium_SRP	Bacteria_large_SRP	Plant_SRP	Protozoa_SRP	Archaea_SRP	Bacteroidales_small_SRP
-CL00004	Telomerase-vert	Telomerase-cil	Sacc_telomerase	Telomerase_Asco
 CL00005	U1	U1_yeast	U11	Gl_U1
 CL00006	U2	U12
 CL00007	U4	U4atac
@@ -367,7 +380,6 @@ CL00116	aCoV-5UTR	bCoV-5UTR	gCoV-5UTR	dCoV-5UTR	Sarbecovirus-5UTR
 CL00117	s2m	Corona_pk3	aCoV-3UTR	bCoV-3UTR	gCoV-3UTR	dCoV-3UTR	Sarbecovirus-3UTR
 CL00114	LhrC	rli22	rli33
 CL00115	DUF805b	DUF805
-CL00112	5_8S_rRNA	LSU_rRNA_archaea	LSU_rRNA_bacteria	LSU_rRNA_eukarya	LSU_trypano_mito
 CL00113	5S_rRNA	mtPerm-5S
 CL00059	SNORD43	snR70
 CL00058	SNORD57	SNORD41	snR51

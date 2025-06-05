@@ -162,20 +162,22 @@ def clan_in_x_corrected(X,y,n_neighbors=10):
 
 from sklearn.metrics import average_precision_score
 
-def average_precision(distances,y):
+def average_precision(distances,y, skip = set()):
     '''
     distances: np.array of shape (n_samples, n_samples)
     y: np.array of shape (n_samples,)
     this function computes the average precision of the distances
+
+
+    skipping is for the test set, where clans have been extended in rf15
     '''
     def score(i):
-
         mask = np.arange(n) != i
         y_true = (y[mask] == y[i])
         y_scores = -distances[i, mask]
         return average_precision_score(y_true, y_scores)
 
-    return np.mean(Map(score, Range(y)))
+    return np.mean(Map(score, [yy for yy in Range(y) if yy not in skip]))
 
 def average_precision_limited(distances,indices, labels):
     '''
