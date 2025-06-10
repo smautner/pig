@@ -41,13 +41,13 @@ def assign_labels(alignments, label_dict):
 
 def getlabels_rfam15(alignments):
     '''
-    ...
+    -> labels for all ze alignments ,
     '''
     label_dict, burned = merge_clans(mode = 'test')
     labels = assign_labels(alignments,label_dict)
     burn = [ a.gf[f'ID'][3:] in burned for a in alignments]
     burn = {i for i, val in enumerate(burn) if val}
-    return labels, burn # this should wok...
+    return labels, burn
 
 def getlabels(alignments):
     '''
@@ -76,7 +76,7 @@ def merge_clans(mode):
             # else we need to ckeck the values...
             for v in list(rf15[k]):
                 if v in rf14[k]:
-                    burned.append[v]
+                    burned.append(v)
         return rf15, set(burned)
 
 

@@ -7,7 +7,7 @@ import numpy as np
 from kiez import Kiez
 from matplotlib import pyplot as plt
 
-from scripts.colormap import gethue
+from colormap import gethue
 
 
 def kiez_neighs(matrix, limit = 100):
