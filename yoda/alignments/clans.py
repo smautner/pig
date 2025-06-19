@@ -13,10 +13,27 @@ def read_clans(clans, fixrf14=False):
     produces a dictionary {rna_name -> clusterlabel}
     '''
     d = {}
+    d_reverse ={} # needed for rf14 fix
     for i,e in enumerate(clans.split(f'\n')):
         line = e.split()
         d[line[0]] = line[1:]
+        # i just add the reverse lookup to make rf14 easier
+        for fam in line[1:]:
+            d_reverse[fam] = line[0]
+
+    if fixrf14:
+        # since we use the clan list from rf14 but the rfam15 seed file, we need to apply some corrections:
+        old_names = ['SAM-I-IV-variant', 'MFR', 'AdoCbl_riboswitch','AdoCbl-variant']
+        new_names = ['SAM-I-IV',         '2dG-I', 'AdoCbl','AdoCbl-II']
+        for old,new in zip(old_names,new_names):
+            clan = d_reverse.pop(old, None)
+            d[clan].remove(old)
+            d[clan].append(new)
+
     return d
+
+
+
 
 def fam_to_id(d):
     r = {}
