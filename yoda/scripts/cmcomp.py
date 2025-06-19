@@ -281,6 +281,76 @@ def plot_hitrate_noCSLS(df):
     plt.show()
     return ax
 
+def slobplot(df_hitrate: pd.DataFrame, df_precrec: pd.DataFrame):
+    """
+    Creates a single plot with two subplots: a hit-rate curve and a
+    precision-recall curve, using a shared, horizontal legend below the plots.
+
+    This version explicitly sets font sizes for the main title and legend to
+    ensure they are appropriately scaled for a "talk" context.
+
+    Args:
+        df_hitrate (pd.DataFrame): DataFrame with hit-rate data.
+            Expected columns: 'neighbors', 'Label Hit Rate', 'Method', 'Distances'.
+        df_precrec (pd.DataFrame): DataFrame with precision-recall data.
+            Expected columns: 'recall', 'precision', 'Method', 'Distances'.
+    """
+    # --- Local helper functions to draw on specific axes ---
+    def _plot_hitrate_on_ax(df, ax):
+        """Plots the filtered hit-rate curve on a given Axes object."""
+        ylabel = 'Label Hit Rate'
+        df_filtered = df[(df.Distances == 'normalized') & (df.Method != 'Infernal_global')]
+        sns.lineplot(data=df_filtered, x='neighbors', y=ylabel, hue='Method', ax=ax, **gethue(df_filtered))
+        #ax.set_title('Neighbor Hit Rate')
+
+    def _plot_precrec_on_ax(df, ax):
+        """Plots the filtered precision-recall curve on a given Axes object."""
+        df_filtered = df[(df.Distances == 'Normalized') & (df.Method != 'Infernal_global')]
+        sns.lineplot(data=df_filtered, y='precision', x='recall', hue='Method', ax=ax, **gethue(df_filtered, 'Method'))
+        #ax.set_title('Precision-Recall Curve')
+
+    # --- Main plotting logic ---
+    sns.set_theme()
+    sns.set_context("talk")  # Use 'talk' for larger font sizes, 'paper' for smaller
+    #fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8)) # Increased height for legend
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6)) # Increased height for legend
+
+    # Generate the two plots on their respective axes
+    _plot_hitrate_on_ax(df_hitrate, ax2)
+    _plot_precrec_on_ax(df_precrec, ax1)
+
+    # --- Handle Shared Legend ---
+    # Get handles and labels from one plot
+    handles, labels = ax2.get_legend_handles_labels()
+
+    # Remove the individual legends automatically added to the subplots
+    if ax1.get_legend():
+        ax1.get_legend().remove()
+    if ax2.get_legend():
+        ax2.get_legend().remove()
+
+    fig.legend(
+        handles, labels, loc='lower center',             # Center the legend horizontally
+        bbox_to_anchor=(0.5, +0.05),    # Position it just below the subplots
+        ncol=len(labels),               # Arrange items horizontally
+        #title='Method',
+        fontsize=17,                    # Explicitly set legend item font size
+        title_fontsize=14               # Explicitly set legend title font size
+    )
+    # fig.suptitle(
+    #     'Performance of RNA Alignment Distance Measures (CSLS Normalized)',
+    #     fontsize=22
+    # )
+    # LAYOUT ADJUSTMENT:
+    # Adjust layout to make space for the suptitle at the top and the legend at the bottom.
+    plt.tight_layout(rect=[0, 0.1, 1, 0.9]) # rect=[left, bottom, right, top]
+    plt.show()
+    return fig
+
+
+
+
+
 
 def get_pairwise_distances(dist_matrix: np.ndarray, labels: np.ndarray) -> (np.ndarray, np.ndarray):
     """
