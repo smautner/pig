@@ -173,7 +173,7 @@ def clanExtend(csr_matrix, l, alignments, max = 30):
 
     '''
     clan_averages: mean vectors for the clan
-    labels: the associated labels 
+    labels: the associated labels
     '''
     clan_averages = []
     labels = []
@@ -266,6 +266,7 @@ def pair_rank_average(matrix, labels, oklabels, maxrank=100, rank = True):
     target_lines = np.where(np.isin(yy,oklabels))[0]
     return np.array(Map(get_rank, target_lines))
 
+import yoda.ml.simpleMl as sml
 
 def plotHits(kraidmatrix, edenmatrix,l):
     ranks = getranks(kraidmatrix,l)
@@ -287,6 +288,9 @@ def plotHits(kraidmatrix, edenmatrix,l):
     hue = 'method'
     ax= sns.lineplot(df, x= 'neighbors', y= y_label, hue = hue, **gethue(df,hue))
     plt.xlabel('neighbors')
+
+    print(f"{ sml.average_precision(kraidmatrix, l) = }")
+    print(f"{ sml.average_precision(edenmatrix, l) = }")
     return ax
     # plt.title('Hit Rate with full Rfam backdrop')
 

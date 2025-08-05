@@ -417,7 +417,7 @@ def plot_precision_recall_curve(dataframe, hue_column='Method', style_column=Non
     plt.show()
     return ax
 
-def make_results_table(data,l):
+def make_results_table(data,l, runtime):
     AUC_label = "Precision/Recall AUC"
     AP_label = "Average Precision"
     results = []
@@ -434,7 +434,7 @@ def make_results_table(data,l):
         """
         p, r = compute_precision_recall(matrix, l)
         auc_score = auc(r, p)
-        map_score =mAP(matrix, l)
+        map_score = mAP(matrix, l)
         norm_flag = "yes" if normalized else "no"
         norm_text = "normalized" if normalized else "raw"
         print(f"{method} {norm_text} AUC: {auc_score}")
@@ -449,5 +449,7 @@ def make_results_table(data,l):
 
     df = pd.DataFrame(results)
     df2 = df.pivot_table(index='method', columns=['scoretype', 'normalized'], values='score', fill_value=0)
+    df2['runtime'] = df2.index.map(runtime)
+
     return df2
 
