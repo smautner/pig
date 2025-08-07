@@ -182,7 +182,8 @@ def average_precision(distances,y, skip = set()):
         y_true = (y == y[i])
         y_scores = -distances[i]
 
-        return average_precision_score(y_true, y_scores)
+        mask = i != np.arange(len(y))
+        return average_precision_score(y_true[mask], y_scores[mask])
 
     data = np.array(Map(score, [yy for yy in Range(y) if yy not in skip]))
     return np.nanmean(data)

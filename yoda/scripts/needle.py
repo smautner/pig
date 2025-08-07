@@ -8,7 +8,8 @@ from kiez import Kiez
 from matplotlib import pyplot as plt
 
 from colormap import gethue
-
+from ubergauss import hubness
+from ubergauss import tools as ut
 
 def kiez_neighs(matrix, limit = 100):
 
@@ -16,7 +17,9 @@ def kiez_neighs(matrix, limit = 100):
         limit = matrix.shape[0]-1
 
     k_inst = Kiez(algorithm='SklearnNN', hubness='CSLS', n_candidates = limit,  algorithm_kwargs= {'metric' : 'cosine'})
-    k_inst.fit(matrix.toarray())
+
+    #k_inst.fit(matrix.toarray())
+    k_inst.fit(ut.zehidense(matrix))
     dist, neigh_ind = k_inst.kneighbors()
     return dist, neigh_ind
 
@@ -269,28 +272,43 @@ def pair_rank_average(matrix, labels, oklabels, maxrank=100, rank = True):
 import yoda.ml.simpleMl as sml
 
 def plotHits(kraidmatrix, edenmatrix,l):
+
+
+
+    random_matrix = np.random.rand(*kraidmatrix.shape)
+    random_ranks = getranks(random_matrix,l)
+
+
     ranks = getranks(kraidmatrix,l)
     ranks2 = getranks(edenmatrix,l)
+
+
+
     sns.set_theme()
     sns.set_context("talk")
 
     #plt.plot([sum(ranks < x)/sum(l != 0) for x in range(1,50)])
     #plt.plot([sum(ranks2 < x)/sum(l2 != 0) for x in range(1,50)])
     y_label = 'Label Hit Rate'
+    ranker = lambda ranks:[sum(ranks < x)/sum(l != 0) for x in range(1,50)]
 
-    meins = [sum(ranks < x)/sum(l != 0) for x in range(1,50)]
-    data = {y_label: meins, 'neighbors':lmz.Range(1,50), 'method' : 'KRAID'}
+    # eden = [sum(ranks2 < x)/sum(l != 0) for x in range(1,50)]
+    data = {y_label: ranker(ranks), 'neighbors':lmz.Range(1,50), 'method' : 'KRAID'}
+    data2 = {y_label: ranker(ranks2), 'neighbors':lmz.Range(1,50),'method' : 'NSPDK'}
+    data3 = {y_label: ranker(random_ranks), 'neighbors':lmz.Range(1,50),'method' : 'random'}
 
-    eden = [sum(ranks2 < x)/sum(l != 0) for x in range(1,50)]
-    data2 = {y_label: eden, 'neighbors':lmz.Range(1,50),'method' : 'NSPDK'}
-
-    df= pd.concat([pd.DataFrame(data),pd.DataFrame(data2)])
+    df= pd.concat([pd.DataFrame(data),
+                   pd.DataFrame(data2),
+                   pd.DataFrame(data3)])
     hue = 'method'
     ax= sns.lineplot(df, x= 'neighbors', y= y_label, hue = hue, **gethue(df,hue))
     plt.xlabel('neighbors')
 
-    print(f"{ sml.average_precision(kraidmatrix, l) = }")
-    print(f"{ sml.average_precision(edenmatrix, l) = }")
+
+    kraid = hubness.transform(kraidmatrix, kraidmatrix)
+    nspdk = hubness.transform(edenmatrix, edenmatrix)
+    print(f"{ sml.average_precision(kraid, l) = }")
+    print(f"{ sml.average_precision(nspdk, l) = }")
     return ax
     # plt.title('Hit Rate with full Rfam backdrop')
 
@@ -327,6 +345,7 @@ def plotSubsetScores(matrix, l, manyseq, fewseq, rf15Labels):
     return ax
 
 
+
 def plotNeedle(matrix,l):
     # get the labels where we have more than 2 examples
     needlelabels = threeinstances(l)
@@ -345,15 +364,15 @@ def plotNeedle(matrix,l):
     four=  [sum(distAvg < x)/len(distAvg) for x in range(1,50)]
 
 
-    data = {'Label Hit Rate': one, 'neighbors':lmz.Range(2,len(one)+2), 'Experiment' : 'distance matrix'}
-    data2 = {'Label Hit Rate': two, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'linear combination search'}
-    data3 = {'Label Hit Rate': three, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'rank average'}
-    data4 = {'Label Hit Rate': four, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'dist average'}
+    data = {'Label Hit Rate': one, 'neighbors':lmz.Range(2,len(one)+2), 'Experiment' : 'next in line'}
+    data2 = {'Label Hit Rate': two, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'average embedding search'}
+    data3 = {'Label Hit Rate': three, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'rank average next in line'}
+    data4 = {'Label Hit Rate': four, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'distance average next in line'}
     df= pd.concat([pd.DataFrame(data),pd.DataFrame(data2), pd.DataFrame(data3), pd.DataFrame(data4)])
     title = 'Finding additional alignments for a clan'
 
     ax= sns.lineplot(df, x= 'neighbors', y= 'Label Hit Rate', hue = 'Experiment')
-    plt.ylabel('Label Hit Rate (≥ 2 Hits)')
+    plt.ylabel('Second Position Hit Rate')
     sns.move_legend(ax, "center left", bbox_to_anchor=(1, 0.5))
     # plt.title(title)
     return ax
