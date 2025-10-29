@@ -30,15 +30,20 @@ hue = {'palette':hue_map, 'hue_order':hue_order}
 
 def gethue(df,hue='Method'):
     ok =  np.unique(df[hue])
+
     hmap = dict(hue_map)
     horder = list(hue_order)
-    for e in hue_map: 
+    for e in ok:
+        if e not in hue_map:
+            print(f"colormap here. {e} is missing from the hue_map... a line will be missing from ur plot")
+
+    for e in hue_map:
         if e not in ok:
             hmap.pop(e)
             horder.remove(e)
-            
+
     return {'palette':hmap, 'hue_order':horder}
 
-    
-        
-        
+
+
+

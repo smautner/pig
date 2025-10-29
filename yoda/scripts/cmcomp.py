@@ -1,5 +1,6 @@
 import networkx as nx
 import structout as so
+import time
 from matplotlib import pyplot as plt
 import lmz
 import eden.graph as eg
@@ -46,7 +47,7 @@ from yoda.scripts.colormap import gethue
 def dumpcm(family_id1):
     # Extract alignments from Stockholm file based on family IDs
     align1_path = f'{family_id1}.fasta'
-    with open('/home/ikea/Rfam.seed.utf8', 'r') as stockholm_file:
+    with open('/home/ubuntu/Rfam.seed.utf8', 'r') as stockholm_file:
         found1 = False
         with open(align1_path, 'w') as align1_file:
             align1_file.write('# STOCKHOLM 1.0\n\n')
@@ -67,23 +68,48 @@ def dumpcm(family_id1):
     return True
 
 # RUN CMCOMPARE
+import os
+import json
 def compare_cm(_, names, cm1=None, cm2=None):
     cm1 = names[cm1]
     cm2 = names[cm2]
-    compare_cmd = f'/home/ikea/Downloads/hsCMCompare-archlinux-x64 {cm1}.cm {cm2}.cm'
+
+
+    cache_file = f"./cmbigres/{cm1}_{cm2}.json"
+
+    if os.path.exists(cache_file):
+        with open(cache_file, 'r') as f:
+            return json.load(f)
+
+    compare_cmd = f'/home/ubuntu/hsCMCompare-fedora12-x64 -q {cm1}.cm {cm2}.cm'
     result = subprocess.run(compare_cmd, shell=True, check=True, capture_output=True, text=True)
-    #print(result.stdout)
     score = result.stdout.split()[3]
     score2 = result.stdout.split()[2]
-    #score = float(score_line.split()[2])
-    return {'score':float(score),'score2': float(score2)}
 
-def run_cmcompare_pairwise(names):
+    output = {'score':float(score),'score2': float(score2)}
+    with open(cache_file, 'w') as f:
+        json.dump(output, f)
+    return output
+
+
+    #compare_cmd = f'/home/ubuntu/hsCMCompare-fedora12-x64 -q {cm1}.cm {cm2}.cm'
+    #result = subprocess.run(compare_cmd, shell=True, check=True, capture_output=True, text=True)
+    ##print(result.stdout)
+    #score = result.stdout.split()[3]
+    #score2 = result.stdout.split()[2]
+    ##score = float(score_line.split()[2])
+    #return {'score':float(score),'score2': float(score2)}
+
+def run_cmcompare_pairwise(names, sizes):
     num_cm = len(names) # or just use 10 for debugging :)
+
+    sizes= dict(enumerate(sizes))
     return uo.gridsearch(compare_cm,
                     param_dict = {'cm1':lmz.Range(num_cm), 'cm2':lmz.Range(num_cm)},
-                    data = [False],
-                    taskfilter = lambda x: x['cm1'] <= x['cm2'])
+                    data_list = [[False]],
+                    mp=True,
+                    taskfilter = lambda x: x['cm1'] <  x['cm2'] and( sizes[x['cm1']] < 1000 or sizes[x['cm2']] < 1000),
+                    names= names)
 
 
 
@@ -95,14 +121,74 @@ def loadcmcomp(csvpath = 'cmcompare_full_run_2024_06_27'):
     cmcompare_dist = to_dist(pivot_numpy(cmcompare_data))
     return cmcompare_dist
 
+def test_cmcompare():
+    a,l = load_rfam(full=True,add_cov = False)
+    t = time.time()
+    names = [aa.gf["AC"][3:] for aa in a]
+    sizes = [aa.alignment.shape[1] for aa in a]
+    # [dumpcm(name) for name in names]
+    r= run_cmcompare_pairwise(names, sizes)
+    print(f"time: { time.time() - t}")
+    #r = r.drop(columns=['names']) why should names be in there ..
+    r.to_csv('latest.csv', index=False)
+    return r
+def test_load():
+    a,l = load_rfam(full=True,add_cov = False)
+    load_latest_cmcompare(l)
+
+def load_latest_cmcompare(labels, file = 'cmcomp_big.csv'):
+    # loads the csv ... we want to load it liike loadcmcomp however.. there are missing values.
+
+    existing_df = pd.read_csv(file)
+    all_data_rows = existing_df.to_dict('records')
+
+    # 2. Identify existing pairs by their integer indices
+    existing_pair_indices = set()
+    for row in all_data_rows:
+        idx1, idx2 = int(row['cm1']), int(row['cm2'])
+        existing_pair_indices.add(tuple(sorted((idx1, idx2))))
+
+    # 3. Determine the number of families and iterate through all possible pairs
+    num_families = len(labels)
+
+    for i in range(num_families):
+        for j in range(i, num_families): # Include diagonal (i,i) and upper triangle (i,j where i<j)
+            idx1, idx2 = i, j
+
+            if tuple(sorted((idx1, idx2))) not in existing_pair_indices:
+                # This pair is missing, generate default scores
+                label_i = labels[i]
+                label_j = labels[j]
+
+                # Default score logic: 100 if same family, -5 if different
+                score_val = 100 if label_i == label_j else -5.0
+
+                all_data_rows.append({
+                    'cm1': idx1,
+                    'cm2': idx2,
+                    'score': score_val,
+                    'score2': score_val, # score2 often same as score in these default cases
+                    'time': -1.0 # Indicate this entry was not run by cmcompare
+                })
+
+    # 4. Create a full DataFrame from all collected rows
+    full_df = pd.DataFrame(all_data_rows)
+
+    # 5. Apply the standard `loadcmcomp` transformations
+    # Fill any potential NaNs in 'score' or 'score2' columns from the original CSV
+    full_df = full_df.fillna(500.0)
+    full_df['score1'] = full_df[['score', 'score2']].min(axis=1)
+    full_df['score3'] = full_df[['score', 'score2']].max(axis=1)
+
+    # Convert to distance matrix
+    cmcompare_dist = to_dist(pivot_numpy(full_df))
+    return cmcompare_dist
 
 
 
 #####################
 # stuff from the inference model
 ##################
-
-
 
 
 def score(mtx,data):
@@ -203,13 +289,14 @@ def pivot_numpy(df):
     '''
     p = df.pivot(index='cm1', columns='cm2', values='score1')
 
-    for i in range(p.values.shape[0]):
-        for j in range(i+1,p.values.shape[0]):
-            p.iloc[j,i] = p.iloc[i,j]
+
+    p = p.combine_first(p.T)
+
+    # for i in range(p.values.shape[0]):
+    #     for j in range(i+1,p.values.shape[0]):
+    #         p.iloc[j,i] = p.iloc[i,j]
 
     np.fill_diagonal(p.values,0)
-
-
 
     p= p.values
     p+=p.min()
@@ -453,3 +540,22 @@ def make_results_table(data,l, runtime):
 
     return df2
 
+
+def hist(aa):
+    lengths = [a.alignment.shape[1] for a in aa]
+    l = np.array(lengths)
+    print(f"{sum(l<1000)=} out of {len(l)}")
+    plt.figure(figsize=(10, 6))
+    plt.xscale('log')
+    sns.histplot(lengths, bins=60, kde=True, color='skyblue', edgecolor='black')
+    plt.title('Distribution of Alignment Lengths')
+    plt.xlabel('Alignment Length')
+    plt.ylabel('Frequency')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.show()
+
+
+def filterdown(m1,m2,m3,l,aa):
+    lengths = np.array([a.alignment.shape[1] for a in aa])
+    mask = lengths < 1000
+    return  m1[mask], m2[mask], m3[mask][:,mask], np.array(l)[mask]

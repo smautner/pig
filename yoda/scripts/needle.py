@@ -10,21 +10,27 @@ from matplotlib import pyplot as plt
 from colormap import gethue
 from ubergauss import hubness
 from ubergauss import tools as ut
+from sklearn.neighbors import NearestNeighbors
 
 def kiez_neighs(matrix, limit = 100):
-
+    '''
+    kiez still has this bug where one side is a one off error for the correction dist.
+    anyway.. we cant fix this everywhere now, should only  be a small error
+    '''
     if limit < 1:
         limit = matrix.shape[0]-1
-
-    k_inst = Kiez(algorithm='SklearnNN', hubness='CSLS', n_candidates = limit,  algorithm_kwargs= {'metric' : 'cosine'})
-
+    k_inst = Kiez(algorithm='SklearnNN', hubness='CSLS', n_candidates = limit,
+                  algorithm_kwargs= {'metric' : 'cosine'})
     #k_inst.fit(matrix.toarray())
     k_inst.fit(ut.zehidense(matrix))
     dist, neigh_ind = k_inst.kneighbors()
     return dist, neigh_ind
 
+
 def getranks(matrix,l):
-    dist, indices = kiez_neighs(matrix)
+    # calculate dist and indices via sklearn
+    dist, indices = NearestNeighbors(n_neighbors=100, metric='cosine').fit(matrix).kneighbors()
+
     yy= np.array(l)
     neighbor_labels = yy[indices]
     # neighbor_labels = neighbor_labels[:, 1:]
@@ -271,17 +277,18 @@ def pair_rank_average(matrix, labels, oklabels, maxrank=100, rank = True):
 
 import yoda.ml.simpleMl as sml
 
-def plotHits(kraidmatrix, edenmatrix,l):
-
-
+def plotHits(kraidmatrix, edenmatrix,cmcmat,l):
 
     random_matrix = np.random.rand(*kraidmatrix.shape)
     random_ranks = getranks(random_matrix,l)
 
+    kraid = hubness.transform(kraidmatrix, kraidmatrix)
+    nspdk = hubness.transform(edenmatrix, edenmatrix)
+    cmc = cmcmat #hubness.justtransform(cmcmat, k=10, algo=2, kstart = 1)
 
-    ranks = getranks(kraidmatrix,l)
-    ranks2 = getranks(edenmatrix,l)
-
+    ranks = getranks(kraid,l)
+    ranks2 = getranks(nspdk,l)
+    ranks3 = getranks(cmc,l)
 
 
     sns.set_theme()
@@ -294,21 +301,25 @@ def plotHits(kraidmatrix, edenmatrix,l):
 
     # eden = [sum(ranks2 < x)/sum(l != 0) for x in range(1,50)]
     data = {y_label: ranker(ranks), 'neighbors':lmz.Range(1,50), 'method' : 'KRAID'}
+    data1 = {y_label: ranker(ranks3), 'neighbors':lmz.Range(1,50), 'method' : 'CMCompare'}
     data2 = {y_label: ranker(ranks2), 'neighbors':lmz.Range(1,50),'method' : 'NSPDK'}
     data3 = {y_label: ranker(random_ranks), 'neighbors':lmz.Range(1,50),'method' : 'random'}
 
+    # this reveals that all is ok, but why doesn't my cmcomp show up in the plot?? answer briefly!
+    print(f"{ranker(ranks3)=}")
     df= pd.concat([pd.DataFrame(data),
                    pd.DataFrame(data2),
+                   pd.DataFrame(data1),
                    pd.DataFrame(data3)])
     hue = 'method'
     ax= sns.lineplot(df, x= 'neighbors', y= y_label, hue = hue, **gethue(df,hue))
     plt.xlabel('neighbors')
 
 
-    kraid = hubness.transform(kraidmatrix, kraidmatrix)
-    nspdk = hubness.transform(edenmatrix, edenmatrix)
     print(f"{ sml.average_precision(kraid, l) = }")
     print(f"{ sml.average_precision(nspdk, l) = }")
+    print(f"{ sml.average_precision(cmc, l) = }")
+
     return ax
     # plt.title('Hit Rate with full Rfam backdrop')
 
@@ -344,9 +355,19 @@ def plotSubsetScores(matrix, l, manyseq, fewseq, rf15Labels):
     plt.xlabel('neighbors')
     return ax
 
+from scipy.special import comb
+
+def calcneedlesum(l):
+    needlelabels = threeinstances(l)
+    sum = 0
+    for e in needlelabels.values():
+        sum += comb(e, 2, exact=True)
+    return sum
 
 
 def plotNeedle(matrix,l):
+
+
     # get the labels where we have more than 2 examples
     needlelabels = threeinstances(l)
     # for each row (with the right label) we find the closest other instance according to the kernel
@@ -363,15 +384,15 @@ def plotNeedle(matrix,l):
     three=  [sum(rankAvg < x)/len(rankAvg) for x in range(1,50)]
     four=  [sum(distAvg < x)/len(distAvg) for x in range(1,50)]
 
-
-    data = {'Label Hit Rate': one, 'neighbors':lmz.Range(2,len(one)+2), 'Experiment' : 'next in line'}
-    data2 = {'Label Hit Rate': two, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'average embedding search'}
-    data3 = {'Label Hit Rate': three, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'rank average next in line'}
-    data4 = {'Label Hit Rate': four, 'neighbors':lmz.Range(2,len(one)+2),'Experiment' : 'distance average next in line'}
+    method = 'Method'
+    data = {'Label Hit Rate': one, 'neighbors':lmz.Range(2,len(one)+2), method : 'next in line'}
+    data2 = {'Label Hit Rate': two, 'neighbors':lmz.Range(2,len(one)+2),method : 'average embedding search'}
+    data3 = {'Label Hit Rate': three, 'neighbors':lmz.Range(2,len(one)+2),method : 'rank average next in line'}
+    data4 = {'Label Hit Rate': four, 'neighbors':lmz.Range(2,len(one)+2),method : 'distance average next in line'}
     df= pd.concat([pd.DataFrame(data),pd.DataFrame(data2), pd.DataFrame(data3), pd.DataFrame(data4)])
     title = 'Finding additional alignments for a clan'
 
-    ax= sns.lineplot(df, x= 'neighbors', y= 'Label Hit Rate', hue = 'Experiment')
+    ax= sns.lineplot(df, x= 'neighbors', y= 'Label Hit Rate', hue = method)
     plt.ylabel('Second Position Hit Rate')
     sns.move_legend(ax, "center left", bbox_to_anchor=(1, 0.5))
     # plt.title(title)
