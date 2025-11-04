@@ -22,7 +22,9 @@ import umap
 
 def makedata(splits = 3,add_cov=''):
     alis, labels = alignments.load_rfam(add_cov='')
-    if splits <= 2:
+    if splits ==2:
+        print("i changed this behaviour... makedata splits =2 ")
+    if splits <= 1:
         return alis, labels
     # 3 way split
     train, test = next( uo.groupedCV(n_splits = splits).split(alis,labels,labels))

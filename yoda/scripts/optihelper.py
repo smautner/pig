@@ -4,32 +4,6 @@ import yoda.ml.simpleMl as sml
 import yoda.ml.distances as yodadist
 import smallgraph as sg
 
-# the plan is to make a plot  for the hyperparam opti, where i show what each
-# part contributes
-
-param = {
-    "ct": 0.965,
-    "RYthresh": 0,
-    "norm": True,
-    "d1": 0.25,
-    "d2": 0.75,
-    "bad_weight": 0.15,
-    "fix_edges": True,
-    "min_r": 2,
-    "maxclust": 10,
-    "nest": True,
-    "simplegraph": False,
-    "clusterSize": 0,
-    "pca": 0,
-    "metric": "euclidean",
-    "kiezMethod": "csls",
-    "min_d": 1}
-
-
-
-def makedata(n):
-    return  [sg.makedata(splits=3)[:2] for i in range(n)]
-
 
 def mkparams():
     experiments = {}
@@ -162,3 +136,85 @@ def eval(alis,labels,
     # ret = {'score': ret,   'score_knn': sml.knn_accuracy(matrix,labels,4),  'score_ari': sml.kmeans_ari(matrix, labels)}
     # return ret
     '''
+
+
+
+
+
+
+space = '''min_r 0 3 1
+min_d 0 3 1
+fix_edges 0 1 1
+ct .88 1
+d1 0 1
+d2 0 1
+nest 0 1 1
+kiezK 23 30 1
+kiezMethod 0 5 1
+simplegraph 0 1 1
+bad_weight 0 .3'''
+
+
+def overfit_plot(numparams=10, numdata = 3):
+    '''
+    we will make 2 plots:
+        - a train/test accuracy plot  ?? maybe later...
+        - and the other one :)
+    '''
+
+    # get some paramz
+    myspace = sg.string_to_space(space)
+    parameters = [myspace.sample() for i in range(numparams)]
+    for i,p in enumerate(parameters):
+        p['ex_id'] = i
+
+    # prepare the data
+    data_all = [sg.makedata(splits=2) for i in range(numdata)]
+    datasets = [d[:2] for d in data_all]
+    test_sets = [d[2] for d in data_all]
+
+    # quick test
+    # eval(*datasets[0],**parameters[0])
+    # print('ok')
+
+    results =  op.gridsearch(eval, datasets, tasks = parameters, mp=True)
+    return results
+
+
+def oldplot(results):
+    # results is a df with a data_id column..
+    # for each data_id we repeated the experiment x times, we assume data is in order!
+
+    # pivot to have columns = data_id..
+    results_pivot = results.pivot(index='ex_id', columns='data_id', values='score')
+
+    # sort rows by mean
+    results_pivot['mean_score'] = results_pivot.mean(axis=1)
+    results_pivot = results_pivot.sort_values(by='mean_score', ascending=True)
+    results_pivot = results_pivot.drop(columns='mean_score')
+
+
+
+    # # we need viridis colors each column (dataset)
+    # datatable =  results_pivot.values # to numpy
+    # colors = sns.color_palette("viridis", n_colors=datatable.shape[1])
+    # # plot each column
+    # for i in range(datatable.shape[1]):
+    #     plt.scatter( range(datatable.shape[0]), datatable[:,i], color=colors[i], label=f"data {i+1}")
+    # plt.show()
+
+
+    # now the rows are sorted. we can just reindex each row..
+    results_pivot['ex_id'] = range(results_pivot.shape[0])
+    # .. and melt back
+    melted = results_pivot.melt(id_vars=['ex_id'], var_name='data_id', value_name='score')
+
+    # now we are ready to scatter
+    sns.set_theme('talk')
+    sns.scatterplot(data=melted, x="ex_id", y="score", hue="data_id", palette='viridis')
+    plt.xlabel('random parameter set (sorted)')
+    plt.ylabel('score')
+    plt.title('Performance across different datasets')
+    plt.show()
+
+

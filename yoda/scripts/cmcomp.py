@@ -559,3 +559,5 @@ def filterdown(m1,m2,m3,l,aa):
     lengths = np.array([a.alignment.shape[1] for a in aa])
     mask = lengths < 1000
     return  m1[mask], m2[mask], m3[mask][:,mask], np.array(l)[mask]
+
+
