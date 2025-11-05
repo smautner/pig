@@ -113,9 +113,11 @@ def stats():
     d = merge_clans(mode='train')
     show(d)
 
-    d = merge_clans(mode='test')
+    d, burn = merge_clans(mode='test')
+    #print(d)
     print(f"test")
     show(d)
+    print(len(burn))
 
 
 # the first 3 clans are very long rnas...
