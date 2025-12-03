@@ -76,10 +76,12 @@ def getlabels(alignments):
 
 
 
-def merge_clans(mode):
+def merge_clans(mode, print_extenders= False):
     rf15 = read_clans(clans_rfam15, fixrf14=False)
     rf14 = read_clans(clans, fixrf14=True)
     'basically 14 determines whats in the train and test set'
+    extender = []
+    justnew = []
     if mode == 'train':
         # return cl from 14
         return rf14
@@ -87,19 +89,29 @@ def merge_clans(mode):
     elif mode == 'test':
         # rf15 but we remove stuff that is already in 14...
         burned = []
+
+        # every new clan
         for k in list(rf15.keys()):
+            # if its new, its ok ...
             if k not in rf14:
+                justnew.append(k)
                 continue
-            # else we need to ckeck the values...
+            # else we check every entry
             for v in list(rf15[k]):
                 if v in rf14[k]:
                     burned.append(v)
+                else: # we keep it
+                    extender.append((k,v))
+        if print_extenders:
+            print(f"{extender=}")
+            print(f"{justnew=}")
+        # print(len(extender))
         return rf15, set(burned)
 
 
     else:
         assert False
-    return rf15
+
 
 
 def stats():
@@ -113,7 +125,7 @@ def stats():
     d = merge_clans(mode='train')
     show(d)
 
-    d, burn = merge_clans(mode='test')
+    d, burn = merge_clans(mode='test', print_extenders= True)
     #print(d)
     print(f"test")
     show(d)
