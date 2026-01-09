@@ -277,7 +277,7 @@ def pair_rank_average(matrix, labels, oklabels, maxrank=100, rank = True):
 
 import yoda.ml.simpleMl as sml
 
-def plotHits(kraidmatrix, edenmatrix,cmcmat,l):
+def prep_plotHits(kraidmatrix, edenmatrix,cmcmat,l):
 
     random_matrix = np.random.rand(*kraidmatrix.shape)
     random_ranks = getranks(random_matrix,l)
@@ -296,14 +296,15 @@ def plotHits(kraidmatrix, edenmatrix,cmcmat,l):
 
     #plt.plot([sum(ranks < x)/sum(l != 0) for x in range(1,50)])
     #plt.plot([sum(ranks2 < x)/sum(l2 != 0) for x in range(1,50)])
-    y_label = 'Label Hit Rate'
     ranker = lambda ranks:[sum(ranks < x)/sum(l != 0) for x in range(1,50)]
 
+    hue = 'method'
+    y_label = 'Label Hit Rate'
     # eden = [sum(ranks2 < x)/sum(l != 0) for x in range(1,50)]
-    data = {y_label: ranker(ranks), 'neighbors':lmz.Range(1,50), 'method' : 'KRAID'}
-    data1 = {y_label: ranker(ranks3), 'neighbors':lmz.Range(1,50), 'method' : 'CMCompare'}
-    data2 = {y_label: ranker(ranks2), 'neighbors':lmz.Range(1,50),'method' : 'NSPDK'}
-    data3 = {y_label: ranker(random_ranks), 'neighbors':lmz.Range(1,50),'method' : 'random'}
+    data = {y_label: ranker(ranks), 'neighbors':lmz.Range(1,50), hue: 'KRAID'}
+    data1 = {y_label: ranker(ranks3), 'neighbors':lmz.Range(1,50), hue: 'CMCompare'}
+    data2 = {y_label: ranker(ranks2), 'neighbors':lmz.Range(1,50),hue: 'NSPDK'}
+    data3 = {y_label: ranker(random_ranks), 'neighbors':lmz.Range(1,50),hue: 'random'}
 
     # this reveals that all is ok, but why doesn't my cmcomp show up in the plot?? answer briefly!
     print(f"{ranker(ranks3)=}")
@@ -311,17 +312,23 @@ def plotHits(kraidmatrix, edenmatrix,cmcmat,l):
                    pd.DataFrame(data2),
                    pd.DataFrame(data1),
                    pd.DataFrame(data3)])
-    hue = 'method'
-    ax= sns.lineplot(df, x= 'neighbors', y= y_label, hue = hue, **gethue(df,hue))
-    plt.xlabel('neighbors')
-
 
     print(f"{ sml.average_precision(kraid, l) = }")
     print(f"{ sml.average_precision(nspdk, l) = }")
     print(f"{ sml.average_precision(cmc, l) = }")
+    return df
 
+
+def plotHits(df):
+    sns.set_theme('notebook', font_scale=1.5)
+    hue = 'method'
+    df['method'] = df['method'].replace('Random', 'random')
+    ax= sns.lineplot(df, x= 'neighbors', y= 'Label Hit Rate', hue = hue, **gethue(df,hue))
+    plt.xlabel('Neighbors')
+    plt.ylabel( 'Label Hit Rate')
+    ax.legend(title=None, frameon=False)
+    sns.move_legend(ax, "upper left", bbox_to_anchor=(0, -0.2), ncol=2)
     return ax
-    # plt.title('Hit Rate with full Rfam backdrop')
 
 
 def plotSubsetScores(matrix, l, manyseq, fewseq, rf15Labels):
@@ -365,7 +372,7 @@ def calcneedlesum(l):
     return sum
 
 
-def plotNeedle(matrix,l):
+def needle3data(matrix,l):
 
 
     # get the labels where we have more than 2 examples
@@ -389,11 +396,40 @@ def plotNeedle(matrix,l):
     data2 = {'Label Hit Rate': two, 'neighbors':lmz.Range(2,len(one)+2),method : 'average embedding search'}
     data3 = {'Label Hit Rate': three, 'neighbors':lmz.Range(2,len(one)+2),method : 'rank average next in line'}
     data4 = {'Label Hit Rate': four, 'neighbors':lmz.Range(2,len(one)+2),method : 'distance average next in line'}
-    df= pd.concat([pd.DataFrame(data),pd.DataFrame(data2), pd.DataFrame(data3), pd.DataFrame(data4)])
-    title = 'Finding additional alignments for a clan'
 
-    ax= sns.lineplot(df, x= 'neighbors', y= 'Label Hit Rate', hue = method)
+
+    df= pd.concat([pd.DataFrame(data),pd.DataFrame(data2), pd.DataFrame(data3), pd.DataFrame(data4)])
+    return df
+
+
+# def plotNeedle3(df):
+#     title = 'Finding additional alignments for a clan'
+#     ax= sns.lineplot(df, x= 'neighbors', y= 'Label Hit Rate', hue = 'Method')
+#     plt.ylabel('Second Position Hit Rate')
+#     sns.move_legend(ax, "center left", bbox_to_anchor=(1, 0.5))
+#     # plt.title(title)
+#     return ax
+
+def plotNeedle3(df):
+
+
+    df['Method'] = df['Method'].replace('next in line', 'Next in Line (NIL)')
+    df['Method'] = df['Method'].replace({
+        'average embedding search': 'Average Embedding',
+        'rank average next in line': 'Rank Average NIL',
+        'distance average next in line': 'Distance Average NIL'
+    })
+
+    sns.set_theme('notebook', font_scale=1.5)
+    ax = sns.lineplot(data=df, x='neighbors', y='Label Hit Rate', hue='Method')
     plt.ylabel('Second Position Hit Rate')
-    sns.move_legend(ax, "center left", bbox_to_anchor=(1, 0.5))
-    # plt.title(title)
+    ax.legend(title=None, frameon=False)
+    # sns.move_legend(ax, "upper left", bbox_to_anchor=(0, -0.2), ncol=2)
+    sns.move_legend(ax, "upper left", bbox_to_anchor=(0, -0.2), ncol=1)
     return ax
+
+
+
+
+
+

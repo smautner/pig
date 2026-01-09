@@ -435,6 +435,60 @@ def slobplot(df_hitrate: pd.DataFrame, df_precrec: pd.DataFrame):
     return fig
 
 
+def slopplot_vertical(df_hitrate: pd.DataFrame, df_precrec: pd.DataFrame):
+    """
+    Creates a single plot with two subplots: a hit-rate curve and a
+    precision-recall curve, arranged vertically. Uses a shared, horizontal legend.
+
+    Args:
+        df_hitrate (pd.DataFrame): DataFrame with hit-rate data.
+            Expected columns: 'neighbors', 'Label Hit Rate', 'Method', 'Distances'.
+        df_precrec (pd.DataFrame): DataFrame with precision-recall data.
+            Expected columns: 'recall', 'precision', 'Method', 'Distances'.
+    """
+    sns.set_theme('notebook', font_scale=1.5)
+    def _plot_hitrate_on_ax(df, ax):
+        ylabel = 'Label Hit Rate'
+        df_filtered = df[(df.Distances == 'normalized') & (df.Method != 'Infernal_global')]
+        sns.lineplot(data=df_filtered, x='neighbors', y=ylabel, hue='Method', ax=ax, **gethue(df_filtered))
+        ax.set_xlabel('Neighbors')
+        ax.set_ylabel('Label Hit Rate')
+        ax.set_title('Neighbor Hit Rate')
+
+    def _plot_precrec_on_ax(df, ax):
+        df_filtered = df[(df.Distances == 'Normalized') & (df.Method != 'Infernal_global')]
+        sns.lineplot(data=df_filtered, y='precision', x='recall', hue='Method', ax=ax, **gethue(df_filtered, 'Method'))
+        ax.set_xlabel('Recall')
+        ax.set_ylabel('Precision')
+        ax.set_title('Precision-Recall Curve')
+
+    sns.set_theme()
+    sns.set_context("talk")
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12)) # Two rows, one column, adjust figsize
+
+    _plot_precrec_on_ax(df_precrec, ax1)
+    _plot_hitrate_on_ax(df_hitrate, ax2)
+
+    handles, labels = ax1.get_legend_handles_labels()
+
+    if ax1.get_legend():
+        ax1.get_legend().remove()
+    if ax2.get_legend():
+        ax2.get_legend().remove()
+
+
+    fig.legend(
+        handles, labels, loc='lower center',
+        bbox_to_anchor=(0.5, 0.025), # 0 was too low, 0.05 high,
+        ncol=3, # Adjust based on the number of methods for better spacing
+        fontsize=17,
+        title=None,frameon=False,
+        title_fontsize=14
+    )
+
+    plt.tight_layout(rect=[0, 0.1, 1, 1]) # Adjust bottom for legend space
+    plt.show()
+    return fig
 
 
 
