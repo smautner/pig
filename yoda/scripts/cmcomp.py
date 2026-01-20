@@ -446,7 +446,11 @@ def slopplot_vertical(df_hitrate: pd.DataFrame, df_precrec: pd.DataFrame):
         df_precrec (pd.DataFrame): DataFrame with precision-recall data.
             Expected columns: 'recall', 'precision', 'Method', 'Distances'.
     """
+
+
+    sns.reset_orig()
     sns.set_theme('notebook', font_scale=1.5)
+
     def _plot_hitrate_on_ax(df, ax):
         ylabel = 'Label Hit Rate'
         df_filtered = df[(df.Distances == 'normalized') & (df.Method != 'Infernal_global')]
@@ -462,8 +466,6 @@ def slopplot_vertical(df_hitrate: pd.DataFrame, df_precrec: pd.DataFrame):
         ax.set_ylabel('Precision')
         ax.set_title('Precision-Recall Curve')
 
-    sns.set_theme()
-    sns.set_context("talk")
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12)) # Two rows, one column, adjust figsize
 
     _plot_precrec_on_ax(df_precrec, ax1)
@@ -481,7 +483,7 @@ def slopplot_vertical(df_hitrate: pd.DataFrame, df_precrec: pd.DataFrame):
         handles, labels, loc='lower center',
         bbox_to_anchor=(0.5, 0.025), # 0 was too low, 0.05 high,
         ncol=3, # Adjust based on the number of methods for better spacing
-        fontsize=17,
+        # fontsize=17,
         title=None,frameon=False,
         title_fontsize=14
     )

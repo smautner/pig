@@ -320,14 +320,18 @@ def prep_plotHits(kraidmatrix, edenmatrix,cmcmat,l):
 
 
 def plotHits(df):
-    sns.set_theme('notebook', font_scale=1.5)
+    # sns.set_theme('notebook', font_scale=1.5)
+    sns.set_theme()
+    sns.reset_orig()
+    sns.set_theme('notebook', font_scale=1)
     hue = 'method'
     df['method'] = df['method'].replace('Random', 'random')
     ax= sns.lineplot(df, x= 'neighbors', y= 'Label Hit Rate', hue = hue, **gethue(df,hue))
     plt.xlabel('Neighbors')
     plt.ylabel( 'Label Hit Rate')
     ax.legend(title=None, frameon=False)
-    sns.move_legend(ax, "upper left", bbox_to_anchor=(0, -0.2), ncol=2)
+    sns.move_legend(ax, "upper left", bbox_to_anchor=(-.1, -0.2), ncol=4)
+    plt.show()
     return ax
 
 
@@ -417,15 +421,19 @@ def plotNeedle3(df):
     df['Method'] = df['Method'].replace({
         'average embedding search': 'Average Embedding',
         'rank average next in line': 'Rank Average NIL',
-        'distance average next in line': 'Distance Average NIL'
+        'distance average next in line': 'Distance Average NIL',
     })
 
-    sns.set_theme('notebook', font_scale=1.5)
+    sns.reset_orig()
+    sns.set_theme('notebook', font_scale=1)
+    # sns.set_theme('notebook', font_scale=1.5)
     ax = sns.lineplot(data=df, x='neighbors', y='Label Hit Rate', hue='Method')
     plt.ylabel('Second Position Hit Rate')
     ax.legend(title=None, frameon=False)
     # sns.move_legend(ax, "upper left", bbox_to_anchor=(0, -0.2), ncol=2)
-    sns.move_legend(ax, "upper left", bbox_to_anchor=(0, -0.2), ncol=1)
+    plt.xlabel('Neighbors')
+    sns.move_legend(ax, "upper left", bbox_to_anchor=(-.1, -0.2), ncol=2)
+    plt.show()
     return ax
 
 
