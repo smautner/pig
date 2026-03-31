@@ -600,7 +600,7 @@ def make_results_table(data,l, runtime):
 def hist(aa):
     lengths = [a.alignment.shape[1] for a in aa]
     l = np.array(lengths)
-    print(f"{sum(l<1000)=} out of {len(l)}")
+    print(f"{sum(l > 400)=} out of {len(l)}")
     plt.figure(figsize=(10, 6))
     plt.xscale('log')
     sns.histplot(lengths, bins=60, kde=True, color='skyblue', edgecolor='black')
@@ -608,6 +608,10 @@ def hist(aa):
     plt.xlabel('Alignment Length')
     plt.ylabel('Frequency')
     plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.show()
+
+    sns.histplot([l for l in lengths if l > 400 and l < 1000], bins=100, kde=False, color='skyblue', edgecolor='black')
+
     plt.show()
 
 

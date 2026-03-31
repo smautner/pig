@@ -1,9 +1,10 @@
+from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 from yoda.graphs import alignment_to_vectors
 from ubergauss import optimization as op
 import yoda.ml.simpleMl as sml
 import yoda.ml.distances as yodadist
 import smallgraph as sg
-
+import numpy as np
 
 def mkparams():
     experiments = {}
@@ -280,22 +281,18 @@ def overfit_plot(numparams=10, numdata = 3):
         - a train/test accuracy plot  ?? maybe later...
         - and the other one :)
     '''
-
     # get some paramz
     myspace = sg.string_to_space(space)
     parameters = [myspace.sample() for i in range(numparams)]
     for i,p in enumerate(parameters):
         p['ex_id'] = i
-
     # prepare the data
     data_all = [sg.makedata(splits=2) for i in range(numdata)]
     datasets = [d[:2] for d in data_all]
     test_sets = [d[2] for d in data_all]
-
     # quick test
     # eval(*datasets[0],**parameters[0])
     # print('ok')
-
     results =  op.gridsearch(eval, datasets, tasks = parameters, mp=True)
     return results
 
@@ -336,4 +333,153 @@ def oldplot(results):
     plt.title('Performance across different datasets')
     plt.show()
 
+def overfit_data_new(numparams=10, rep = 2):
+    # prepare the data
+    # datasets = Flatten([[[d[0],d[1]],d[2]] for d in data_all])
+    # data_all = [sg.makedata(splits=2) for i in range(rep)]
+
+    # get some paramz
+    results = []
+    for e in range(rep):
+        data_all = sg.makedata(splits=2)
+        datasets = [data_all[:2],data_all[2]]
+
+        myspace = sg.string_to_space(space)
+        params = [myspace.sample() for i in range(numparams)]
+        for i,p in enumerate(params):
+            p['ex_id'] = i
+        re = op.gridsearch(eval, datasets, tasks = params, mp=True)
+        results.append(re)
+
+    # quick test
+    # eval(*datasets[0],**parameters[0])
+    return results
+
+# def newplot(results):
+#     the current versio of this function, assumes that results is a single dataframe.
+#     it is now a list of dataframes. it was produced by overfit_data_new (above).
+#     adjust this function to the new situation.
+
+
+def newplot(results_list):
+    train_lines = []
+    test_lines = []
+
+
+    def getlines(train, test):
+        idx_best = [train['score'].iloc[:i+1].values.argmax() for i in range(len(train))]
+        tline = train['score'].cummax().values.tolist()
+        line = [test.iloc[idx]['score'] for idx in idx_best]
+        return tline,line
+
+
+    for df in results_list:
+        train = df[df['data_id'] % 2 == 0]
+        test = df[df['data_id'] % 2 != 0].copy()
+        # test['data_id'] -= 1
+        a,b = getlines(train, test)
+        train_lines.append(a)
+        test_lines.append(b)
+        a,b = getlines(test, train)
+        train_lines.append(a)
+        test_lines.append(b)
+
+
+
+    df_plot = pd.concat([
+        pd.DataFrame(train_lines).melt(var_name='it', value_name='score').assign(type='Train'),
+        pd.DataFrame(test_lines).melt(var_name='it', value_name='score').assign(type='Test')
+    ])
+
+    sns.set_theme(style="whitegrid")
+    ax = sns.lineplot(data=df_plot, x='it', y='score', hue='type', palette={'Train': 'blue', 'Test': 'red'})
+    ax.set(xlabel='Optimization Iteration', ylabel='Average Precision')
+    plt.show()
+
+
+    # draw 2 more plots, just dumping the lines. make it very simple
+
+    plt.figure()
+    for line in train_lines: plt.plot(line, color='blue', alpha=0.3)
+    plt.show()
+    plt.figure()
+    for line in test_lines: plt.plot(line, color='red', alpha=0.3)
+    plt.show()
+
+    return ax
+
+
+
+
+
+#     # first we need to process the data a bit,
+#     # split data into even and odd data_ids
+#     even_data = results[results['data_id'] % 2 == 0]
+#     odd_data = results[results['data_id'] % 2 != 0 ]
+#     odd_data.data_id = odd_data.data_id -1  # match the grouping...
+
+#     # next we can calculate the lines..
+#     test_lines = []
+#     train_lines = []
+
+#     def addlines(train, test):
+#         for gid, group in train.groupby('data_id'):
+#                 test_group = test[test['data_id'] == gid]
+
+#                 # sort by iteration id
+#                 group = group.sort_values('ex_id')
+#                 test_group = test_group.sort_values('ex_id')
+
+#                 # calculate "best so far" cumulative max
+#                 train_best = group['score'].cummax()
+
+
+
+#                 idx_best = [group['score'].iloc[:i+1].values.argmax() for i in range(len(group))]
+#                 # idx_best = [group['score'].iloc[:i+1].idxmax() for i in range(len(group))]
+
+#                 test_at_best = [test_group.iloc[idx]['score'] for idx in idx_best]
+
+#                 train_lines.append(train_best.values)
+#                 test_lines.append(test_at_best)
+
+#     addlines(even_data, odd_data)
+#     addlines(odd_data, even_data)
+
+#     print(test_lines)
+#     print(train_lines)
+
+#     # Convert to arrays for plotting
+#     train_lines = np.array(train_lines)
+#     test_lines = np.array(test_lines)
+#     x = range(len(np.unique(results['ex_id'])))
+#     sns.set_theme(style="whitegrid")
+#     plt.figure(figsize=(10, 6))
+
+#     # Plot means and shaded variance
+#     def plot_band(data, label, color):
+#         mean = np.mean(data, axis=0)
+#         std = np.std(data, axis=0)
+#         plt.plot(x, mean, label=label, color=color, linewidth=2)
+#         plt.fill_between(x, mean - std, mean + std, color=color, alpha=0.2)
+
+#     plot_band(train_lines, 'Train (Best So Far)', 'blue')
+#     plot_band(test_lines, 'Test (at Train Best)', 'red')
+
+#     plt.xlabel('Optimization Iteration')
+#     plt.ylabel('Average Precision')
+#     plt.legend()
+#     plt.show()
+
+
+#     # can we  draw this via sns and return the ax-object? no new function!
+
+#     df = pd.concat([
+#         pd.DataFrame(np.array(train_lines)).melt(var_name='it', value_name='score').assign(type='Train'),
+#         pd.DataFrame(np.array(test_lines)).melt(var_name='it', value_name='score').assign(type='Test')
+#     ])
+#     sns.set_theme(style="whitegrid")
+#     ax = sns.lineplot(data=df, x='it', y='score', hue='type', palette={'Train': 'blue', 'Test': 'red'})
+#     ax.set(xlabel='Optimization Iteration', ylabel='Average Precision')
+#     return ax
 

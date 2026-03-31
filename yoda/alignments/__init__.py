@@ -6,7 +6,9 @@ from yoda.graphs.ali2graph import manifest_sequences
 from yoda.alignments import filein, clans, alignment, eslweights
 import numpy as np
 
-def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/test2', sequenec_weights = '~/weights.rfam'):
+# def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/test2', sequenec_weights = '~/weights.rfam'):
+# def load_rfam(seedpath = '~/rfam151.seed.utf8', full = False, add_cov = '~/rfam/test2', sequenec_weights = '~/weights.rfam'):
+def load_rfam(seedpath = '~/rfam151.seed.utf8', full = False, add_cov = '~/rfam/test2', sequenec_weights = '~/easlweight15.1.rfam'):
     alignments = filein.readseedfile(ut.fixpath( seedpath))
     weights = eslweights.getWeights(ut.fixpath(sequenec_weights)) if sequenec_weights else False
     labels = clans.getlabels(alignments)
