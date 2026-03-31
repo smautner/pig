@@ -1,5 +1,8 @@
 import re
 
+
+# this makes the weights: ./esl-weight  ~/rfam151.seed.utf8 > ~/easlweight15.1.rfam
+
 def getWeights(filepath):
     """
     Parses an Rfam seed file (Stockholm format) annotated with ESL weights
