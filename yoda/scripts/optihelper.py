@@ -483,3 +483,59 @@ def newplot(results_list):
 #     ax.set(xlabel='Optimization Iteration', ylabel='Average Precision')
 #     return ax
 
+
+
+# def optimize_xx(trials):
+#     '''
+#     - load the dataset load_rfam()
+#     - use 'space', sample trials parameter
+#     - run the optimization, some place here should show yo how...
+#     '''
+#     return trials, labels
+# def optimize_table(trials,labels):
+#     '''
+#     use optimize_xx output, it will be a pandas file with parameters and a score column
+#     the row with the highest score wins
+#     make me a latex table with the parametername, explored range (from the pace variable), correlation to target (mutual info or whatever one uses for labeled data), the best value
+#     '''
+
+
+def optimize_xx(trials=100):
+    alis,labels  = sg.makedata(splits=1)
+    myspace = sg.string_to_space(space)
+    params = [myspace.sample() for _ in range(trials)]
+    results = op.gridsearch(eval, [(alis, labels)], tasks=params, mp=True)
+    return results
+
+def optimize_table(results):
+    from sklearn.feature_selection import mutual_info_regression
+
+    # Extract parameter names from the global 'space' string
+    param_info = [line.split() for line in space.strip().split('\n')]
+    param_names = [p[0] for p in param_info]
+
+    # Prepare data for MI calculation
+    X = results[param_names].apply(pd.to_numeric, errors='coerce').fillna(0)
+    y = results['score']
+    mi = mutual_info_regression(X, y)
+
+    best_idx = y.idxmax()
+    best_params = results.loc[best_idx]
+
+    rows = []
+    for i, p in enumerate(param_info):
+        name = p[0]
+        rng = f"{p[1]} - {p[2]}"
+        rows.append({
+            'Parameter': name,
+            'Range': rng,
+            'MI Score': f"{mi[i]:.3f}",
+            'Best Value': best_params[name]
+        })
+
+    df_table = pd.DataFrame(rows)
+    return df_table.to_latex(index=False)
+
+
+
+

@@ -47,7 +47,7 @@ from yoda.scripts.colormap import gethue
 def dumpcm(family_id1):
     # Extract alignments from Stockholm file based on family IDs
     align1_path = f'{family_id1}.fasta'
-    with open('/home/ubuntu/Rfam.seed.utf8', 'r') as stockholm_file:
+    with open('/home/ubuntu/rfam151.seed.utf8', 'r') as stockholm_file:
         found1 = False
         with open(align1_path, 'w') as align1_file:
             align1_file.write('# STOCKHOLM 1.0\n\n')
@@ -75,13 +75,15 @@ def compare_cm(_, names, cm1=None, cm2=None):
     cm2 = names[cm2]
 
 
-    cache_file = f"./cmbigres/{cm1}_{cm2}.json"
+    # cache_file = f"./cmbigres/{cm1}_{cm2}.json"
+    cache_file = f"/home/ubuntu/data/cmcom_delme/{cm1}_{cm2}.json"
 
     if os.path.exists(cache_file):
         with open(cache_file, 'r') as f:
             return json.load(f)
 
-    compare_cmd = f'/home/ubuntu/hsCMCompare-fedora12-x64 -q {cm1}.cm {cm2}.cm'
+    path = '/home/ubuntu/repos/pig/data/2026_3_cmfasta/'
+    compare_cmd = f'/home/ubuntu/hsCMCompare-fedora12-x64 -q {path}{cm1}.cm {path}{cm2}.cm'
     result = subprocess.run(compare_cmd, shell=True, check=True, capture_output=True, text=True)
     score = result.stdout.split()[3]
     score2 = result.stdout.split()[2]
@@ -100,16 +102,18 @@ def compare_cm(_, names, cm1=None, cm2=None):
     ##score = float(score_line.split()[2])
     #return {'score':float(score),'score2': float(score2)}
 
-def run_cmcompare_pairwise(names, sizes):
+def run_cmcompare_pairwise(names):#, sizes):
     num_cm = len(names) # or just use 10 for debugging :)
 
-    sizes= dict(enumerate(sizes))
+    # sizes= dict(enumerate(sizes))
     return uo.gridsearch(compare_cm,
                     param_dict = {'cm1':lmz.Range(num_cm), 'cm2':lmz.Range(num_cm)},
                     data_list = [[False]],
                     mp=True,
-                    taskfilter = lambda x: x['cm1'] <  x['cm2'] and( sizes[x['cm1']] < 1000 or sizes[x['cm2']] < 1000),
+                    # taskfilter = lambda x: x['cm1'] <  x['cm2'] and( sizes[x['cm1']] < 1000 or sizes[x['cm2']] < 1000),
+                    taskfilter = lambda x: x['cm1'] <  x['cm2'],
                     names= names)
+
 
 
 
@@ -132,6 +136,7 @@ def test_cmcompare():
     #r = r.drop(columns=['names']) why should names be in there ..
     r.to_csv('latest.csv', index=False)
     return r
+
 def test_load():
     a,l = load_rfam(full=True,add_cov = False)
     load_latest_cmcompare(l)
