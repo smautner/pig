@@ -330,12 +330,15 @@ def k_clan_discovery(X,l,k):
 
 import ubergauss.hubness as uh
 
+DIST_RAW_LABEL = 'Raw'
+DIST_CSLS_LABEL = 'Corrected'
+
 def mkHitRateData(data,l):
     r = []
     ylabel = 'Label Hit Rate'
     for k,dist in data.items():
         for i,val in enumerate( k_clan_discovery(dist,l,50)[1:]):
-            r+=[{'Distances':'unmodified','Method':k,'neighbors':i+1,ylabel:val}]
+            r+=[{'Distances':DIST_RAW_LABEL,'Method':k,'neighbors':i+1,ylabel:val}]
 
         # dist_norm = normalize(dist, axis=0)
         dist_norm = nearneigh.normalize_csls(dist)
@@ -343,7 +346,7 @@ def mkHitRateData(data,l):
         # dist_norm += np.abs(dist_norm.min()) + 1
 
         for i,val in enumerate(k_clan_discovery(dist_norm,l,50)[1:]):
-            r+=[{'Distances':'normalized','Method':k,'neighbors':i+1,ylabel:val}]
+            r+=[{'Distances':DIST_CSLS_LABEL,'Method':k,'neighbors':i+1,ylabel:val}]
 
     df = pd.DataFrame(r)
     return df
@@ -363,7 +366,7 @@ def plot_hitrate_plusCSLS(df):
 
 def plot_hitrate_noCSLS(df):
     ylabel= 'Label Hit Rate'
-    df = df[df.Distances == 'normalized']
+    df = df[df.Distances ==  DIST_CSLS_LABEL]
     df = df[df.Method != 'Infernal_global']
     sns.set_theme()
     sns.set_context("talk")
@@ -458,14 +461,14 @@ def slopplot_vertical(df_hitrate: pd.DataFrame, df_precrec: pd.DataFrame):
 
     def _plot_hitrate_on_ax(df, ax):
         ylabel = 'Label Hit Rate'
-        df_filtered = df[(df.Distances == 'normalized') & (df.Method != 'Infernal_global')]
+        df_filtered = df[(df.Distances == DIST_CSLS_LABEL) & (df.Method != 'Infernal_global')]
         sns.lineplot(data=df_filtered, x='neighbors', y=ylabel, hue='Method', ax=ax, **gethue(df_filtered))
         ax.set_xlabel('Neighbors')
         ax.set_ylabel('Label Hit Rate')
         ax.set_title('Neighbor Hit Rate')
 
     def _plot_precrec_on_ax(df, ax):
-        df_filtered = df[(df.Distances == 'Normalized') & (df.Method != 'Infernal_global')]
+        df_filtered = df[(df.Distances == DIST_CSLS_LABEL) & (df.Method != 'Infernal_global')]
         sns.lineplot(data=df_filtered, y='precision', x='recall', hue='Method', ax=ax, **gethue(df_filtered, 'Method'))
         ax.set_xlabel('Recall')
         ax.set_ylabel('Precision')
@@ -531,7 +534,7 @@ def collect_results_precrec(data: dict, labels: np.ndarray) -> list:
         # Process raw distances
         precision, recall = compute_precision_recall(dist_matrix, labels)
         for p_val, r_val in zip(precision, recall):
-            results.append({'Distances': 'Raw', 'Method': method_name, 'precision': p_val, 'recall': r_val})
+            results.append({'Distances': DIST_RAW_LABEL, 'Method': method_name, 'precision': p_val, 'recall': r_val})
 
         # Process normalized distances using CSLS normalization from nearneigh
         normalized_matrix = nearneigh.normalize_csls(dist_matrix)
@@ -542,7 +545,7 @@ def collect_results_precrec(data: dict, labels: np.ndarray) -> list:
 
         precision, recall = compute_precision_recall(normalized_matrix, labels)
         for p_val, r_val in zip(precision, recall):
-            results.append({'Distances': 'Normalized', 'Method': method_name, 'precision': p_val, 'recall': r_val})
+            results.append({'Distances': DIST_CSLS_LABEL, 'Method': method_name, 'precision': p_val, 'recall': r_val})
     return results
 
 
@@ -567,7 +570,9 @@ def plot_precision_recall_curve(dataframe, hue_column='Method', style_column=Non
 
 def make_results_table(data,l, runtime):
     AUC_label = "Precision/Recall AUC"
+    AUC_label = "PR AUC"
     AP_label = "Average Precision"
+    AP_label = "mAP"
     results = []
 
     def process_matrix(method, matrix, normalized):
@@ -587,8 +592,8 @@ def make_results_table(data,l, runtime):
         norm_text = "normalized" if normalized else "raw"
         print(f"{method} {norm_text} AUC: {auc_score}")
         print(f"{method} {norm_text} mAP: {map_score}")
-        results.append({'method': method, 'scoretype': AUC_label, 'normalized': norm_flag, 'score': auc_score})
-        results.append({'method': method, 'scoretype': AP_label, 'normalized': norm_flag, 'score': map_score})
+        results.append({'method': method, 'metric': AUC_label, 'normalized': norm_flag, 'score': auc_score})
+        results.append({'method': method, 'metric': AP_label, 'normalized': norm_flag, 'score': map_score})
 
     for method, dist in data.items():
         process_matrix(method, dist, normalized=False)
@@ -596,11 +601,59 @@ def make_results_table(data,l, runtime):
         process_matrix(method, normalized_matrix, normalized=True)
 
     df = pd.DataFrame(results)
-    df2 = df.pivot_table(index='method', columns=['scoretype', 'normalized'], values='score', fill_value=0)
+    df2 = df.pivot_table(index='method', columns=['metric', 'normalized'], values='score', fill_value=0)
+
+    df2 = df2.reindex(columns=['yes', 'no'], level='normalized')
+
     df2['runtime'] = df2.index.map(runtime)
+
+
+    df2.index.name = 'Method'
 
     return df2
 
+def table_to_latex(df):
+
+    tex = df.to_latex(index=True,  header=True, float_format="%.2f")
+
+    # lines = tex.split('\n'); tex = '\n'.join([line for line in lines if not line.strip().startswith('method')])
+    tex = tex.replace('normalized', 'CSLS')
+    tex = tex.replace('metric', '')
+
+
+    lines = tex.split('\n')
+    for i, line in enumerate(lines):
+        if 'KRAID' in line:
+            parts = line.split()
+            print(f"{parts=}")
+            parts[2] = f" \\textbf{{{parts[2].strip()}}} "
+            parts[6] = f" \\textbf{{{parts[6].strip()}}} "
+            lines[i] = ' '.join(parts)
+    tex = '\n'.join(lines)
+
+
+    lines = tex.split('\n')
+    for i, line in enumerate(lines):
+        if 'NSPDK' in line:
+            parts = line.split()
+            print(f"{parts=}")
+            parts[10] = f" \\textbf{{{parts[10].strip()}}} "
+            lines[i] = ' '.join(parts)
+    tex = '\n'.join(lines)
+
+
+
+    new_header = r"""\begin{tabular}{lrr|rr|l}
+\toprule
+ & PR AUC& & mAP & & runtime \\
+CSLS &    yes &   no &  yes & no &  \\
+Method          &        &      &      &      &         \\
+\midrule"""
+    tex = tex.split(r'\midrule')[-1]
+    tex = new_header + tex
+
+
+    return tex
 
 def hist(aa):
     lengths = [a.alignment.shape[1] for a in aa]
@@ -626,3 +679,11 @@ def filterdown(m1,m2,m3,l,aa):
     return  m1[mask], m2[mask], m3[mask][:,mask], np.array(l)[mask]
 
 
+def sanity_check(data):
+    for key in data:
+        temp_mtx = data[key].copy()
+        np.fill_diagonal(temp_mtx, np.nanmean(temp_mtx))
+        # plt.figure()
+        sns.heatmap(temp_mtx)
+        plt.title(f'Sanity Check: {key}')
+        plt.show()

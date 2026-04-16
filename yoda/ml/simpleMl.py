@@ -172,6 +172,7 @@ def average_precision(distances,y, skip = set()):
     skipping is for the test set, where clans have been extended in rf15
     '''
     def score(i):
+        'this scores row i'
         if y[i] ==0:
             return np.nan
 
@@ -182,8 +183,9 @@ def average_precision(distances,y, skip = set()):
         y_true = (y == y[i])
         y_scores = -distances[i]
 
-        mask = i != np.arange(len(y))
-        return average_precision_score(y_true[mask], y_scores[mask])
+        # mask = i != np.arange(len(y))
+        # return average_precision_score(y_true[mask], y_scores[mask])
+        return average_precision_score(y_true, y_scores)
 
     data = np.array(Map(score, [yy for yy in Range(y) if yy not in skip]))
     return np.nanmean(data)
