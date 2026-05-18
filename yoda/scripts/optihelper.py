@@ -8,14 +8,14 @@ import numpy as np
 
 def mkparams():
     experiments = {}
-    experiments['full'] = {}
-    experiments['default kernel parameters'] =  {"min_r": 3, "min_d": 3}
-    experiments['no hubness correction'] = {'kiezMethod': 0}
-    experiments['no nesting edges'] = {'nest': False}
-    experiments['no conservation on edges'] =  {"fix_edges": False}
-    experiments['no conservation smoothing'] = {'d1 ': 0, 'd2': 0}
-    experiments['conservation ignored'] =  {"bad_weight": 1}
-    experiments['conservation unbinned'] =  {"bad_weight": 9999}
+    experiments['Full'] = {}
+    experiments['Default kernel parameters'] =  {"min_r": 3, "min_d": 3}
+    experiments['No hubness correction'] = {'kiezMethod': 0}
+    experiments['No nesting edges'] = {'nest': False}
+    experiments['No conservation on edges'] =  {"fix_edges": False}
+    experiments['No conservation smoothing'] = {'d1 ': 0, 'd2': 0}
+    experiments['Conservation ignored'] =  {"bad_weight": 1}
+    experiments['Conservation unbinned'] =  {"bad_weight": 9999}
 
     def fix(k,v):
         v['experiment'] = k
@@ -72,12 +72,12 @@ def plot(results):
     plt.xticks(rotation=45, ha='right')
 
     plt.xlabel('')
-    plt.ylabel('relative degredation')
+    plt.ylabel('Relative degredation')
     return barplot
 
 
 
-def eval(alis,labels,
+def eval(x,
          matrix = None,
          ct = .965,
          RYthresh = 0,
@@ -99,6 +99,7 @@ def eval(alis,labels,
          min_d = 1,
          **nothingtosee):
 
+    alis, labels = x
     if matrix is None:
         matrix = alignment_to_vectors(alis, RYthresh=RYthresh,d1=d1,d2=d2,
                                   fix_edges=fix_edges,ct=ct,bad_weight=bad_weight,
@@ -137,7 +138,6 @@ def eval(alis,labels,
     # ret = {'score': ret,   'score_knn': sml.knn_accuracy(matrix,labels,4),  'score_ari': sml.kmeans_ari(matrix, labels)}
     # return ret
     '''
-
 
 
 
@@ -275,7 +275,7 @@ simplegraph 0 1 1
 bad_weight 0 .3'''
 
 
-def overfit_plot(numparams=10, numdata = 3):
+def hyperparam_robust_collect(numparams=10, numdata = 3):
     '''
     we will make 2 plots:
         - a train/test accuracy plot  ?? maybe later...
@@ -293,23 +293,34 @@ def overfit_plot(numparams=10, numdata = 3):
     # quick test
     # eval(*datasets[0],**parameters[0])
     # print('ok')
-    results =  op.gridsearch(eval, datasets, tasks = parameters, mp=True)
+
+    def evalds(ds, **parameters):
+        return Map(eval, ds, **parameters)
+        # return eval(*ds, **parameters[0])
+
+    results =  op.gridsearch(evalds, datasets, tasks = parameters, mp=True)
     return results
 
 
-def oldplot(results):
+def hyperparam_robust_plot(results):
+    '''
+    '''
     # results is a df with a data_id column..
     # for each data_id we repeated the experiment x times, we assume data is in order!
 
     # pivot to have columns = data_id..
-    results_pivot = results.pivot(index='ex_id', columns='data_id', values='score')
+
+    results_pivot = results.explode('score')
+
+    results_pivot['data_id'] = results_pivot.groupby(level=0).cumcount()
+    results_pivot = results_pivot.pivot(index='ex_id', columns='data_id', values='score').astype(float)
+
+
 
     # sort rows by mean
     results_pivot['mean_score'] = results_pivot.mean(axis=1)
     results_pivot = results_pivot.sort_values(by='mean_score', ascending=True)
     results_pivot = results_pivot.drop(columns='mean_score')
-
-
 
     # # we need viridis colors each column (dataset)
     # datatable =  results_pivot.values # to numpy
@@ -319,18 +330,28 @@ def oldplot(results):
     #     plt.scatter( range(datatable.shape[0]), datatable[:,i], color=colors[i], label=f"data {i+1}")
     # plt.show()
 
-
     # now the rows are sorted. we can just reindex each row..
     results_pivot['ex_id'] = range(results_pivot.shape[0])
     # .. and melt back
     melted = results_pivot.melt(id_vars=['ex_id'], var_name='data_id', value_name='score')
 
     # now we are ready to scatter
-    sns.set_theme('talk')
+
+    sns.set_theme("notebook")
     sns.scatterplot(data=melted, x="ex_id", y="score", hue="data_id", palette='viridis')
-    plt.xlabel('random parameter set (sorted)')
-    plt.ylabel('score')
-    plt.title('Performance across different datasets')
+    plt.xlabel('Random parameter set (sorted)')
+    plt.ylabel('mAP Score')
+
+    # ok the data_id legend is a bit annoying.. can we compress that information somehow and put it in the lower right of the plot? -> just make the legend, no redrawing
+    # is dataset the right title? its a bootstrap sample or something? whats scientifically accurate?
+
+# 'Sample' or 'Resample' is more accurate if they are bootstrap/shuffled splits.
+    # 'Split' is standard for CV. 'Fold' if applicable.
+    # Let's use 'Dataset Instance' to be safe.
+    plt.legend(loc='lower right', title='Sample', fontsize='small', ncol=3)
+
+
+    # plt.title('Performance across different datasets')
     plt.show()
 
 def overfit_data_new(numparams=10, rep = 2):
@@ -504,8 +525,24 @@ def optimize_xx(trials=100):
     alis,labels  = sg.makedata(splits=1)
     myspace = sg.string_to_space(space)
     params = [myspace.sample() for _ in range(trials)]
-    results = op.gridsearch(eval, [(alis, labels)], tasks=params, mp=True)
+    results = op.gridsearch(eval, (alis, labels), tasks=params, mp=True)
     return results
+
+
+from ubergauss.optimization import gatype
+def test_ga(data=False):
+    # ut.nuke()
+    # alis,labels  = sg.makedata(splits=1)
+    if not data:
+        data = sg.makedata(splits=1)
+    alis,labels = data
+    o = gatype.nutype(space,
+                   eval,
+                   data=[(alis, labels)],
+                   numsample=32)
+    [o.opti() for _ in range(5)]
+    o.print()
+    # o.print_more()
 
 def optimize_table(results):
     from sklearn.feature_selection import mutual_info_regression
@@ -533,9 +570,29 @@ def optimize_table(results):
             'Best Value': best_params[name]
         })
 
+    # ct = cutoff_conserved; bad_weight = weight_unconserved, kiezK = hubness_k, kiezMethod = hubness_method
+
+    rename_map = {
+        'ct': 'cutoff_conserved',
+        'bad_weight': 'weight_unconserved',
+        'kiezK': 'hubness_k',
+        'kiezMethod': 'hubness_method',
+        'nest': 'h_bond_special',
+        'd1': 'smooth_cons_1',
+        'd2': 'smooth_cons_2'
+    }
+
+    for row in rows:
+        row['Parameter'] = rename_map.get(row['Parameter'], row['Parameter'])
+
+
+
     df_table = pd.DataFrame(rows)
+    df_table = df_table[df_table['Parameter'] != 'simplegraph']
     return df_table.to_latex(index=False)
 
+    # df_table = pd.DataFrame(rows)
+    # return df_table.to_latex(index=False)
 
 
 

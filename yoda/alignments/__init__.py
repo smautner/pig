@@ -8,8 +8,17 @@ import numpy as np
 
 # def load_rfam(seedpath = '~/Rfam.seed.utf8', full = False, add_cov = '~/rfam/test2', sequenec_weights = '~/weights.rfam'):
 # def load_rfam(seedpath = '~/rfam151.seed.utf8', full = False, add_cov = '~/rfam/test2', sequenec_weights = '~/weights.rfam'):
-def load_rfam(seedpath = '~/rfam151.seed.utf8', full = False, add_cov = '~/rfam/test2', sequenec_weights = '~/easlweight15.1.rfam'):
+
+def load_rfam(seedpath = '~/rfam151.seed.utf8', full = False,
+              filter_size = 1040,
+              add_cov = '~/rfam/test2', sequenec_weights = '~/easlweight15.1.rfam'):
+
+
     alignments = filein.readseedfile(ut.fixpath( seedpath))
+
+    if filter_size:
+        alignments = [a for a in alignments if a.alignment.shape[1] < filter_size]
+
     weights = eslweights.getWeights(ut.fixpath(sequenec_weights)) if sequenec_weights else False
     labels = clans.getlabels(alignments)
 

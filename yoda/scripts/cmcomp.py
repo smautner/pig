@@ -76,13 +76,18 @@ def compare_cm(_, names, cm1=None, cm2=None):
 
 
     # cache_file = f"./cmbigres/{cm1}_{cm2}.json"
-    cache_file = f"/home/ubuntu/data/cmcom_delme/{cm1}_{cm2}.json"
+    # cache_file = f"/home/ubuntu/data/cmcom/cmcom_delme/{cm1}_{cm2}.json"
+    cache_file = f"/home/ubuntu/data/cmcom/cmbigres/{cm1}_{cm2}.json"
 
+    # print(f"{cache_file=}")
     if os.path.exists(cache_file):
         with open(cache_file, 'r') as f:
-            return json.load(f)
+            # it can also be empty, where we resume , therwise return the loaded results
+            if f.read(1):
+                f.seek(0)
+                return json.load(f)
 
-    path = '/home/ubuntu/repos/pig/data/2026_3_cmfasta/'
+    path = f"/home/ubuntu/data/cmcom/2026_3_cmfasta/"
     compare_cmd = f'/home/ubuntu/hsCMCompare-fedora12-x64 -q {path}{cm1}.cm {path}{cm2}.cm'
     result = subprocess.run(compare_cmd, shell=True, check=True, capture_output=True, text=True)
     score = result.stdout.split()[3]
@@ -188,6 +193,43 @@ def load_latest_cmcompare(labels, file = 'cmcomp_big.csv'):
     # Convert to distance matrix
     cmcompare_dist = to_dist(pivot_numpy(full_df))
     return cmcompare_dist
+
+
+
+def rerun4k():
+    '''
+    -  the loadedr will remove long alignments..
+    '''
+    # 1. make sure we have all the fasta and cm files in /home/ubuntu/data/cmcom/2026_3_cmfasta
+    # 2. run the pairwise cmcompare on all pairs -> cache in  /home/ubuntu/data/cmcom/cmbigres
+    # 3. dump csv file
+
+    alignments, _ = load_rfam(full=True, add_cov = False)
+    print(f"got ali!")
+    # alignments =alignments[:10]
+
+    # 1. ensure path exists
+    save_path = "/home/ubuntu/data/cmcom/2026_3_cmfasta/"
+    # os.makedirs(save_path, exist_ok=True)
+
+    # 2. dump fasta and build CMs
+    names = [aa.gf["AC"].split()[1] for aa in alignments]
+    for name in names:
+        if not os.path.exists(f"{save_path}{name}.cm"):
+            print(f" dumping: { name= }",)
+            dumpcm(name)
+            print(f"...",)
+            subprocess.run(f"mv {name}.fasta {name}.cm {save_path}", shell=True)
+            print(f"")
+
+    print(f"cm ing .. ",end = '')
+    # 3. run pairwise comparison
+    r = run_cmcompare_pairwise(names)
+    print(f"done")
+    # 4. cleanup and save results
+    r.to_csv('cmcomp_4k_20260418.csv', index=False)
+    return 0
+
 
 
 
@@ -330,7 +372,7 @@ def k_clan_discovery(X,l,k):
 
 import ubergauss.hubness as uh
 
-DIST_RAW_LABEL = 'Raw'
+DIST_RAW_LABEL = 'Uncorrected'
 DIST_CSLS_LABEL = 'Corrected'
 
 def mkHitRateData(data,l):
