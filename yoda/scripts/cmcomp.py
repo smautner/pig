@@ -67,59 +67,95 @@ def dumpcm(family_id1):
     subprocess.run(infernal_cmd1, shell=True, check=True)
     return True
 
-# RUN CMCOMPARE
+
+
+
+
+## RUN CMCOMPARE
+#import json
+#def compare_cm(_, names, cm1=None, cm2=None):
+#    cm1 = names[cm1]
+#    cm2 = names[cm2]
+#    # cache_file = f"./cmbigres/{cm1}_{cm2}.json"
+#    # cache_file = f"/home/ubuntu/data/cmcom/cmcom_delme/{cm1}_{cm2}.json"
+#    cache_file = f"/home/ubuntu/data/cmcom/cmbigres/{cm1}_{cm2}.json"
+#    # print(f"{cache_file=}")
+#    if os.path.exists(cache_file):
+#        with open(cache_file, 'r') as f:
+#            # it can also be empty, where we resume , therwise return the loaded results
+#            if f.read(1):
+#                f.seek(0)
+#                return json.load(f)
+#    path = f"/home/ubuntu/data/cmcom/2026_3_cmfasta/"
+#    compare_cmd = f'/home/ubuntu/hsCMCompare-fedora12-x64 -q {path}{cm1}.cm {path}{cm2}.cm'
+#    result = subprocess.run(compare_cmd, shell=True, check=True, capture_output=True, text=True)
+#    score = result.stdout.split()[3]
+#    score2 = result.stdout.split()[2]
+#    output = {'score':float(score),'score2': float(score2)}
+#    with open(cache_file, 'w') as f:
+#        json.dump(output, f)
+#    return output
+#    #compare_cmd = f'/home/ubuntu/hsCMCompare-fedora12-x64 -q {cm1}.cm {cm2}.cm'
+#    #result = subprocess.run(compare_cmd, shell=True, check=True, capture_output=True, text=True)
+#    ##print(result.stdout)
+#    #score = result.stdout.split()[3]
+#    #score2 = result.stdout.split()[2]
+#    ##score = float(score_line.split()[2])
+#    #return {'score':float(score),'score2': float(score2)}
+
+
 import os
-import json
-def compare_cm(_, names, cm1=None, cm2=None):
-    cm1 = names[cm1]
-    cm2 = names[cm2]
+import sqlite3
+def compare_cm_sql(_, names, cm1=None, cm2=None):
+    # sqlite3 /home/ubuntu/data/cmcom/cmbigres/scores.db "SELECT * FROM scores LIMIT 5;"
+    # ╭─────────┬─────────┬────────┬────────╮
+    # │   rf1   │   rf2   │  sc1   │  sc2   │
+    # ╞═════════╪═════════╪════════╪════════╡
+    # │ RF01173 │ RF01463 │ 10.942 │ 11.454 │
+    # same as compare_cm but there are no json files but scores.db, assume the table already exists!
 
+    db_path = "/home/ubuntu/data/cmcom/cmbigres/scores.db"
+    cm1, cm2 = names[cm1], names[cm2]
 
-    # cache_file = f"./cmbigres/{cm1}_{cm2}.json"
-    # cache_file = f"/home/ubuntu/data/cmcom/cmcom_delme/{cm1}_{cm2}.json"
-    cache_file = f"/home/ubuntu/data/cmcom/cmbigres/{cm1}_{cm2}.json"
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT sc1, sc2 FROM scores WHERE (rf1=? AND rf2=?) OR (rf1=? AND rf2=?)", (cm1, cm2, cm2, cm1))
+        row = cursor.fetchone()
 
-    # print(f"{cache_file=}")
-    if os.path.exists(cache_file):
-        with open(cache_file, 'r') as f:
-            # it can also be empty, where we resume , therwise return the loaded results
-            if f.read(1):
-                f.seek(0)
-                return json.load(f)
+    if row:
+        return {'score': float(row[0]), 'score2': float(row[1])}
 
     path = f"/home/ubuntu/data/cmcom/2026_3_cmfasta/"
     compare_cmd = f'/home/ubuntu/hsCMCompare-fedora12-x64 -q {path}{cm1}.cm {path}{cm2}.cm'
     result = subprocess.run(compare_cmd, shell=True, check=True, capture_output=True, text=True)
     score = result.stdout.split()[3]
     score2 = result.stdout.split()[2]
-
     output = {'score':float(score),'score2': float(score2)}
-    with open(cache_file, 'w') as f:
-        json.dump(output, f)
+
+    while True:
+        try:
+            with sqlite3.connect(db_path) as conn:
+                conn.execute("INSERT INTO scores (rf1, rf2, sc1, sc2) VALUES (?, ?, ?, ?)",
+                             (cm1, cm2, output['score'], output['score2']))
+            break
+        except sqlite3.OperationalError as e:
+            if 'locked' in str(e):
+                time.sleep(1)
+                print('.', end='', flush=True)
+            # else: raise e
     return output
 
 
-    #compare_cmd = f'/home/ubuntu/hsCMCompare-fedora12-x64 -q {cm1}.cm {cm2}.cm'
-    #result = subprocess.run(compare_cmd, shell=True, check=True, capture_output=True, text=True)
-    ##print(result.stdout)
-    #score = result.stdout.split()[3]
-    #score2 = result.stdout.split()[2]
-    ##score = float(score_line.split()[2])
-    #return {'score':float(score),'score2': float(score2)}
 
 def run_cmcompare_pairwise(names):#, sizes):
     num_cm = len(names) # or just use 10 for debugging :)
-
     # sizes= dict(enumerate(sizes))
-    return uo.gridsearch(compare_cm,
+    return uo.gridsearch(compare_cm_sql, 0,
                     param_dict = {'cm1':lmz.Range(num_cm), 'cm2':lmz.Range(num_cm)},
-                    data_list = [[False]],
                     mp=True,
                     # taskfilter = lambda x: x['cm1'] <  x['cm2'] and( sizes[x['cm1']] < 1000 or sizes[x['cm2']] < 1000),
                     taskfilter = lambda x: x['cm1'] <  x['cm2'],
                     names= names)
-
-
 
 
 def loadcmcomp(csvpath = 'cmcompare_full_run_2024_06_27'):
@@ -133,6 +169,7 @@ def loadcmcomp(csvpath = 'cmcompare_full_run_2024_06_27'):
 def test_cmcompare():
     a,l = load_rfam(full=True,add_cov = False)
     t = time.time()
+    a= a[:10]
     names = [aa.gf["AC"][3:] for aa in a]
     sizes = [aa.alignment.shape[1] for aa in a]
     # [dumpcm(name) for name in names]
