@@ -36,6 +36,7 @@ def neighbors(vecz, k = 100):
 
 from kiez import Kiez
 def normalize_csls(di):
+    assert False, 'do not use this anymore.. '
     k_inst = Kiez(algorithm='SklearnNN', hubness='csls',  n_candidates = di.shape[0]-1,
               algorithm_kwargs= {'metric' : 'precomputed'})
     k_inst.fit(di)
@@ -47,6 +48,19 @@ def normalize_csls(di):
     for i, neighbors in enumerate(indices2):
         complete_distance_matrix[i, neighbors] = dist2[i]
     return complete_distance_matrix
+
+
+from ubergauss import hubness as uh
+def csls(matrix):
+        matrix = uh.transform(matrix, k =10)
+        # there is an numpy  matrix, per row add abs(min) -> just few lines, then return matrix
+        return add_abs_min_to_rows(matrix)
+
+def add_abs_min_to_rows(matrix: np.ndarray) -> np.ndarray:
+    # Find the absolute minimum of each row, preserving shape for broadcasting
+    abs_mins: np.ndarray = np.abs(np.min(matrix, axis=1, keepdims=True))
+    # Return the matrix with the row-specific absolute minimum added to each element
+    return matrix + abs_mins
 
 
 

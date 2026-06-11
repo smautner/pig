@@ -4,26 +4,23 @@ import seaborn as sns
 from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 from collections import Counter
 import numpy as np
-from kiez import Kiez
+# from kiez import Kiez
 from matplotlib import pyplot as plt
-
 from colormap import gethue
 from ubergauss import hubness
 from ubergauss import tools as ut
 from sklearn.neighbors import NearestNeighbors
+from typing import Tuple
 
-def kiez_neighs(matrix, limit = 100):
-    '''
-    kiez still has this bug where one side is a one off error for the correction dist.
-    anyway.. we cant fix this everywhere now, should only  be a small error
-    '''
+def kiez_neighs(matrix, limit: int = 100) -> Tuple[np.ndarray, np.ndarray]:
+    # Set limit to maximum possible neighbors if less than 1
     if limit < 1:
-        limit = matrix.shape[0]-1
-    k_inst = Kiez(algorithm='SklearnNN', hubness='CSLS', n_candidates = limit,
-                  algorithm_kwargs= {'metric' : 'cosine'})
-    #k_inst.fit(matrix.toarray())
-    k_inst.fit(ut.zehidense(matrix))
-    dist, neigh_ind = k_inst.kneighbors()
+        limit = matrix.shape[0] - 1
+    dense_matrix = ut.zehidense(matrix)
+    dense_matrix = hubness.transform(dense_matrix,dense_matrix, metric = 'cosine')
+    nn = NearestNeighbors(n_neighbors=limit, metric='cosine')
+    nn.fit(dense_matrix)
+    dist, neigh_ind = nn.kneighbors(dense_matrix)
     return dist, neigh_ind
 
 
@@ -94,24 +91,26 @@ def get_same_at_x(matrix,l,oklabels,maxrank= 5):
 
 def threeinstances(l):
     c= Counter(l)
-    c.pop(0)
+    c.pop(0,None)
     for k,v in list(c.items()):
         if v < 3:
             c.pop(k)
     return c
 
-def sim_label_idx(matrix,labels, oklabels):
-    sim = (matrix @ matrix.T).toarray()
-    # np.fill_diagonal(sim,0)
-    tups =  [[(similarity, startid, endid) for
-        endid, similarity in enumerate(sim[startid]) if labels[endid] == label ]# label are the same
-        for startid,label in enumerate(labels) if label in oklabels] # for labels with > 2 instances
 
-    [x.sort(key = lambda x:x[0]) for x in tups]
 
-    return tups
+# i think this is unused
+# def sim_label_idx(matrix,labels, oklabels):
+#     sim = (matrix @ matrix.T).toarray()
+#     # np.fill_diagonal(sim,0)
+#     tups =  [[(similarity, startid, endid) for
+#         endid, similarity in enumerate(sim[startid]) if labels[endid] == label ]# label are the same
+#         for startid,label in enumerate(labels) if label in oklabels] # for labels with > 2 instances
+#     [x.sort(key = lambda x:x[0]) for x in tups]
+#     return tups
 
 def sim_label_idx_limited(oklabels,labels,matrix, maxrank= 5):
+
     assert maxrank < 100, 'call to kiezneigh will only return 100 currently'
 
     partners = get_same_at_x(matrix,labels,oklabels,maxrank)
@@ -124,19 +123,7 @@ def sim_label_idx_limited(oklabels,labels,matrix, maxrank= 5):
 
     tups = Map(makedata, [(i,p) for i,p in enumerate(partners) if p < 999999], labels = labels)
     [x.sort(key = lambda x:x[0]) for x in tups]
-
     return tups
-
-    # res = []
-    # seen = {}
-    # for tup in tups:
-    #     id = tup[-1][2], tup[-2][2]
-    #     if id in seen:
-    #         continue
-    #     seen[id[::-1]] =1 # if we see this in the future, we skip
-    #     res.append(tup)
-    # return res
-
 
 def getrank(sli,matrix):
     # merge the rows
@@ -178,8 +165,6 @@ def clanExtend(csr_matrix, l, alignments, max = 30):
     - calculate the average features
     - then search for similar instances...
     '''
-
-
     '''
     clan_averages: mean vectors for the clan
     labels: the associated labels
@@ -196,11 +181,20 @@ def clanExtend(csr_matrix, l, alignments, max = 30):
         labels.append(label)
 
 
-    '''nearest neighbor search
-    '''
-    kz = Kiez(algorithm='SklearnNN', hubness='CSLS', n_candidates = max,  algorithm_kwargs= {'metric' : 'cosine'})
-    kz.fit(np.array(clan_averages), csr_matrix.toarray())
-    distances, indices = kz.kneighbors(max)
+    # '''nearest neighbor search
+    # '''
+    # kz = Kiez(algorithm='SklearnNN', hubness='CSLS', n_candidates = max,  algorithm_kwargs= {'metric' : 'cosine'})
+    # kz.fit(np.array(clan_averages), csr_matrix.toarray())
+    # distances, indices = kz.kneighbors(max)
+
+
+    # 'max' represents the number of neighbors to find
+    # anyway this should do what the KIEZthing above did.
+    n_neighbors: int = max
+    nn: NearestNeighbors = NearestNeighbors(n_neighbors=n_neighbors, metric='cosine')
+    nn.fit(csr_matrix.toarray())
+    distances, indices = nn.kneighbors(np.array(clan_averages), n_neighbors=n_neighbors)
+
 
     for i,label in enumerate(labels):
         # find the names of the original instances
@@ -220,60 +214,128 @@ def clanExtend(csr_matrix, l, alignments, max = 30):
 
 
 
+
+
+# 1. Incorrect Distance Indexing:
+# In the loops, you write dist[i_id][e] and dist[j_id][e]. Since dist has shape (n_samples, limit), indexing with the absolute neighbor ID (i_id/j_id) retrieves the distance from a completely different row. It must be dist[i][e] and dist[j][e], because e is the relative neighbor index of the current source row (i or j).
+# 2. Self-Match (Self-Loop) Bug:
+# Nearest neighbors include the node itself at index 0. Therefore, same_label_neighbors[0] is always 0. This means j = indices[i, 0], which is just i. You end up comparing the node with itself rather than finding its closest partner. You need to exclude index 0.
+
+
+import numpy as np
 import collections
 
-def pair_rank_average(matrix, labels, oklabels, maxrank=100, rank = True):
-    '''
-    we want to write another function that returns a rank (similar to other function in this file)
-    we are given the instance vectors, and the labels
-    previously we did linear combination and straight up looking at the third instances (in this file)
-    to find more instances, now we want to look at the pair (both rows in the distance matrix(corrected by kiedz))
-    rank both rows and report the average rank. from this rank list we see how far we need to go to find a third instance.
-    '''
-    oklabels= list(oklabels.keys())
-    dist, indices = kiez_neighs(matrix, limit=maxrank)
-    yy = np.array(labels)
-    neighbor_labels = yy[indices]
+# def pair_rank_average(matrix, labels, oklabels, maxrank=100, rank = True):
+#     '''
+#     we want to write another function that returns a rank (similar to other function in this file)
+#     we are given the instance vectors, and the labels
+#     previously we did linear combination and straight up looking at the third instances (in this file)
+#     to find more instances, now we want to look at the pair (both rows in the distance matrix(corrected by kiedz))
+#     rank both rows and report the average rank. from this rank list we see how far we need to go to find a third instance.
+#     '''
+#     # oklabels= list(oklabels.keys())
+#     dist, indices = kiez_neighs(matrix, limit=maxrank)
+#     yy = np.array(labels)
+#     neighbor_labels = yy[indices]
+#     def get_rank(i):
+#         # we find the first guy of the same class
+#         same_label_neighbors  = np.where(neighbor_labels[i] == yy[i])[0]
+#         # find the partner
+#         if len(same_label_neighbors) <= 2:
+#             return 99999999
+#         j = indices[i,same_label_neighbors[1]]
+#         same_label_neighbors_j  = np.where(neighbor_labels[j] == yy[i])[0]
+#         # from the same_label_neighbors we can already calculate the result i think
+#         d= collections.defaultdict(list)
+#         for e in same_label_neighbors:
+#             i_id = indices[i,e]
+#             d[i_id].append(e if rank else dist[i_id][e])
+#         for e in same_label_neighbors_j:
+#             j_id = indices[j,e]
+#             d[j_id].append(e if rank else dist[j_id][e])
+#         # now we can calculate the rank
+#         d.pop(i,None)
+#         d.pop(j,None)
+#         # remove all entries where the value-list contains only 1 element
+#         # else v -> mean
+#         for k,v in list(d.items()):
+#             if len(v) < 2:
+#                 d.pop(k)
+#             else:
+#                 d[k] = np.mean(v)
+#         if d:
+#             return min(d.values())
+#         # failed
+#         return 99999999
+#     target_lines = np.where(np.isin(yy,oklabels))[0]
+#     return np.array(Map(get_rank, target_lines))
 
+def pair_rank_average(matrix, labels, oklabels, maxrank=300, use_rank=True):
+    """
+    Finds a nearest-neighbor partner of the same class for each valid instance,
+    then finds a third mutual instance of the same class.
+    Returns the minimum average rank (or distance) of that third instance.
+    """
+    # Assuming kiez_neighs is defined elsewhere in your file
+    oklabels = list(oklabels.keys())
+    dist, indices = kiez_neighs(matrix, limit=maxrank)
+
+    y = np.array(labels)
+    neighbor_labels = y[indices]
 
     def get_rank(i):
-        # we find the first guy of the same class
-        same_label_neighbors  = np.where(neighbor_labels[i] == yy[i])[0]
-        # find the partner
-        if len(same_label_neighbors) == 0:
-            return 99999999
-        j = indices[i,same_label_neighbors[0]] # apparently 0 is not the self? weird
-        same_label_neighbors_j  = np.where(neighbor_labels[j] == yy[i])[0]
+        # Find indices (ranks) in the neighbor list where the label matches the instance's label
+        same_class_ranks_i = np.where(neighbor_labels[i] == y[i])[0]
+
+        # We need at least 3 instances: the instance itself, a partner, and a 3rd target
+        if len(same_class_ranks_i) <= 2:
+            return np.inf
+
+        # Find the partner 'j' (assuming index 0 is the instance 'i' itself)
+        j = indices[i, same_class_ranks_i[1]]
+        same_class_ranks_j = np.where(neighbor_labels[j] == y[i])[0]
+
+        # Dictionary to group ranks/distances for mutual neighbors
+        candidate_scores = collections.defaultdict(list)
+
+        # Process the neighbors of instance i
+        for rank_idx in same_class_ranks_i:
+            neighbor_idx = indices[i, rank_idx]
+            score = rank_idx if use_rank else dist[i, rank_idx]
+            candidate_scores[neighbor_idx].append(score)
+
+        # Process the neighbors of partner j
+        for rank_idx in same_class_ranks_j:
+            neighbor_idx = indices[j, rank_idx]
+            score = rank_idx if use_rank else dist[j, rank_idx]
+            candidate_scores[neighbor_idx].append(score)
+
+        # Remove i and j so they aren't evaluated as the "third" instance
+        candidate_scores.pop(i, None)
+        candidate_scores.pop(j, None)
+
+        # A mutual neighbor must appear in BOTH lists (len >= 2)
+        valid_averages = [
+            np.mean(scores)
+            for scores in candidate_scores.values()
+            if len(scores) >= 2
+        ]
+
+        # Return the minimum average rank/dist, or infinity if none are found
+        if valid_averages:
+            return min(valid_averages)
+
+        return np.inf
+
+    # Find all instances whose labels are in oklabels
+    target_lines = np.where(np.isin(y, oklabels))[0]
+
+    # Process each target line and return as a numpy array
+    results = [get_rank(i) for i in target_lines]
+    return np.array(results)
 
 
 
-        # from the same_label_neighbors we can already calculate the result i think
-        d= collections.defaultdict(list)
-        for e in same_label_neighbors:
-            i_id = indices[i,e]
-            d[i_id].append(e if rank else dist[i_id][e])
-        for e in same_label_neighbors_j:
-            j_id = indices[j,e]
-            d[j_id].append(e if rank else dist[j_id][e])
-        # now we can calculate the rank
-        d.pop(i,None)
-        d.pop(j,None)
-        # remove all entries where the value-list contains only 1 element
-        # else v -> mean
-        for k,v in list(d.items()):
-            if len(v) < 2:
-                d.pop(k)
-            else:
-                d[k] = np.mean(v)
-
-        if d:
-            return min(d.values())
-        # failed
-        return 99999999
-
-
-    target_lines = np.where(np.isin(yy,oklabels))[0]
-    return np.array(Map(get_rank, target_lines))
 
 import yoda.ml.simpleMl as sml
 
@@ -376,21 +438,67 @@ def calcneedlesum(l):
     return sum
 
 
+
+
+# this might replace getranks_idx3...
+def get_same_label_neighbor_ranks(
+    matrix: np.ndarray,
+    labels: list,
+    oklabels: set,
+    target_neighbor_index: int = 1
+) -> np.ndarray:
+    """
+    Calculates the 0-indexed rank of the target_neighbor_index-th closest
+    neighbor of the same class, excluding the self-match at index 0.
+
+    To find the first partner (excluding self), set target_neighbor_index=1.
+    To find the second partner (excluding self), set target_neighbor_index=2.
+    """
+    # Get nearest neighbors from kiez
+    dist, neighbor_indices = kiez_neighs(matrix)
+    yy: np.ndarray = np.array(labels)
+
+    ranks: list = []
+    for i, label in enumerate(yy):
+        if label not in oklabels:
+            continue
+
+        # Extract neighbor labels and exclude the self-match at index 0
+        neighbor_labs: np.ndarray = yy[neighbor_indices[i]][1:]
+        # Locate indices of matching labels among the non-self neighbors
+        same_label_indices: np.ndarray = np.where(neighbor_labs == label)[0]
+        # Return the rank if we have found enough matching neighbors
+
+        print(same_label_indices)
+        if len(same_label_indices) >= target_neighbor_index: # [0, 10, 19]
+            ranks.append(same_label_indices[target_neighbor_index - 1])
+        else:
+            ranks.append(999999)
+    return np.array(ranks)
+
+
+
 def needle3data(matrix,l):
-
-
     # get the labels where we have more than 2 examples
     needlelabels = threeinstances(l)
+
+
     # for each row (with the right label) we find the closest other instance according to the kernel
     # sim_label_idx = needle.sim_label_idx(matrix,l,needlelabels)
 
     sim_label_idx = sim_label_idx_limited(needlelabels, l,matrix,maxrank=50)
+
     needleranks = getranks_mix(sim_label_idx,matrix)
     rankAvg = pair_rank_average(matrix, l, needlelabels)
     distAvg = pair_rank_average(matrix, l, needlelabels, False)
 
-    moreranks = getranks_idx3(matrix,l,set([e[-1][2] for e in sim_label_idx]))
+    # moreranks = getranks_idx3(matrix,l,set([e[-1][2] for e in sim_label_idx]))
+    # moreranks = getranks_idx3(matrix, l, set([l[e[-1][2]] for e in sim_label_idx]))
+    # the way moreranks  is calculated seems overly complicated and might hide bugs. is there a straightforward way to acchieve the same result? write functions with comments etc..
+    moreranks = get_same_label_neighbor_ranks(matrix,l, needlelabels, target_neighbor_index = 2)
+
     one = [sum(moreranks < x)/len(moreranks) for x in range(1,50)]
+
     two=  [sum(needleranks < x)/len(needleranks) for x in range(1,50)]
     three=  [sum(rankAvg < x)/len(rankAvg) for x in range(1,50)]
     four=  [sum(distAvg < x)/len(distAvg) for x in range(1,50)]
@@ -404,6 +512,15 @@ def needle3data(matrix,l):
 
     df= pd.concat([pd.DataFrame(data),pd.DataFrame(data2), pd.DataFrame(data3), pd.DataFrame(data4)])
     return df
+
+
+# ok we need to test this needle 3 stuff
+from yoda.alignments import load_rfam
+import yoda.graphs as gr
+def load():
+    a, l = load_rfam(full=False)
+    matrix = gr.alignment_to_vectors(a)
+    return matrix,l
 
 
 # def plotNeedle3(df):

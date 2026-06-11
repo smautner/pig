@@ -1,18 +1,14 @@
-import networkx as nx
+from lmz import Map,Zip,Filter,Grouper,Range,Transpose,Flatten
 import structout as so
 import time
 from matplotlib import pyplot as plt
-import lmz
 import eden.graph as eg
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score, adjusted_rand_score, rand_score, precision_recall_curve, auc
-from yoda.graphs import ali2graph
 import numpy as np
 import yoda.ml.simpleMl as sml
-import eden.display as ed
-from yoda.alignments import load_rfam, filter_by_seqcount
+from yoda.alignments import load_rfam
 import ubergauss.tools as ut
-from yoda import graphs as ygraphs, alignments, ml
 import subprocess
 import seaborn as sns
 from umap import UMAP
@@ -20,24 +16,10 @@ from yoda import draw
 import ubergauss.optimization as uo
 import pandas as pd
 from yoda.ml import nearneigh
-
-import smallgraph as sg
-import networkx as nx
-from matplotlib import pyplot as plt
-import lmz
-import eden.graph as eg
-from yoda.graphs import ali2graph
-import numpy as np
-import yoda.ml.simpleMl as sml
-import eden.display as ed
-from yoda.alignments import load_rfam, filter_by_seqcount
-import ubergauss.tools as ut
-from yoda import graphs as ygraphs
-
+import os
+import sqlite3
 
 from yoda.scripts.colormap import gethue
-
-
 
 #########################
 # RUNNING CMCOMPARE
@@ -52,7 +34,7 @@ def dumpcm(family_id1):
         with open(align1_path, 'w') as align1_file:
             align1_file.write('# STOCKHOLM 1.0\n\n')
             for line in stockholm_file:
-                if line.startswith(f'#=GF AC') and family_id1 in line:
+                if line.startswith('#=GF AC') and family_id1 in line:
                     found1 = True
                 elif line.startswith('//'):
                     if found1:
@@ -68,17 +50,12 @@ def dumpcm(family_id1):
     return True
 
 
-
-
-
-## RUN CMCOMPARE
 #import json
 #def compare_cm(_, names, cm1=None, cm2=None):
 #    cm1 = names[cm1]
 #    cm2 = names[cm2]
 #    # cache_file = f"./cmbigres/{cm1}_{cm2}.json"
 #    # cache_file = f"/home/ubuntu/data/cmcom/cmcom_delme/{cm1}_{cm2}.json"
-#    cache_file = f"/home/ubuntu/data/cmcom/cmbigres/{cm1}_{cm2}.json"
 #    # print(f"{cache_file=}")
 #    if os.path.exists(cache_file):
 #        with open(cache_file, 'r') as f:
@@ -104,60 +81,138 @@ def dumpcm(family_id1):
 #    #return {'score':float(score),'score2': float(score2)}
 
 
-import os
-import sqlite3
-def compare_cm_sql(_, names, cm1=None, cm2=None):
-    # sqlite3 /home/ubuntu/data/cmcom/cmbigres/scores.db "SELECT * FROM scores LIMIT 5;"
-    # ╭─────────┬─────────┬────────┬────────╮
-    # │   rf1   │   rf2   │  sc1   │  sc2   │
-    # ╞═════════╪═════════╪════════╪════════╡
-    # │ RF01173 │ RF01463 │ 10.942 │ 11.454 │
-    # same as compare_cm but there are no json files but scores.db, assume the table already exists!
+
+#def run_cmcompare_pairwise(names):#, sizes):
+#    # num_cm = len(names) # or just use 10 for debugging :)
+#    # sizes= dict(enumerate(sizes))
+#    return uo.gridsearch(compare_cm_sql, 0,
+#                    # param_dict = {'cm1':lmz.Range(num_cm), 'cm2':lmz.Range(num_cm)},
+#                    param_dict = {'cm1':names, 'cm2':names},
+#                    mp=True,
+#                    # taskfilter = lambda x: x['cm1'] <  x['cm2'] and( sizes[x['cm1']] < 1000 or sizes[x['cm2']] < 1000),
+#                    taskfilter = lambda x: x['cm1'] <  x['cm2'])
+#def test_cmcompare():
+#    a,l = load_rfam(full=True,add_cov = False)
+#    t = time.time()
+#    a= a[:10]
+#    names = [aa.gf["AC"][3:] for aa in a]
+#    sizes = [aa.alignment.shape[1] for aa in a]
+#    # [dumpcm(name) for name in names]
+#    r= run_cmcompare_pairwise(names, sizes)
+#    print(f"time: { time.time() - t}")
+#    #r = r.drop(columns=['names']) why should names be in there ..
+#    r.to_csv('latest.csv', index=False)
+#    return r
+#def test_load():
+#    a,l = load_rfam(full=True,add_cov = False)
+#    load_latest_cmcompare(l)
+#def rerun4k():
+#    '''
+#    -  the loadedr will remove long alignments..
+#    '''
+#    # 1. make sure we have all the fasta and cm files in /home/ubuntu/data/cmcom/2026_3_cmfasta
+#    # 2. run the pairwise cmcompare on all pairs -> cache in  /home/ubuntu/data/cmcom/cmbigres
+#    # 3. dump csv file
+#    alignments, _ = load_rfam(full=True, add_cov = False)
+#    print(f"got ali!")
+#    # alignments =alignments[:10]
+#    # 1. ensure path exists
+#    save_path = "/home/ubuntu/data/cmcom/2026_3_cmfasta/"
+#    # os.makedirs(save_path, exist_ok=True)
+#    # 2. dump fasta and build CMs
+#    names = [aa.gf["AC"].split()[1] for aa in alignments]
+#    for name in names:
+#        if not os.path.exists(f"{save_path}{name}.cm"):
+#            print(f" dumping: { name= }",)
+#            dumpcm(name)
+#            print(f"...",)
+#            subprocess.run(f"mv {name}.fasta {name}.cm {save_path}", shell=True)
+#            print(f"")
+#    print(f"cm ing .. ",end = '')
+#    # 3. run pairwise comparison
+#    r = run_cmcompare_pairwise(names)
+#    print(f"done")
+#    # 4. cleanup and save results
+#    r.to_csv('cmcomp_4k_20260418.csv', index=False)
+#    return 0
+
+
+
+
+###########################
+# SQL based approach to run cmcompare pairwise and store results in a database
+# lets start by generating the data
+#######################
+
+def sqlOdi():
+    t= time.time()
+    alignments, _ = load_rfam(full=True, add_cov = False)
+    names = [aa.gf["AC"][3:] for aa in alignments]
+    #    # [dumpcm(name) for name in names]
+    names.sort()
+    sm = ut.spacemap(names)
+    l = len(names)
+    mat =  np.zeros((l,l), dtype=bool)
 
     db_path = "/home/ubuntu/data/cmcom/cmbigres/scores.db"
-    cm1, cm2 = names[cm1], names[cm2]
-
     with sqlite3.connect(db_path) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT sc1, sc2 FROM scores WHERE (rf1=? AND rf2=?) OR (rf1=? AND rf2=?)", (cm1, cm2, cm2, cm1))
-        row = cursor.fetchone()
+        query = f"SELECT rf1, rf2 FROM scores"
+        cursor = conn.execute(query)
+        for a,b in cursor:
+            try:
+                # inthe db are matches for too long rna so they are not in the original names list...
+                mat[sm.getint[a], sm.getint[b]] = True
+            except:
+                pass
+    print(f"{time.time() - t}")
+    return mat, sm
 
-    if row:
-        return {'score': float(row[0]), 'score2': float(row[1])}
+def plo(ma):
+    # set lower-left triangle to 1 (excluding diagonal) and plot heatmap
+    arr = np.asarray(ma).copy()
+    i, j = np.tril_indices_from(arr, k=-1)
+    arr[i, j] = 1
+    sns.heatmap(arr, cmap='viridis')
+    plt.show()
+    return arr
 
+def sqlMissPairs(arr):
+    a,b = np.where(arr == False)
+    mp = [ (a,b) for a,b in zip(a,b) if a != b ]
+    return mp
+
+def sql_cmp(mp):
+    cm1, cm2 = mp
     path = f"/home/ubuntu/data/cmcom/2026_3_cmfasta/"
     compare_cmd = f'/home/ubuntu/hsCMCompare-fedora12-x64 -q {path}{cm1}.cm {path}{cm2}.cm'
     result = subprocess.run(compare_cmd, shell=True, check=True, capture_output=True, text=True)
     score = result.stdout.split()[3]
     score2 = result.stdout.split()[2]
-    output = {'score':float(score),'score2': float(score2)}
+    return (cm1, cm2, score, score2)
 
-    while True:
-        try:
-            with sqlite3.connect(db_path) as conn:
-                conn.execute("INSERT INTO scores (rf1, rf2, sc1, sc2) VALUES (?, ?, ?, ?)",
-                             (cm1, cm2, output['score'], output['score2']))
-            break
-        except sqlite3.OperationalError as e:
-            if 'locked' in str(e):
-                time.sleep(1)
-                print('.', end='', flush=True)
-            # else: raise e
-    return output
-
-
-
-def run_cmcompare_pairwise(names):#, sizes):
-    num_cm = len(names) # or just use 10 for debugging :)
-    # sizes= dict(enumerate(sizes))
-    return uo.gridsearch(compare_cm_sql, 0,
-                    param_dict = {'cm1':lmz.Range(num_cm), 'cm2':lmz.Range(num_cm)},
-                    mp=True,
-                    # taskfilter = lambda x: x['cm1'] <  x['cm2'] and( sizes[x['cm1']] < 1000 or sizes[x['cm2']] < 1000),
-                    taskfilter = lambda x: x['cm1'] <  x['cm2'],
-                    names= names)
+def sqlRunMp(mp, sm):
+    mp = [ (sm.getitem[a], sm.getitem[b]) for a,b in mp ]
+    print(f"missing items: { len(mp)=}")
+    db_path = "/home/ubuntu/data/cmcom/cmbigres/scores.db"
+    i=0
+    with sqlite3.connect(db_path) as conn:
+        for thing in ut.xxxmap(sql_cmp, mp):
+            conn.execute("INSERT INTO scores (rf1, rf2, sc1, sc2) VALUES (?, ?, ?, ?)", thing)
+            i+=1
+            if i % 250 == 0:
+                conn.commit()
+                print(',', end='')
+def sqlfix():
+    mat, sm = sqlOdi()
+    mat = plo(mat)
+    mp  = sqlMissPairs(mat)
+    sqlRunMp(mp,sm)
 
 
+
+######################
+# we need to make the sql version of this too:
+############################
 def loadcmcomp(csvpath = 'cmcompare_full_run_2024_06_27'):
     cmcompare_data = pd.read_csv(csvpath)
     cmcompare_data  = cmcompare_data.fillna(500)
@@ -166,106 +221,71 @@ def loadcmcomp(csvpath = 'cmcompare_full_run_2024_06_27'):
     cmcompare_dist = to_dist(pivot_numpy(cmcompare_data))
     return cmcompare_dist
 
-def test_cmcompare():
-    a,l = load_rfam(full=True,add_cov = False)
-    t = time.time()
-    a= a[:10]
-    names = [aa.gf["AC"][3:] for aa in a]
-    sizes = [aa.alignment.shape[1] for aa in a]
-    # [dumpcm(name) for name in names]
-    r= run_cmcompare_pairwise(names, sizes)
-    print(f"time: { time.time() - t}")
-    #r = r.drop(columns=['names']) why should names be in there ..
-    r.to_csv('latest.csv', index=False)
-    return r
 
-def test_load():
-    a,l = load_rfam(full=True,add_cov = False)
-    load_latest_cmcompare(l)
+# def load_latest_cmcompare(labels, file = 'cmcomp_big.csv', cm_names : list):
+#     # loads the csv ... we want to load it liike loadcmcomp however.. there are missing values.
+#     existing_df = pd.read_csv(file)
+#     all_data_rows = existing_df.to_dict('records')
+#     # 2. Identify existing pairs by their integer indices
+#     existing_pair_indices = set()
+#     for row in all_data_rows:
+#         idx1, idx2 = int(row['cm1']), int(row['cm2'])
+#         existing_pair_indices.add(tuple(sorted((idx1, idx2))))
+#     # 3. Determine the number of families and iterate through all possible pairs
+#     num_families = len(labels)
+#     for i in range(num_families):
+#         for j in range(i, num_families): # Include diagonal (i,i) and upper triangle (i,j where i<j)
+#             idx1, idx2 = i, j
+#             if tuple(sorted((idx1, idx2))) not in existing_pair_indices:
+#                 # This pair is missing, generate default scores
+#                 label_i = labels[i]
+#                 label_j = labels[j]
+#                 # Default score logic: 100 if same family, -5 if different
+#                 score_val = 100 if label_i == label_j else -5.0
+#                 all_data_rows.append({
+#                     'cm1': idx1,
+#                     'cm2': idx2,
+#                     'score': score_val,
+#                     'score2': score_val, # score2 often same as score in these default cases
+#                     'time': -1.0 # Indicate this entry was not run by cmcompare
+#                 })
+#     # 4. Create a full DataFrame from all collected rows
+#     full_df = pd.DataFrame(all_data_rows)
+#     # 5. Apply the standard `loadcmcomp` transformations
+#     # Fill any potential NaNs in 'score' or 'score2' columns from the original CSV
+#     full_df = full_df.fillna(500.0)
+#     full_df['score1'] = full_df[['score', 'score2']].min(axis=1)
+#     full_df['score3'] = full_df[['score', 'score2']].max(axis=1)
+#     # Convert to distance matrix
+#     cmcompare_dist = to_dist(pivot_numpy(full_df))
+#     return cmcompare_dist
 
-def load_latest_cmcompare(labels, file = 'cmcomp_big.csv'):
-    # loads the csv ... we want to load it liike loadcmcomp however.. there are missing values.
+def load_latest_cmcompare( alignments: list, db_path: str = "/home/ubuntu/data/cmcom/cmbigres/scores.db") -> np.ndarray:
+    # Map family name strings to their corresponding indices
+    cm_names = [ali.gf["AC"].split()[1] for ali in alignments]
+    name_to_idx = {name: idx for idx, name in enumerate(cm_names)}
+    n = len(cm_names)
 
-    existing_df = pd.read_csv(file)
-    all_data_rows = existing_df.to_dict('records')
+    # Initialize similarity matrix with default scores
+    S = np.zeros((n, n), dtype=float)
 
-    # 2. Identify existing pairs by their integer indices
-    existing_pair_indices = set()
-    for row in all_data_rows:
-        idx1, idx2 = int(row['cm1']), int(row['cm2'])
-        existing_pair_indices.add(tuple(sorted((idx1, idx2))))
+    # Populate the similarity matrix with scores queried from the SQLite database
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.execute("SELECT rf1, rf2, sc1, sc2 FROM scores")
+        for rf1, rf2, sc1, sc2 in cursor:
+            if rf1 in name_to_idx and rf2 in name_to_idx:
+                idx1 = name_to_idx[rf1]
+                idx2 = name_to_idx[rf2]
+                val1 = float(sc1) if sc1 is not None else 500.0
+                val2 = float(sc2) if sc2 is not None else 500.0
+                score1 = min(val1, val2)
+                S[idx1, idx2] = score1
+                S[idx2, idx1] = score1
 
-    # 3. Determine the number of families and iterate through all possible pairs
-    num_families = len(labels)
-
-    for i in range(num_families):
-        for j in range(i, num_families): # Include diagonal (i,i) and upper triangle (i,j where i<j)
-            idx1, idx2 = i, j
-
-            if tuple(sorted((idx1, idx2))) not in existing_pair_indices:
-                # This pair is missing, generate default scores
-                label_i = labels[i]
-                label_j = labels[j]
-
-                # Default score logic: 100 if same family, -5 if different
-                score_val = 100 if label_i == label_j else -5.0
-
-                all_data_rows.append({
-                    'cm1': idx1,
-                    'cm2': idx2,
-                    'score': score_val,
-                    'score2': score_val, # score2 often same as score in these default cases
-                    'time': -1.0 # Indicate this entry was not run by cmcompare
-                })
-
-    # 4. Create a full DataFrame from all collected rows
-    full_df = pd.DataFrame(all_data_rows)
-
-    # 5. Apply the standard `loadcmcomp` transformations
-    # Fill any potential NaNs in 'score' or 'score2' columns from the original CSV
-    full_df = full_df.fillna(500.0)
-    full_df['score1'] = full_df[['score', 'score2']].min(axis=1)
-    full_df['score3'] = full_df[['score', 'score2']].max(axis=1)
-
-    # Convert to distance matrix
-    cmcompare_dist = to_dist(pivot_numpy(full_df))
-    return cmcompare_dist
-
+    np.fill_diagonal(S, 0)
+    return to_dist(S)
 
 
-def rerun4k():
-    '''
-    -  the loadedr will remove long alignments..
-    '''
-    # 1. make sure we have all the fasta and cm files in /home/ubuntu/data/cmcom/2026_3_cmfasta
-    # 2. run the pairwise cmcompare on all pairs -> cache in  /home/ubuntu/data/cmcom/cmbigres
-    # 3. dump csv file
-
-    alignments, _ = load_rfam(full=True, add_cov = False)
-    print(f"got ali!")
-    # alignments =alignments[:10]
-
-    # 1. ensure path exists
-    save_path = "/home/ubuntu/data/cmcom/2026_3_cmfasta/"
-    # os.makedirs(save_path, exist_ok=True)
-
-    # 2. dump fasta and build CMs
-    names = [aa.gf["AC"].split()[1] for aa in alignments]
-    for name in names:
-        if not os.path.exists(f"{save_path}{name}.cm"):
-            print(f" dumping: { name= }",)
-            dumpcm(name)
-            print(f"...",)
-            subprocess.run(f"mv {name}.fasta {name}.cm {save_path}", shell=True)
-            print(f"")
-
-    print(f"cm ing .. ",end = '')
-    # 3. run pairwise comparison
-    r = run_cmcompare_pairwise(names)
-    print(f"done")
-    # 4. cleanup and save results
-    r.to_csv('cmcomp_4k_20260418.csv', index=False)
-    return 0
 
 
 
@@ -275,16 +295,16 @@ def rerun4k():
 ##################
 
 
-def score(mtx,data):
+def score(mtx, data):
     labels = data[1]
     return silhouette_score(mtx, labels, metric='precomputed')
 
 
 def data_to_reffile(data):
     alis,_ = data
-    reflist = [ ali.gf[f'AC'].split()[1] for ali in alis]
-    with open(f'reffile.delme',f'w') as f:
-        f.write(f'\n'.join(reflist))
+    reflist = [ ali.gf['AC'].split()[1] for ali in alis]
+    with open('reffile.delme',f'w') as f:
+        f.write('\n'.join(reflist))
     return reflist
 
 
@@ -302,8 +322,8 @@ def data_to_fasta(data):
         lines.append( f'>{rfamid}')
         lines.append( ali.graph.graph['sequence'])
 
-    with open(f'fasta.delme',f'w') as f:
-        f.write(f'\n'.join(lines))
+    with open('fasta.delme',f'w') as f:
+        f.write('\n'.join(lines))
     # return lines
 
 
@@ -420,7 +440,8 @@ def mkHitRateData(data,l):
             r+=[{'Distances':DIST_RAW_LABEL,'Method':k,'neighbors':i+1,ylabel:val}]
 
         # dist_norm = normalize(dist, axis=0)
-        dist_norm = nearneigh.normalize_csls(dist)
+        # dist_norm = nearneigh.normalize_csls(dist)
+        dist_norm =  nearneigh.csls(dist)
         # dist_norm = uh.justtransform(dist.copy(),k=27,algo=2)
         # dist_norm += np.abs(dist_norm.min()) + 1
 
@@ -616,8 +637,9 @@ def collect_results_precrec(data: dict, labels: np.ndarray) -> list:
             results.append({'Distances': DIST_RAW_LABEL, 'Method': method_name, 'precision': p_val, 'recall': r_val})
 
         # Process normalized distances using CSLS normalization from nearneigh
-        normalized_matrix = nearneigh.normalize_csls(dist_matrix)
+        # normalized_matrix = nearneigh.normalize_csls(dist_matrix)
 
+        normalized_matrix = nearneigh.csls(dist_matrix)
         # normalized_matrix = uh.justtransform(dist_matrix.copy(), k=27, algo=2)
         # normalized_matrix += np.abs(normalized_matrix.min()) + 1
 
@@ -676,7 +698,9 @@ def make_results_table(data,l, runtime):
 
     for method, dist in data.items():
         process_matrix(method, dist, normalized=False)
-        normalized_matrix = nearneigh.normalize_csls(dist)
+        ## normalized_matrix = uh.transform(dist, k = 10)
+        # normalized_matrix += abs(normalized_matrix.min())
+        normalized_matrix = nearneigh.csls(dist)
         process_matrix(method, normalized_matrix, normalized=True)
 
     df = pd.DataFrame(results)
