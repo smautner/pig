@@ -52,15 +52,8 @@ def normalize_csls(di):
 
 from ubergauss import hubness as uh
 def csls(matrix):
-        matrix = uh.transform(matrix, k =10)
-        # there is an numpy  matrix, per row add abs(min) -> just few lines, then return matrix
-        return add_abs_min_to_rows(matrix)
-
-def add_abs_min_to_rows(matrix: np.ndarray) -> np.ndarray:
-    # Find the absolute minimum of each row, preserving shape for broadcasting
-    abs_mins: np.ndarray = np.abs(np.min(matrix, axis=1, keepdims=True))
-    # Return the matrix with the row-specific absolute minimum added to each element
-    return matrix + abs_mins
+    matrix = uh.transform(matrix, k=10)
+    return matrix - matrix.min()
 
 
 

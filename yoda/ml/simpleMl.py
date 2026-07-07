@@ -129,15 +129,12 @@ def clan_in_x(X, y,n_neighbors=10):
     knn = KNeighborsClassifier(n_neighbors=n_neighbors+1, metric = 'precomputed')
     y_train= np.array(y)
     knn.fit(X,y)
-    # Get the labels of the nearest neighbors for each training point
     _, indices = knn.kneighbors(X)
-    # instances -> labels
-    neighbor_labels = y_train[indices]
-    # Exclude the label of the training point itself
-    neighbor_labels = neighbor_labels[:, 1:]
-    # Compute the training error
-    # agreement = (_repeat_as_column(y_train,n_neighbors) == neighbor_labels).mean()
-    return np.mean([y in row for y,row in zip(y_train,neighbor_labels)  ])
+    filtered = []
+    for i, row in enumerate(indices):
+        mask = indices[i] != i
+        filtered.append(y_train[indices[i][mask][:n_neighbors]])
+    return np.mean([y in row for y,row in zip(y_train,filtered)])
 
 def accs(ind,y):
     '''
