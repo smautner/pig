@@ -260,7 +260,7 @@ def loadcmcomp(csvpath = 'cmcompare_full_run_2024_06_27'):
 #     cmcompare_dist = to_dist(pivot_numpy(full_df))
 #     return cmcompare_dist
 
-def load_latest_cmcompare( alignments: list, db_path: str = "/home/ubuntu/data/cmcom/cmbigres/scores.db") -> np.ndarray:
+def load_latest_cmcompare( alignments: list, db_path: str = "/home/ubuntu/data/cmcom/cmbigres/scores.db",f_combine = min) -> np.ndarray:
     # Map family name strings to their corresponding indices
     cm_names = [ali.gf["AC"].split()[1] for ali in alignments]
     name_to_idx = {name: idx for idx, name in enumerate(cm_names)}
@@ -278,7 +278,7 @@ def load_latest_cmcompare( alignments: list, db_path: str = "/home/ubuntu/data/c
                 idx2 = name_to_idx[rf2]
                 val1 = float(sc1) if sc1 is not None else 500.0
                 val2 = float(sc2) if sc2 is not None else 500.0
-                score1 = min(val1, val2)
+                score1 = f_combine(val1, val2)
                 S[idx1, idx2] = score1
                 S[idx2, idx1] = score1
 
@@ -288,6 +288,23 @@ def load_latest_cmcompare( alignments: list, db_path: str = "/home/ubuntu/data/c
 
 
 
+def combination_comparison(a,l):
+    data={}
+    data['avg'] = load_latest_cmcompare(a, f_combine= lambda y,z : (y+z)/2)
+    data['min']  = load_latest_cmcompare(a, f_combine= min)
+    data['max'] = load_latest_cmcompare(a, f_combine= max)
+    for k,v in data.items():
+        print(f"{k=} {mAP(v,l)=}")
+
+def infernal_refconstruct(a,l):
+    data={}
+    path = 'inftools/'
+    data['kraidstyle'] =  infernal_tbl_to_dist(a,l,path+'infernal.tbl')
+    data['kraid_global_match'] =  infernal_tbl_to_dist(a,l,path+'infernal_global.tbl')
+    data['maxweight']  =  infernal_tbl_to_dist(a,l,path+'cmscan_eslmax.tbl')
+    data['maxscroe'] =  infernal_tbl_to_dist(a,l,path+'cmscan_cmemit.tbl')
+    for k,v in data.items():
+        print(f"{k=} {mAP(v,l)=}")
 
 
 #####################
@@ -331,8 +348,8 @@ def readCmscanAndMakeTable(data, path = 'inftools/infernal.tbl'):
     reflist = data_to_reffile(data)
     refdict = {nr:idx for idx,nr in enumerate(reflist)}
     l = len(refdict)
-    distmtx= np.ones((l,l))
-    distmtx*=0
+    distmtx= np.zeros((l,l))
+    distmtx2= np.zeros((l,l))
 
     for  line in open(path,f'r').readlines():
         if not line.startswith(f"#"):
@@ -344,10 +361,11 @@ def readCmscanAndMakeTable(data, path = 'inftools/infernal.tbl'):
             y = refdict[line[2]]
             evalue = float(line[15])
             distmtx[x,y] = evalue
-            distmtx[y,x] = evalue
+            distmtx2[y,x] = evalue
             # print(f"{ evalue=}")
     np.fill_diagonal(distmtx,0)
-    return distmtx
+    np.fill_diagonal(distmtx2,0)
+    return distmtx, distmtx2
 
 
 def eval_agglo_ari(dist,labels, linkage = 'single'):
@@ -375,9 +393,14 @@ def eval_agglo_ari(dist,labels, linkage = 'single'):
 
 
 def infernal_tbl_to_dist(a,l,path):
-    SIM_INF =  readCmscanAndMakeTable((a, l), path)
-    infernal_dist = to_dist(SIM_INF)
-    indices = np.where(infernal_dist == SIM_INF.max())
+    tb =  readCmscanAndMakeTable((a, l), path)
+    # tb = np.maximum(tb[0] , tb[1])
+    # print(f"{tb[0][:10,:10]=}")
+    # print(f"{tb[1][:10,:10]=}")
+    tb = tb[0] + tb[1]
+
+    infernal_dist = to_dist(tb)
+    indices = np.where(infernal_dist == tb.max())
     noise = np.random.normal(0, 1, size=len(indices[0]))
     infernal_dist[indices] += noise
     return infernal_dist
